@@ -71,8 +71,6 @@ services:
       - keycloak
     ports:
       - "5000:8080"
-    volumes:
-      - .:/src # Sincroniza tu código en tiempo real
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=db;Database=umbral_db;Username=postgres;Password=postgres
