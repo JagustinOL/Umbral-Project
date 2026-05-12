@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # --- 1. INFRAESTRUCTURA Y DATOS ---
+  # ==========================================
+  db:
+    image: postgres:17-alpine
+    container_name: umbral-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: umbral_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: umbral-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@umbral.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+  mq:
+    image: rabbitmq:3-management-alpine
+    container_name: umbral-mq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Panel de control RabbitMQ
+
+  # ==========================================
+  # --- 2. SEGURIDAD Y CALIDAD (NUEVO) ---
+  # ==========================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: umbral-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: start-dev # Inicia en modo desarrollo para facilitar pruebas locales
+    ports:
+      - "8081:8080" # http://localhost:8081
+    depends_on:
+      - db
+
+  sonarqube:
+    image: sonarqube:10.4-community
+    container_name: umbral-sonarqube
+    ports:
+      - "9000:9000" # http://localhost:9000
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true # Evita que falle por falta de memoria en local
+
+  # ==========================================
+  # --- 3. APLICACIONES BACKEND (.NET 9) ---
+  # ==========================================
+  api:
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: umbral-api
+    depends_on:
+      - db
+      - mq
+      - keycloak
+    ports:
+      - "5000:8080"
+    volumes:
+      - .:/src # Sincroniza tu código en tiempo real
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Database=umbral_db;Username=postgres;Password=postgres
+      # Conexión interna para validar los JWT emitidos por Keycloak
+      - Keycloak__Authority=http://keycloak:8080/realms/umbral-realm 
+
+  # ==========================================
+  # --- 4. APLICACIONES FRONTEND Y MOBILE ---
+  # ==========================================
+  web:
+    image: node:20-alpine
+    container_name: umbral-web
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Evita que Docker borre tus librerías locales
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8081
+
+  mobile:
+    image: node:20-alpine
+    container_name: umbral-mobile
+    working_dir: /app
+    ports:
+      - "19000:19000" # Puerto Metro Bundler
+      - "19001:19001"
+      - "8081:8081"
+    volumes:
+      - ./mobile:/app
+      - /app/node_modules
+    # Instala expo y corre el túnel para que lo veas en tu celular físico
+    command: sh -c "npm install && npx expo start --tunnel"
+    environment:
+      # Las apps móviles (Expo) usan el prefijo EXPO_PUBLIC para variables de entorno
+      - EXPO_PUBLIC_API_URL=http://localhost:5000
+      - EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8081
+
+volumes:
+  db-data:
+    driver: local

@@ -1,0 +1,99 @@
+# ============================================================
+#  GITIGNORE — Umbral Monorepo
+#  Cubre: umbral-web (Next.js) | umbral-mobile (Expo/RN) | Umbral.WebAPI (C#/.NET)
+# ============================================================
+
+# ─── Secretos y entorno ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+
+# ─── Editores / IDEs ────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DS_Store
+Thumbs.db
+
+# ============================================================
+#  NEXT.JS  (umbral-web)
+# ============================================================
+umbral-web/.next/
+umbral-web/out/
+umbral-web/node_modules/
+umbral-web/.cache/
+umbral-web/next-env.d.ts
+
+# ============================================================
+#  NEXT.JS  (umbral-web-ai)
+# ============================================================
+umbral-web-ai/.next/
+umbral-web-ai/out/
+umbral-web-ai/node_modules/
+umbral-web-ai/.cache/
+umbral-web-ai/next-env.d.ts
+
+# ============================================================
+#  EXPO / REACT NATIVE  (umbral-mobile)
+# ============================================================
+umbral-mobile/node_modules/
+umbral-mobile/.expo/
+umbral-mobile/dist/
+umbral-mobile/web-build/
+umbral-mobile/android/
+umbral-mobile/ios/
+umbral-mobile/expo-env.d.ts
+
+# Caché de Metro y EAS
+umbral-mobile/.metro-health-check*
+umbral-mobile/.env*.local
+
+# ============================================================
+#  C# / .NET  (Umbral.WebAPI)
+# ============================================================
+
+# Artefactos de compilación
+Umbral.WebAPI/**/bin/
+Umbral.WebAPI/**/obj/
+
+# Archivos de usuario de Visual Studio
+Umbral.WebAPI/**/*.user
+Umbral.WebAPI/**/*.suo
+Umbral.WebAPI/**/.vs/
+Umbral.WebAPI/**/*.userprefs
+
+# Publicaciones y paquetes NuGet locales
+Umbral.WebAPI/**/publish/
+Umbral.WebAPI/**/*.nupkg
+Umbral.WebAPI/**/*.nuspec
+
+# Configuraciones sensibles de entorno
+Umbral.WebAPI/**/appsettings.Development.json
+Umbral.WebAPI/**/appsettings.Production.json
+Umbral.WebAPI/**/*.pfx
+Umbral.WebAPI/**/*.cer
+
+# Logs y archivos temporales .NET
+Umbral.WebAPI/**/*.log
+Umbral.WebAPI/**/*.tmp
+Umbral.WebAPI/**/TestResults/
+
+# ============================================================
+#  DOCKER
+# ============================================================
+# Descomentar si tienes volumenes locales montados que no deban subir:
+# docker-data/
+
+# ============================================================
+#  LOGS GENERALES
+# ============================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
