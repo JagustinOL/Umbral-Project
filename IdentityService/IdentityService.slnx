@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="IdentityService.Application/IdentityService.Application.csproj" />
+  <Project Path="IdentityService.Domain/IdentityService.Domain.csproj" />
+  <Project Path="IdentityService.Infrastructure/IdentityService.Infrastructure.csproj" />
+  <Project Path="IdentityService.WebApi/IdentityService.WebApi.csproj" />
+</Solution>

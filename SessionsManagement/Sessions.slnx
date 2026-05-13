@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SessionManagement.Application/SessionManagement.Application.csproj" />
+  <Project Path="SessionManagement.Domain/SessionManagement.Domain.csproj" />
+  <Project Path="SessionManagement.Infrastructure/SessionManagement.Infrastructure.csproj" />
+  <Project Path="SessionManagement.WebApi/SessionManagement.WebApi.csproj" />
+</Solution>

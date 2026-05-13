@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="TeamService.Application/TeamService.Application.csproj" />
+  <Project Path="TeamService.Domain/TeamService.Domain.csproj" />
+  <Project Path="TeamService.Infrastructure/TeamService.Infrastructure.csproj" />
+  <Project Path="TeamService.WebApi/TeamService.WebApi.csproj" />
+</Solution>

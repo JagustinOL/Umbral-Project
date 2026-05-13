@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Nhbx7A+OpxQ=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\José Ojeda\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.7\\microsoft.aspnetcore.openapi.10.0.7.nupkg.sha512",
+    "C:\\Users\\José Ojeda\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
