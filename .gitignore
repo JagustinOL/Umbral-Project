@@ -56,31 +56,19 @@ umbral-mobile/.env*.local
 #  C# / .NET  (Umbral.WebAPI)
 # ============================================================
 
-# Artefactos de compilación
-Umbral.WebAPI/**/bin/
-Umbral.WebAPI/**/obj/
+# Ignorar artefactos de compilación y archivos temporales en cualquier proyecto .NET
+**/bin/
+**/obj/
 
-# Archivos de usuario de Visual Studio
-Umbral.WebAPI/**/*.user
-Umbral.WebAPI/**/*.suo
-Umbral.WebAPI/**/.vs/
-Umbral.WebAPI/**/*.userprefs
-
-# Publicaciones y paquetes NuGet locales
-Umbral.WebAPI/**/publish/
-Umbral.WebAPI/**/*.nupkg
-Umbral.WebAPI/**/*.nuspec
-
-# Configuraciones sensibles de entorno
-Umbral.WebAPI/**/appsettings.Development.json
-Umbral.WebAPI/**/appsettings.Production.json
-Umbral.WebAPI/**/*.pfx
-Umbral.WebAPI/**/*.cer
+# Configuraciones sensibles de entorno (appsettings) y certificados
+**/appsettings*.json
+**/*.pfx
+**/*.cer
 
 # Logs y archivos temporales .NET
-Umbral.WebAPI/**/*.log
-Umbral.WebAPI/**/*.tmp
-Umbral.WebAPI/**/TestResults/
+**/*.log
+**/*.tmp
+**/TestResults/
 
 # ============================================================
 #  DOCKER
