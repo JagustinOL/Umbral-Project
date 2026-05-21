@@ -1,40 +1,33 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj": {}
+    "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
+    "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj",
+        "projectUniqueName": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj",
         "projectName": "SessionManagement.Application",
-        "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj",
-        "packagesPath": "C:\\Users\\José Ojeda\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\obj\\",
+        "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj",
+        "packagesPath": "C:\\Users\\danpe\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\José Ojeda\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\danpe\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj": {
-                "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj"
+              "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj": {
+                "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj"
               }
             }
           }
@@ -70,7 +63,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -348,29 +341,22 @@
         }
       }
     },
-    "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj": {
+    "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj",
         "projectName": "SessionManagement.Domain",
-        "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj",
-        "packagesPath": "C:\\Users\\José Ojeda\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\obj\\",
+        "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\SessionManagement.Domain.csproj",
+        "packagesPath": "C:\\Users\\danpe\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Domain\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\José Ojeda\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\danpe\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -410,7 +396,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -688,37 +674,30 @@
         }
       }
     },
-    "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj": {
+    "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj",
+        "projectUniqueName": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj",
         "projectName": "SessionManagement.Infrastructure",
-        "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\José Ojeda\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\obj\\",
+        "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\danpe\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\José Ojeda\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\danpe\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
-                "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj"
+              "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
+                "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj"
               }
             }
           }
@@ -754,7 +733,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -1032,40 +1011,33 @@
         }
       }
     },
-    "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj": {
+    "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj",
+        "projectUniqueName": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj",
         "projectName": "SessionManagement.WebApi",
-        "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj",
-        "packagesPath": "C:\\Users\\José Ojeda\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\obj\\",
+        "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\SessionManagement.WebApi.csproj",
+        "packagesPath": "C:\\Users\\danpe\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.WebApi\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\José Ojeda\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\danpe\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
-                "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj"
+              "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj": {
+                "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Application\\SessionManagement.Application.csproj"
               },
-              "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj"
+              "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\SessionsManagement\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj"
               }
             }
           }
@@ -1110,7 +1082,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

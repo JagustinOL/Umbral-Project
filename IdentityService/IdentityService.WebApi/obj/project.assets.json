@@ -36,6 +36,42 @@
             "related": ".pdb;.xml"
           }
         }
+      },
+      "IdentityService.Application/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "IdentityService.Domain": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/IdentityService.Application.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/IdentityService.Application.dll": {}
+        }
+      },
+      "IdentityService.Domain/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "compile": {
+          "bin/placeholder/IdentityService.Domain.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/IdentityService.Domain.dll": {}
+        }
+      },
+      "IdentityService.Infrastructure/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "IdentityService.Application": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/IdentityService.Infrastructure.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/IdentityService.Infrastructure.dll": {}
+        }
       }
     }
   },
@@ -75,46 +111,62 @@
         "microsoft.openapi.2.0.0.nupkg.sha512",
         "microsoft.openapi.nuspec"
       ]
+    },
+    "IdentityService.Application/1.0.0": {
+      "type": "project",
+      "path": "../IdentityService.Application/IdentityService.Application.csproj",
+      "msbuildProject": "../IdentityService.Application/IdentityService.Application.csproj"
+    },
+    "IdentityService.Domain/1.0.0": {
+      "type": "project",
+      "path": "../IdentityService.Domain/IdentityService.Domain.csproj",
+      "msbuildProject": "../IdentityService.Domain/IdentityService.Domain.csproj"
+    },
+    "IdentityService.Infrastructure/1.0.0": {
+      "type": "project",
+      "path": "../IdentityService.Infrastructure/IdentityService.Infrastructure.csproj",
+      "msbuildProject": "../IdentityService.Infrastructure/IdentityService.Infrastructure.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "IdentityService.Application >= 1.0.0",
+      "IdentityService.Infrastructure >= 1.0.0",
       "Microsoft.AspNetCore.OpenApi >= 10.0.7"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\José Ojeda\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\danpe\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\IdentityService.WebApi.csproj",
+      "projectUniqueName": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\IdentityService.WebApi.csproj",
       "projectName": "IdentityService.WebApi",
-      "projectPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\IdentityService.WebApi.csproj",
-      "packagesPath": "C:\\Users\\José Ojeda\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\José Ojeda\\Documents\\Program\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\obj\\",
+      "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\IdentityService.WebApi.csproj",
+      "packagesPath": "C:\\Users\\danpe\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.WebApi\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\José Ojeda\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\danpe\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.Application\\IdentityService.Application.csproj": {
+              "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.Application\\IdentityService.Application.csproj"
+            },
+            "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.Infrastructure\\IdentityService.Infrastructure.csproj": {
+              "projectPath": "C:\\Users\\danpe\\OneDrive\\Documents\\8VO SEMESTRE\\DESAROLLO\\Umbral-Project\\IdentityService\\IdentityService.Infrastructure\\IdentityService.Infrastructure.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
@@ -157,7 +209,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
