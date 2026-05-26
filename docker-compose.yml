@@ -72,68 +72,28 @@ services:
   # ==========================================
   # --- 3. MICROSERVICIOS BACKEND (.NET 10) ---
   # ==========================================
-  admin-service:
+  mission-management-service:
     build:
-      context: ./AdminService
+      context: ./MissionManagement
       dockerfile: Dockerfile
-    container_name: umbral-admin-service
-    depends_on:
-      db:
-        condition: service_healthy
-      mq:
-        condition: service_healthy
-      keycloak:
-        condition: service_started
-    ports:
-      - "5149:8080"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
-      RabbitMQ__Host: mq
-      Keycloak__Authority: http://keycloak:8080/realms/umbral-realm
-
-  identity-service:
-    build:
-      context: ./IdentityService
-      dockerfile: Dockerfile
-    container_name: umbral-identity-service
-    depends_on:
-      db:
-        condition: service_healthy
-      mq:
-        condition: service_healthy
-      keycloak:
-        condition: service_started
-    ports:
-      - "5049:8080"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
-      RabbitMQ__Host: mq
-      Keycloak__Authority: http://keycloak:8080/realms/umbral-realm
-
-  team-service:
-    build:
-      context: ./TeamService
-      dockerfile: Dockerfile
-    container_name: umbral-team-service
+    container_name: umbral-mission-management-service
     depends_on:
       db:
         condition: service_healthy
       mq:
         condition: service_healthy
     ports:
-      - "5180:8080"
+      - "5260:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
 
-  sessions-service:
+  session-management-service:
     build:
-      context: ./SessionsManagement
+      context: ./SessionManagement
       dockerfile: Dockerfile
-    container_name: umbral-sessions-service
+    container_name: umbral-session-management-service
     depends_on:
       db:
         condition: service_healthy
@@ -141,6 +101,23 @@ services:
         condition: service_healthy
     ports:
       - "5278:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
+      RabbitMQ__Host: mq
+
+  scoring-audit-service:
+    build:
+      context: ./ScoringAudit
+      dockerfile: Dockerfile
+    container_name: umbral-scoring-audit-service
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    ports:
+      - "5290:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
@@ -163,14 +140,14 @@ services:
       - umbral-web-node-modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
     environment:
-      NEXT_PUBLIC_ADMIN_API_URL: http://localhost:5149
-      NEXT_PUBLIC_IDENTITY_API_URL: http://localhost:5049
-      NEXT_PUBLIC_TEAM_API_URL: http://localhost:5180
-      NEXT_PUBLIC_SESSIONS_API_URL: http://localhost:5278
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
+      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
+      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
     depends_on:
-      - admin-service
-      - identity-service
+      - mission-management-service
+      - session-management-service
+      - scoring-audit-service
 
 volumes:
   db-data:

@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="AdminService.Application/AdminService.Application.csproj" />
-  <Project Path="AdminService.Domain/AdminService.Domain.csproj" />
-  <Project Path="AdminService.Infrastructure/AdminService.Infrastructure.csproj" />
-  <Project Path="AdminService.WebApi/AdminService.WebApi.csproj" />
-</Solution>
