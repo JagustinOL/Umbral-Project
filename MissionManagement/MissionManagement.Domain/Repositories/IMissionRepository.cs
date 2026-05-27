@@ -17,10 +17,22 @@ namespace MissionManagement.Domain.Repositories;
 public interface IMissionRepository
 {
     /// <summary>
+    /// Retorna todas las misiones (cualquier estado).
+    /// Usado para el catálogo del Administrador (HU-02).
+    /// </summary>
+    Task<IReadOnlyList<Mission>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Carga una misión con su árbol completo de nodos y pistas.
     /// Retorna null si no existe.
     /// </summary>
     Task<Mission?> GetByIdAsync(Guid missionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifica si ya existe una misión con el mismo título (case-insensitive).
+    /// Usado para HU-01 (título único).
+    /// </summary>
+    Task<bool> TitleExistsAsync(string title, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retorna todas las misiones en estado Active.

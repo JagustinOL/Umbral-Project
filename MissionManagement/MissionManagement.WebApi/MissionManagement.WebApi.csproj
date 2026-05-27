@@ -8,10 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MissionManagement\MissionManagement.Application\MissionManagement.Application.csproj" />
+    <ProjectReference Include="..\MissionManagement.Application\MissionManagement.Application.csproj" />
     <ProjectReference Include="..\MissionManagement.Infrastructure\MissionManagement.Infrastructure.csproj" />
   </ItemGroup>
 

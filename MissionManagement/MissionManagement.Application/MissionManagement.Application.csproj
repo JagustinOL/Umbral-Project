@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="14.1.0" />
     <ProjectReference Include="..\MissionManagement.Domain\MissionManagement.Domain.csproj" />
   </ItemGroup>
 

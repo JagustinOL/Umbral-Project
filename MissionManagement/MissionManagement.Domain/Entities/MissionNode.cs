@@ -49,6 +49,8 @@ public sealed class MissionNode : Entity
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("El título del nodo no puede estar vacío.", nameof(title));
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("La descripción del nodo no puede estar vacía.", nameof(description));
         if (executionOrder < 1)
             throw new ArgumentOutOfRangeException(nameof(executionOrder), "El orden debe ser >= 1.");
         if (baseScore < 0)
@@ -96,6 +98,27 @@ public sealed class MissionNode : Entity
                 $"Ya existe una pista con Order={hint.Order} en el nodo '{Title}'.");
 
         _hints.Add(hint);
+    }
+
+    internal void UpdateDetails(string title, string description)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("El título del nodo no puede estar vacío.", nameof(title));
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("La descripción del nodo no puede estar vacía.", nameof(description));
+
+        Title = title;
+        Description = description;
+    }
+
+    internal bool RemoveChild(Guid childNodeId)
+    {
+        var child = _children.FirstOrDefault(c => c.Id == childNodeId);
+        if (child is null)
+            return false;
+
+        _children.Remove(child);
+        return true;
     }
 
     /// <summary>

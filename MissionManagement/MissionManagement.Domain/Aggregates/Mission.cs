@@ -89,6 +89,14 @@ public sealed class Mission : AggregateRoot
         ArgumentNullException.ThrowIfNull(node);
         ThrowIfNotDraft("agregar nodos");
 
+        if (node.ParentNodeId is not null)
+            throw new InvalidOperationException(
+                "Un nodo raíz no puede tener ParentNodeId. Use AddChildNode para sub-nodos.");
+
+        if (node.NodeType != MissionNodeType.Stage)
+            throw new InvalidOperationException(
+                "Solo se pueden agregar nodos raíz de tipo 'Stage' (etapas) a la misión.");
+
         bool orderConflict = _nodes.Any(n => n.ExecutionOrder == node.ExecutionOrder);
         if (orderConflict)
             throw new InvalidOperationException(
@@ -133,6 +141,67 @@ public sealed class Mission : AggregateRoot
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
         node.AddHint(hint);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Actualiza una etapa (nodo) existente.
+    /// INVARIANTE: Solo permitido mientras la misión está en estado Borrador (RN-01).
+    /// </summary>
+    public void UpdateNode(Guid nodeId, string title, string description)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacío.", nameof(nodeId));
+
+        ThrowIfNotDraft("editar etapas");
+
+        var node = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        if (node.NodeType != MissionNodeType.Stage)
+            throw new InvalidOperationException("Solo se pueden editar nodos de tipo 'Stage' en esta épica.");
+
+        node.UpdateDetails(title, description);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Elimina una etapa (nodo) existente.
+    /// INVARIANTE: Solo permitido mientras la misión está en estado Borrador (RN-01).
+    /// </summary>
+    public void DeleteNode(Guid nodeId)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacío.", nameof(nodeId));
+
+        ThrowIfNotDraft("eliminar etapas");
+
+        var existing = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        if (existing.NodeType != MissionNodeType.Stage)
+            throw new InvalidOperationException("Solo se pueden eliminar nodos de tipo 'Stage' en esta épica.");
+
+        if (existing.ParentNodeId is null)
+        {
+            var root = _nodes.FirstOrDefault(n => n.Id == nodeId);
+            if (root is null)
+                throw new InvalidOperationException($"No se encontró el nodo raíz con Id={nodeId}.");
+
+            _nodes.Remove(root);
+        }
+        else
+        {
+            var parent = FindNodeById(existing.ParentNodeId.Value)
+                ?? throw new InvalidOperationException(
+                    $"No se encontró el nodo padre con Id={existing.ParentNodeId}.");
+
+            var removed = parent.RemoveChild(nodeId);
+            if (!removed)
+                throw new InvalidOperationException(
+                    $"El nodo padre con Id={existing.ParentNodeId} no contiene el hijo con Id={nodeId}.");
+        }
+
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
@@ -206,6 +275,11 @@ public sealed class Mission : AggregateRoot
 
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("El título no puede estar vacío.", nameof(title));
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("La descripción no puede estar vacía.", nameof(description));
+        if (maxDurationMinutes is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxDurationMinutes),
+                "La duración máxima debe ser mayor que cero si se especifica.");
 
         Title = title;
         Description = description;
