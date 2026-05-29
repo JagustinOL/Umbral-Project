@@ -32,6 +32,12 @@ public sealed class HintConfiguration : IEntityTypeConfiguration<Hint>
 
         builder.HasIndex(x => new { x.MissionNodeId, x.Order })
             .IsUnique();
+
+        builder.ToTable(t =>
+        {
+            t.HasCheckConstraint("ck_hints_order_positive", "\"order\" >= 1");
+            t.HasCheckConstraint("ck_hints_penalty_non_negative", "penalty_points >= 0");
+        });
     }
 }
 

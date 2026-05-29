@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MissionManagement.Domain.Aggregates;
 using MissionManagement.Domain.ValueObjects;
+using System.Text.Json;
 
 namespace MissionManagement.Infrastructure.Persistence.Configurations;
 
@@ -50,6 +51,15 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
 
         builder.HasIndex(x => x.Title)
             .IsUnique();
+
+        builder.Property<List<OperatorRef>>("_operators")
+            .HasColumnName("operators")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => string.IsNullOrWhiteSpace(value)
+                    ? new List<OperatorRef>()
+                    : JsonSerializer.Deserialize<List<OperatorRef>>(value, (JsonSerializerOptions?)null) ?? new List<OperatorRef>());
 
         builder.Metadata
             .FindNavigation(nameof(Mission.Nodes))!

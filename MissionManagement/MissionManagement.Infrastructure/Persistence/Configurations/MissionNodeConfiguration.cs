@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MissionManagement.Domain.Entities;
+using MissionManagement.Domain.ValueObjects;
+using System.Text.Json;
 
 namespace MissionManagement.Infrastructure.Persistence.Configurations;
 
@@ -41,6 +43,33 @@ public sealed class MissionNodeConfiguration : IEntityTypeConfiguration<MissionN
 
         builder.Property(x => x.ParentNodeId)
             .HasColumnName("parent_node_id");
+
+        builder.Property(x => x.Instructions)
+            .HasColumnName("instructions")
+            .HasMaxLength(2000);
+
+        builder.Property(x => x.SecretCode)
+            .HasColumnName("secret_code")
+            .HasMaxLength(250);
+
+        builder.ComplexProperty(
+            x => x.Destination,
+            destinationBuilder =>
+            {
+                destinationBuilder.Property(x => x.Latitude)
+                    .HasColumnName("destination_latitude");
+                destinationBuilder.Property(x => x.Longitude)
+                    .HasColumnName("destination_longitude");
+            });
+
+        builder.Property(x => x.TriviaQuestions)
+            .HasColumnName("trivia_questions")
+            .HasColumnType("jsonb")
+            .HasConversion(
+                value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => string.IsNullOrWhiteSpace(value)
+                    ? new List<TriviaQuestion>()
+                    : JsonSerializer.Deserialize<List<TriviaQuestion>>(value, (JsonSerializerOptions?)null) ?? new List<TriviaQuestion>());
 
         builder.HasIndex("MissionId", "ParentNodeId", nameof(MissionNode.ExecutionOrder))
             .IsUnique();

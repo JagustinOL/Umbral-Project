@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="14.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.10" />
     <ProjectReference Include="..\MissionManagement.Domain\MissionManagement.Domain.csproj" />
   </ItemGroup>
 

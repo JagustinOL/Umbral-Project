@@ -23,6 +23,7 @@ namespace MissionManagement.Domain.Aggregates;
 public sealed class Mission : AggregateRoot
 {
     private readonly List<MissionNode> _nodes = [];
+    private readonly List<OperatorRef> _operators = [];
 
     public string Title { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
@@ -40,6 +41,7 @@ public sealed class Mission : AggregateRoot
 
     /// <summary>Nodos de primer nivel de la misión (raíces del árbol Composite).</summary>
     public IReadOnlyList<MissionNode> Nodes => _nodes.AsReadOnly();
+    public IReadOnlyList<OperatorRef> Operators => _operators.AsReadOnly();
 
     private Mission() { }
 
@@ -124,8 +126,45 @@ public sealed class Mission : AggregateRoot
                 $"Solo los nodos de tipo 'Stage' pueden contener sub-nodos. " +
                 $"El nodo '{parent.Title}' es de tipo '{parent.NodeType}'.");
 
+        if (childNode.NodeType is not (MissionNodeType.Trivia or MissionNodeType.TreasureHunt))
+            throw new InvalidOperationException(
+                "Solo se pueden agregar sub-nodos de tipo 'Trivia' o 'TreasureHunt' a una etapa.");
+
         parent.AddChild(childNode);
         LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public Guid AddTriviaNode(
+        Guid parentNodeId,
+        IReadOnlyList<TriviaQuestion> questions,
+        int executionOrder,
+        int baseScore = 0)
+    {
+        ThrowIfNotDraft("agregar juegos de trivia");
+        var triviaNode = MissionNode.CreateTrivia(executionOrder, questions, parentNodeId, baseScore);
+        AddChildNode(parentNodeId, triviaNode);
+        return triviaNode.Id;
+    }
+
+    public Guid AddTreasureHuntNode(
+        Guid parentNodeId,
+        string instructions,
+        string secretCode,
+        GpsCoordinate destination,
+        int executionOrder,
+        int baseScore = 0)
+    {
+        ThrowIfNotDraft("agregar juegos de busqueda");
+        var treasureNode = MissionNode.CreateTreasureHunt(
+            executionOrder,
+            instructions,
+            secretCode,
+            destination,
+            parentNodeId,
+            baseScore);
+
+        AddChildNode(parentNodeId, treasureNode);
+        return treasureNode.Id;
     }
 
     /// <summary>
@@ -165,6 +204,38 @@ public sealed class Mission : AggregateRoot
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
+    public void UpdateTriviaNode(Guid nodeId, IReadOnlyList<TriviaQuestion> questions)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
+
+        ThrowIfNotDraft("editar trivias");
+
+        var node = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        node.UpdateTriviaQuestions(questions);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public void UpdateTreasureHuntNode(
+        Guid nodeId,
+        string instructions,
+        string secretCode,
+        GpsCoordinate destination)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
+
+        ThrowIfNotDraft("editar busquedas");
+
+        var node = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        node.UpdateTreasureHunt(instructions, secretCode, destination);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
     /// <summary>
     /// Elimina una etapa (nodo) existente.
     /// INVARIANTE: Solo permitido mientras la misión está en estado Borrador (RN-01).
@@ -178,9 +249,6 @@ public sealed class Mission : AggregateRoot
 
         var existing = FindNodeById(nodeId)
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
-
-        if (existing.NodeType != MissionNodeType.Stage)
-            throw new InvalidOperationException("Solo se pueden eliminar nodos de tipo 'Stage' en esta épica.");
 
         if (existing.ParentNodeId is null)
         {
@@ -202,6 +270,68 @@ public sealed class Mission : AggregateRoot
                     $"El nodo padre con Id={existing.ParentNodeId} no contiene el hijo con Id={nodeId}.");
         }
 
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public void UpdateHint(Guid nodeId, Guid hintId, string newContent)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
+        if (hintId == Guid.Empty)
+            throw new ArgumentException("El hintId no puede ser vacio.", nameof(hintId));
+
+        ThrowIfNotDraft("editar pistas");
+
+        var node = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+        var hint = node.FindHint(hintId)
+            ?? throw new InvalidOperationException($"No se encontró la pista con Id={hintId}.");
+
+        hint.UpdateContent(newContent);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public void DeleteHint(Guid nodeId, Guid hintId)
+    {
+        if (nodeId == Guid.Empty)
+            throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
+        if (hintId == Guid.Empty)
+            throw new ArgumentException("El hintId no puede ser vacio.", nameof(hintId));
+
+        ThrowIfNotDraft("eliminar pistas");
+
+        var node = FindNodeById(nodeId)
+            ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        var removed = node.RemoveHint(hintId);
+        if (!removed)
+            throw new InvalidOperationException($"No se encontró la pista con Id={hintId}.");
+
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public void AssignOperator(Guid operatorId)
+    {
+        var operatorRef = new OperatorRef(operatorId);
+        if (_operators.Any(x => x.OperatorId == operatorRef.OperatorId))
+            throw new InvalidOperationException(
+                $"El operador con Id={operatorRef.OperatorId} ya está asignado a la misión '{Title}'.");
+
+        _operators.Add(operatorRef);
+        LastModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    public void RevokeOperator(Guid operatorId)
+    {
+        if (operatorId == Guid.Empty)
+            throw new ArgumentException("El operatorId no puede ser vacio.", nameof(operatorId));
+
+        var existing = _operators.FirstOrDefault(x => x.OperatorId == operatorId);
+        if (existing is null)
+            throw new InvalidOperationException(
+                $"El operador con Id={operatorId} no está asignado a la misión '{Title}'.");
+
+        _operators.Remove(existing);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 

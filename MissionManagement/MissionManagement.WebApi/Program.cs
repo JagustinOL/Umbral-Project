@@ -18,6 +18,8 @@ builder.Services.AddDbContext<MissionManagement.Infrastructure.Persistence.Missi
 });
 
 builder.Services.AddScoped<MissionManagement.Domain.Repositories.IMissionRepository, MissionManagement.Infrastructure.Repositories.MissionRepository>();
+builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IIdentityService, MissionManagement.Infrastructure.External.Fakes.FakeIdentityService>();
+builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.ISessionValidationService, MissionManagement.Infrastructure.External.Fakes.FakeSessionValidationService>();
 
 var app = builder.Build();
 
