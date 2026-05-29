@@ -52,9 +52,12 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
         builder.HasIndex(x => x.Title)
             .IsUnique();
 
+        builder.Ignore(x => x.Operators);
+
         builder.Property<List<OperatorRef>>("_operators")
             .HasColumnName("operators")
             .HasColumnType("jsonb")
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasConversion(
                 value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
                 value => string.IsNullOrWhiteSpace(value)
