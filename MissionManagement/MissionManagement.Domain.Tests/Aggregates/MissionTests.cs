@@ -8,6 +8,98 @@ namespace MissionManagement.Domain.Tests.Aggregates;
 public sealed class MissionTests
 {
     [Fact]
+    public void AssignOperator_WhenOperatorAlreadyAssigned_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var operatorId = Guid.NewGuid();
+        mission.AssignOperator(operatorId);
+
+        // Act
+        var action = () => mission.AssignOperator(operatorId);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ya está asignado*");
+    }
+
+    [Fact]
+    public void AssignOperator_WhenValid_AddsOperatorToList()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var operatorId = Guid.NewGuid();
+
+        // Act
+        mission.AssignOperator(operatorId);
+
+        // Assert
+        mission.Operators.Should().ContainSingle(x => x.OperatorId == operatorId);
+    }
+
+    [Fact]
+    public void RevokeOperator_WhenOperatorDoesNotExist_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var operatorId = Guid.NewGuid();
+
+        // Act
+        var action = () => mission.RevokeOperator(operatorId);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*no está asignado*");
+    }
+
+    [Fact]
+    public void AddTriviaNode_WhenMissionIsActive_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión activa", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc etapa", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
+        mission.Activate();
+
+        IReadOnlyList<TriviaQuestion> questions =
+        [
+            new TriviaQuestion("¿Capital de Colombia?", ["Bogotá", "Medellín"], correctOptionIndex: 0)
+        ];
+
+        // Act
+        var action = () => mission.AddTriviaNode(
+            parentNodeId: stage.Id,
+            questions: questions,
+            executionOrder: 1);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*estado actual es 'Active'*");
+    }
+
+    [Fact]
+    public void AddHint_WhenMissionIsActive_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión activa", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc etapa", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
+        mission.Activate();
+
+        var hint = Hint.Create(
+            missionNodeId: stage.Id,
+            order: 1,
+            content: "Pista inicial");
+
+        // Act
+        var action = () => mission.AddHintToNode(stage.Id, hint);
+
+        // Assert
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*estado actual es 'Active'*");
+    }
+
+    [Fact]
     public void UpdateDetails_WhenStatusIsActive_ThrowsInvalidOperationException()
     {
         // Arrange
