@@ -7,6 +7,6 @@ public sealed record AddHintCommand(
     Guid MissionId,
     Guid NodeId,
     string Content,
-    IFormFile Attachment
+    IFormFile? Attachment
 ) : IRequest<Guid>;
 

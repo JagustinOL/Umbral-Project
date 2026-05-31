@@ -211,11 +211,11 @@
 - **Microservicio:** MissionManagement
 - **Método y Ruta:** `POST /api/v1/missions/{missionId}/nodes/{nodeId}/hints`
 - **Capa Application:** `AddHintCommand`
-- **Body / Payload (Request):**
+- **Body / Payload (Request - `multipart/form-data`):**
   ```json
   {
     "content": "string",
-    "attachment": "IFormFile (jpg/png)"
+    "attachment": "IFormFile (jpg/png, opcional)"
   }
   ```
 

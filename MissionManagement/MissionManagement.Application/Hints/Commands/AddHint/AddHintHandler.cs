@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Domain.Entities;
 using MissionManagement.Domain.Repositories;
@@ -27,7 +28,7 @@ public sealed class AddHintHandler : IRequestHandler<AddHintCommand, Guid>
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.MissionId}.");
 
-        ValidateAttachment(request);
+        ValidateAttachment(request.Attachment);
 
         var node = mission.FindNodeById(request.NodeId);
         if (node is null)
@@ -46,19 +47,19 @@ public sealed class AddHintHandler : IRequestHandler<AddHintCommand, Guid>
         return hint.Id;
     }
 
-    private static void ValidateAttachment(AddHintCommand request)
+    private static void ValidateAttachment(IFormFile? attachment)
     {
-        if (request.Attachment is null)
-            throw new ConflictException("El adjunto es obligatorio para crear una pista.");
+        if (attachment is null)
+            return;
 
-        if (request.Attachment.Length <= 0)
+        if (attachment.Length <= 0)
             throw new ConflictException("El archivo adjunto está vacío.");
 
-        if (request.Attachment.Length > MaxAttachmentBytes)
+        if (attachment.Length > MaxAttachmentBytes)
             throw new ConflictException($"El archivo adjunto supera el tamaño máximo permitido ({MaxAttachmentBytes} bytes).");
 
-        if (string.IsNullOrWhiteSpace(request.Attachment.ContentType) ||
-            !AllowedContentTypes.Contains(request.Attachment.ContentType))
+        if (string.IsNullOrWhiteSpace(attachment.ContentType) ||
+            !AllowedContentTypes.Contains(attachment.ContentType))
         {
             throw new ConflictException("Formato de archivo no válido. Solo se permiten JPG o PNG.");
         }

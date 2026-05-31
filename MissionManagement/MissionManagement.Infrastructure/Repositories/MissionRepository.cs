@@ -28,7 +28,7 @@ public sealed class MissionRepository : IMissionRepository
             throw new ArgumentException("El missionId no puede ser vacío.", nameof(missionId));
 
         return await _dbContext.Missions
-            .AsNoTracking()
+            .AsNoTrackingWithIdentityResolution()
             .Include(m => m.Nodes)
                 .ThenInclude(n => n.Hints)
             .Include(m => m.Nodes)
