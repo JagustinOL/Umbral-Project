@@ -27,7 +27,7 @@ public sealed class RevokeOperatorFromMissionHandler : IRequestHandler<RevokeOpe
             throw new ConflictException(
                 $"No se puede revocar el operador con Id={request.OperatorId} porque supervisa una sesión activa de la misión con Id={request.MissionId}.");
 
-        var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
+        var mission = await _repository.GetByIdForUpdateAsync(request.MissionId, cancellationToken);
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.MissionId}.");
 

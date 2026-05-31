@@ -19,7 +19,7 @@ public sealed class AddRootNodeHandlerTests
         var missionId = Guid.NewGuid();
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(missionId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(missionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Mission?)null);
 
         var handler = new AddRootNodeHandler(_repositoryMock.Object);
@@ -48,7 +48,7 @@ public sealed class AddRootNodeHandlerTests
         var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mission);
 
         _repositoryMock

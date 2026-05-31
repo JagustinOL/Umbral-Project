@@ -15,7 +15,7 @@ public sealed class AssignOperatorToMissionHandler : IRequestHandler<AssignOpera
 
     public async Task Handle(AssignOperatorToMissionCommand request, CancellationToken cancellationToken)
     {
-        var mission = await _repository.GetByIdAsync(request.MissionId, cancellationToken);
+        var mission = await _repository.GetByIdForUpdateAsync(request.MissionId, cancellationToken);
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.MissionId}.");
 

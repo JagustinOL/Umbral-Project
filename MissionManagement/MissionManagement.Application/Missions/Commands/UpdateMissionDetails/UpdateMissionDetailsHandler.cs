@@ -15,7 +15,7 @@ public sealed class UpdateMissionDetailsHandler : IRequestHandler<UpdateMissionD
 
     public async Task Handle(UpdateMissionDetailsCommand request, CancellationToken cancellationToken)
     {
-        var mission = await _repository.GetByIdAsync(request.Id, cancellationToken);
+        var mission = await _repository.GetByIdForUpdateAsync(request.Id, cancellationToken);
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.Id}.");
 

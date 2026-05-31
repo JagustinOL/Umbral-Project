@@ -21,7 +21,7 @@ public sealed class DeleteNodeHandlerTests
         var nodeId = Guid.NewGuid();
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(missionId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(missionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Mission?)null);
 
         var handler = new DeleteNodeHandler(_repositoryMock.Object);
@@ -49,7 +49,7 @@ public sealed class DeleteNodeHandlerTests
         var nodeId = stage.Id;
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mission);
 
         _repositoryMock

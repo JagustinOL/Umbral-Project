@@ -27,6 +27,13 @@ public interface IMissionRepository
     /// Retorna null si no existe.
     /// </summary>
     Task<Mission?> GetByIdAsync(Guid missionId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Carga una misión para un caso de uso de escritura.
+    /// Retorna una entidad trackeada por EF para que SaveAsync
+    /// persista mutaciones del agregado sin reconstruir el grafo.
+    /// </summary>
+    Task<Mission?> GetByIdForUpdateAsync(Guid missionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Verifica si ya existe una misión con el mismo título (case-insensitive).

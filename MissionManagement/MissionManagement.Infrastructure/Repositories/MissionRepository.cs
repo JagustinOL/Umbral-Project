@@ -35,6 +35,19 @@ public sealed class MissionRepository : IMissionRepository
                 .ThenInclude(n => n.Children)
             .FirstOrDefaultAsync(m => m.Id == missionId, cancellationToken);
     }
+    
+    public async Task<Mission?> GetByIdForUpdateAsync(Guid missionId, CancellationToken cancellationToken = default)
+    {
+        if (missionId == Guid.Empty)
+            throw new ArgumentException("El missionId no puede ser vacío.", nameof(missionId));
+        
+        return await _dbContext.Missions
+            .Include(m => m.Nodes)
+                .ThenInclude(n => n.Hints)
+            .Include(m => m.Nodes)
+                .ThenInclude(n => n.Children)
+            .FirstOrDefaultAsync(m => m.Id == missionId, cancellationToken);
+    }
 
     public async Task<bool> TitleExistsAsync(string title, CancellationToken cancellationToken = default)
     {
@@ -61,17 +74,22 @@ public sealed class MissionRepository : IMissionRepository
     {
         ArgumentNullException.ThrowIfNull(mission);
 
-        var exists = await _dbContext.Missions
-            .AsNoTracking()
-            .AnyAsync(m => m.Id == mission.Id, cancellationToken);
+        var entry = _dbContext.Entry(mission);
+        if (entry.State == EntityState.Detached)
+        {
+            var exists = await _dbContext.Missions
+                .AsNoTracking()
+                .AnyAsync(m => m.Id == mission.Id, cancellationToken);
 
-        if (!exists)
-        {
-            _dbContext.Missions.Add(mission);
-        }
-        else
-        {
-            _dbContext.Missions.Update(mission);
+            if (!exists)
+            {
+                _dbContext.Missions.Add(mission);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "La misión no está trackeada. Cárguela con GetByIdForUpdateAsync antes de guardar cambios.");
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
