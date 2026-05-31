@@ -15,7 +15,9 @@ public sealed class MissionNodeConfiguration : IEntityTypeConfiguration<MissionN
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
 
-        builder.Property<Guid>("MissionId").HasColumnName("mission_id");
+        builder.Property(x => x.MissionId)
+            .HasColumnName("mission_id")
+            .IsRequired();
 
         builder.Property(x => x.Title)
             .HasColumnName("title")
@@ -71,7 +73,7 @@ public sealed class MissionNodeConfiguration : IEntityTypeConfiguration<MissionN
                     ? new List<TriviaQuestion>()
                     : JsonSerializer.Deserialize<List<TriviaQuestion>>(value, (JsonSerializerOptions?)null) ?? new List<TriviaQuestion>());
 
-        builder.HasIndex("MissionId", "ParentNodeId", nameof(MissionNode.ExecutionOrder))
+        builder.HasIndex(nameof(MissionNode.MissionId), nameof(MissionNode.ParentNodeId), nameof(MissionNode.ExecutionOrder))
             .IsUnique();
 
         builder.Metadata

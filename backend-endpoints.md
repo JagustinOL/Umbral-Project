@@ -106,8 +106,19 @@
 - **Body / Payload (Request):**
   ```json
   {
-    "questions": "List<TriviaQuestionRequest>",
-    "executionOrder": "int"
+    "questions": [
+      {
+        "prompt": "¿Capital de Venezuela?",
+        "options": ["Caracas", "Valencia", "Maracaibo"],
+        "correctOptionIndex": 0
+      },
+      {
+        "prompt": "¿2 + 2?",
+        "options": ["3", "4", "5"],
+        "correctOptionIndex": 1
+      }
+    ],
+    "executionOrder": 1
   }
   ```
 
@@ -127,7 +138,18 @@
 - **Body / Payload (Request):**
   ```json
   {
-    "questions": "List<TriviaQuestionRequest>"
+    "questions": [
+      {
+        "prompt": "¿Capital de Venezuela?",
+        "options": ["Caracas", "Valencia", "Maracaibo"],
+        "correctOptionIndex": 0
+      },
+      {
+        "prompt": "¿2 + 2?",
+        "options": ["3", "4", "5"],
+        "correctOptionIndex": 1
+      }
+    ]
   }
   ```
 

@@ -70,7 +70,7 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
 
         builder.HasMany(x => x.Nodes)
             .WithOne()
-            .HasForeignKey("MissionId")
+            .HasForeignKey(x => x.MissionId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

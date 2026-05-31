@@ -33,6 +33,7 @@ public sealed class MissionNode : Entity
     /// Nodo padre. Null si es nodo raíz de la misión (etapa de primer nivel).
     /// Patrón Composite: permite árbol de profundidad variable.
     /// </summary>
+    public Guid MissionId { get; private set; }
     public Guid? ParentNodeId { get; private set; }
     public string? Instructions { get; private set; }
     public string? SecretCode { get; private set; }
@@ -50,7 +51,8 @@ public sealed class MissionNode : Entity
         MissionNodeType nodeType,
         int executionOrder,
         int baseScore,
-        Guid? parentNodeId = null)
+        Guid? parentNodeId = null,
+        Guid? missionId = null)
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("El título del nodo no puede estar vacío.", nameof(title));
@@ -69,6 +71,7 @@ public sealed class MissionNode : Entity
             NodeType = nodeType,
             ExecutionOrder = executionOrder,
             BaseScore = baseScore,
+            MissionId = missionId ?? Guid.Empty,
             ParentNodeId = parentNodeId
         };
     }
@@ -77,7 +80,8 @@ public sealed class MissionNode : Entity
         int executionOrder,
         IReadOnlyList<TriviaQuestion> questions,
         Guid parentNodeId,
-        int baseScore = 0)
+        int baseScore = 0,
+        Guid? missionId = null)
     {
         if (parentNodeId == Guid.Empty)
             throw new ArgumentException("El parentNodeId no puede ser vacio.", nameof(parentNodeId));
@@ -90,7 +94,8 @@ public sealed class MissionNode : Entity
             nodeType: MissionNodeType.Trivia,
             executionOrder: executionOrder,
             baseScore: baseScore,
-            parentNodeId: parentNodeId);
+            parentNodeId: parentNodeId,
+            missionId: missionId);
 
         node.TriviaQuestions = questions.ToList();
         return node;
@@ -102,7 +107,8 @@ public sealed class MissionNode : Entity
         string secretCode,
         GpsCoordinate destination,
         Guid parentNodeId,
-        int baseScore = 0)
+        int baseScore = 0,
+        Guid? missionId = null)
     {
         if (parentNodeId == Guid.Empty)
             throw new ArgumentException("El parentNodeId no puede ser vacio.", nameof(parentNodeId));
@@ -118,7 +124,8 @@ public sealed class MissionNode : Entity
             nodeType: MissionNodeType.TreasureHunt,
             executionOrder: executionOrder,
             baseScore: baseScore,
-            parentNodeId: parentNodeId);
+            parentNodeId: parentNodeId,
+            missionId: missionId);
 
         node.Instructions = instructions.Trim();
         node.SecretCode = secretCode.Trim();
@@ -140,6 +147,18 @@ public sealed class MissionNode : Entity
                 $"Ya existe un nodo hijo con ExecutionOrder={child.ExecutionOrder} en este nodo.");
 
         _children.Add(child);
+    }
+
+    internal void AssignMission(Guid missionId)
+    {
+        if (missionId == Guid.Empty)
+            throw new ArgumentException("El missionId no puede ser vacío.", nameof(missionId));
+
+        if (MissionId != Guid.Empty && MissionId != missionId)
+            throw new InvalidOperationException(
+                $"El nodo ya pertenece a otra misión (MissionId={MissionId}).");
+
+        MissionId = missionId;
     }
 
     /// <summary>

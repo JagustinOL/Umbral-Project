@@ -104,6 +104,7 @@ public sealed class Mission : AggregateRoot
             throw new InvalidOperationException(
                 $"Ya existe un nodo raíz con ExecutionOrder={node.ExecutionOrder}.");
 
+        node.AssignMission(Id);
         _nodes.Add(node);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
@@ -130,6 +131,7 @@ public sealed class Mission : AggregateRoot
             throw new InvalidOperationException(
                 "Solo se pueden agregar sub-nodos de tipo 'Trivia' o 'TreasureHunt' a una etapa.");
 
+        childNode.AssignMission(parent.MissionId);
         parent.AddChild(childNode);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
@@ -141,7 +143,12 @@ public sealed class Mission : AggregateRoot
         int baseScore = 0)
     {
         ThrowIfNotDraft("agregar juegos de trivia");
-        var triviaNode = MissionNode.CreateTrivia(executionOrder, questions, parentNodeId, baseScore);
+        var triviaNode = MissionNode.CreateTrivia(
+            executionOrder,
+            questions,
+            parentNodeId,
+            baseScore,
+            missionId: Id);
         AddChildNode(parentNodeId, triviaNode);
         return triviaNode.Id;
     }
@@ -161,7 +168,8 @@ public sealed class Mission : AggregateRoot
             secretCode,
             destination,
             parentNodeId,
-            baseScore);
+            baseScore,
+            missionId: Id);
 
         AddChildNode(parentNodeId, treasureNode);
         return treasureNode.Id;
