@@ -278,3 +278,99 @@
   ```json
   { }
   ```
+
+## SessionManagement · Épica 5 (Participación Jugador/Equipo MVP)
+
+### Listar Sesiones Activas (HU-36)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/live-sessions/active`
+- **Capa Application:** `GetActiveSessionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Unirse a Sesión por Código (HU-37)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/join`
+- **Capa Application:** `JoinSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "joinCode": "string",
+    "teamId": "Guid"
+  }
+  ```
+
+### Consultar Etapa Actual del Equipo (HU-38/HU-39/HU-41)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/live-sessions/{sessionId}/teams/{teamId}/current-stage`
+- **Capa Application:** `GetTeamCurrentStageQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Enviar Código de Búsqueda del Tesoro (HU-40)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/{sessionId}/teams/{teamId}/treasure-hunt-code`
+- **Capa Application:** `SubmitTreasureHuntCodeCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "nodeId": "Guid",
+    "foundCode": "string"
+  }
+  ```
+
+### Enviar Respuesta Trivia (HU-42)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/{sessionId}/teams/{teamId}/trivia-answer`
+- **Capa Application:** `SubmitTriviaAnswerCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "nodeId": "Guid",
+    "answer": "string"
+  }
+  ```
+
+## SessionManagement · Épica 6 (Operador, alcance reducido)
+
+### Consultar Misiones Asignadas al Operador (HU-47)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/missions`
+- **Capa Application:** `GetOperatorAssignedMissionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Crear Sesión Live para una Misión Asignada (HU-48)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/operators/{operatorId}/sessions`
+- **Capa Application:** `CreateLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "missionId": "Guid"
+  }
+  ```
+
+### Consultar Equipos Unidos a una Sesión Pending (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/sessions/{sessionId}/teams`
+- **Capa Application:** `GetSessionTeamsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Iniciar Sesión Live (HU-50)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/sessions/{sessionId}/start`
+- **Capa Application:** `StartLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```

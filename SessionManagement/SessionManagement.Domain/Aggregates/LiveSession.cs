@@ -3,6 +3,7 @@ using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Events;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
+using System.Security.Cryptography;
 
 namespace SessionManagement.Domain.Aggregates;
 
@@ -36,6 +37,7 @@ public sealed class LiveSession : AggregateRoot
 
     /// <summary>Referencia al Operador asignado (Keycloak ID). Enforza RB-10.</summary>
     public Guid OperatorRef { get; private set; }
+    public string JoinCode { get; private set; } = string.Empty;
 
     public LiveSessionStatus Status { get; private set; }
 
@@ -104,12 +106,28 @@ public sealed class LiveSession : AggregateRoot
             OperatorRef = operatorRef,
             DifficultyMultiplier = difficultyMultiplier,
             MaxDurationMinutes = maxDurationMinutes,
-            Status = LiveSessionStatus.Scheduled,
+            Status = LiveSessionStatus.Pending,
+            JoinCode = GenerateJoinCode(),
             CreatedAtUtc = DateTime.UtcNow
         };
 
         session._allowedNodes.AddRange(nodeList);
         return session;
+    }
+
+    public static LiveSession CreateForMission(
+        Guid missionRef,
+        Guid operatorRef,
+        IEnumerable<AllowedNode> allowedNodes,
+        decimal difficultyMultiplier,
+        int? maxDurationMinutes = null)
+    {
+        return Create(
+            missionRef: missionRef,
+            operatorRef: operatorRef,
+            allowedNodes: allowedNodes,
+            difficultyMultiplier: difficultyMultiplier,
+            maxDurationMinutes: maxDurationMinutes);
     }
 
     // ── Gestión de equipos ─────────────────────────────────────────────────────
@@ -125,10 +143,10 @@ public sealed class LiveSession : AggregateRoot
         if (teamId == Guid.Empty)
             throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
 
-        if (Status is not (LiveSessionStatus.Scheduled or LiveSessionStatus.Preparation))
+        if (Status is not (LiveSessionStatus.Pending or LiveSessionStatus.Preparation))
             throw new SessionDomainException(
                 $"No se pueden registrar equipos en una sesión con estado '{Status}'. " +
-                $"Solo se permite en Scheduled o Preparation.");
+                $"Solo se permite en Pending o Preparation.");
 
         if (_registeredTeamIds.Contains(teamId))
             throw new SessionDomainException(
@@ -147,7 +165,7 @@ public sealed class LiveSession : AggregateRoot
 
     /// <summary>
     /// Mueve la sesión a estado Preparation (configuración de equipos).
-    /// Transición: Scheduled → Preparation.
+    /// Transición: Pending → Preparation.
     /// </summary>
     public void BeginPreparation()
     {
@@ -155,9 +173,20 @@ public sealed class LiveSession : AggregateRoot
         RaiseDomainEvent(new SessionStateChangedEvent
         {
             SessionId = Id,
-            PreviousStatus = LiveSessionStatus.Scheduled,
+            PreviousStatus = LiveSessionStatus.Pending,
             NewStatus = LiveSessionStatus.Preparation
         });
+    }
+
+    public void JoinTeam(Guid teamId, string providedJoinCode)
+    {
+        if (string.IsNullOrWhiteSpace(providedJoinCode))
+            throw new ArgumentException("El código de unión no puede estar vacío.", nameof(providedJoinCode));
+
+        if (!string.Equals(JoinCode, providedJoinCode.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new SessionDomainException("Código de sesión inválido.");
+
+        RegisterTeam(teamId);
     }
 
     /// <summary>
@@ -170,11 +199,16 @@ public sealed class LiveSession : AggregateRoot
     /// </summary>
     public void Start()
     {
-        // RB-02
+        StartSession();
+    }
+
+    public void StartSession()
+    {
+        // RN-15 / RB-02
         if (_registeredTeamIds.Count == 0)
-            throw new SessionDomainException(
+            throw new InvalidOperationException(
                 $"La sesión {Id} no puede iniciarse porque no tiene equipos registrados. " +
-                $"Registra al menos un equipo antes de iniciar (RB-02).");
+                "Debe existir al menos un equipo participante (RN-15).");
 
         var previous = Status;
         TransitionTo(LiveSessionStatus.Active);
@@ -330,6 +364,56 @@ public sealed class LiveSession : AggregateRoot
         return evidence;
     }
 
+    public Guid? GetCurrentNodeForTeam(
+        Guid teamId,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException($"El equipo {teamId} no está registrado en la sesión {Id}.");
+        if (validationRules is null || validationRules.Count == 0)
+            throw new ArgumentException("Las reglas de validación no pueden estar vacías.", nameof(validationRules));
+
+        var completedNodeIds = _evidenceSubmissions
+            .Where(e => e.TeamId == teamId && e.IsValid == true)
+            .Select(e => e.MissionNodeId)
+            .Distinct()
+            .ToHashSet();
+
+        var currentRule = validationRules
+            .OrderBy(x => x.ExecutionOrder)
+            .FirstOrDefault(x => !completedNodeIds.Contains(x.NodeId));
+
+        return currentRule?.NodeId;
+    }
+
+    public SubmissionResult SubmitTriviaAnswer(
+        Guid teamId,
+        Guid nodeId,
+        string answer,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        return SubmitByValidationType(
+            teamId: teamId,
+            nodeId: nodeId,
+            payload: answer,
+            expectedType: NodeValidationType.Trivia,
+            validationRules: validationRules);
+    }
+
+    public SubmissionResult SubmitTreasureHuntCode(
+        Guid teamId,
+        Guid nodeId,
+        string foundCode,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        return SubmitByValidationType(
+            teamId: teamId,
+            nodeId: nodeId,
+            payload: foundCode,
+            expectedType: NodeValidationType.TreasureHunt,
+            validationRules: validationRules);
+    }
+
     /// <summary>
     /// Marca una evidencia previamente aceptada como válida y dispara
     /// el evento EvidenceValidated hacia ScoringAudit.
@@ -469,7 +553,7 @@ public sealed class LiveSession : AggregateRoot
     /// Cualquier transición no listada lanza SessionDomainException (RB-09).
     ///
     /// Transiciones válidas:
-    ///   Scheduled   → Preparation, Cancelled
+    ///   Pending   → Preparation, Cancelled
     ///   Preparation → Active, Cancelled
     ///   Active      → Paused, Finalized, Cancelled
     ///   Paused      → Active, Finalized, Cancelled
@@ -478,8 +562,8 @@ public sealed class LiveSession : AggregateRoot
     {
         bool isValid = (Status, newStatus) switch
         {
-            (LiveSessionStatus.Scheduled,   LiveSessionStatus.Preparation) => true,
-            (LiveSessionStatus.Scheduled,   LiveSessionStatus.Cancelled)   => true,
+            (LiveSessionStatus.Pending,   LiveSessionStatus.Preparation) => true,
+            (LiveSessionStatus.Pending,   LiveSessionStatus.Cancelled)   => true,
             (LiveSessionStatus.Preparation, LiveSessionStatus.Active)      => true,
             (LiveSessionStatus.Preparation, LiveSessionStatus.Cancelled)   => true,
             (LiveSessionStatus.Active,      LiveSessionStatus.Paused)      => true,
@@ -505,4 +589,83 @@ public sealed class LiveSession : AggregateRoot
         _evidenceSubmissions.FirstOrDefault(e => e.Id == evidenceId)
         ?? throw new SessionDomainException(
             $"No se encontró la evidencia {evidenceId} en la sesión {Id}.");
+
+    private SubmissionResult SubmitByValidationType(
+        Guid teamId,
+        Guid nodeId,
+        string payload,
+        NodeValidationType expectedType,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+            throw new ArgumentException("El payload no puede estar vacío.", nameof(payload));
+        if (validationRules is null || validationRules.Count == 0)
+            throw new ArgumentException("Las reglas de validación no pueden estar vacías.", nameof(validationRules));
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException($"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        var orderedRules = validationRules.OrderBy(x => x.ExecutionOrder).ToList();
+        var currentRule = ResolveCurrentRule(teamId, orderedRules);
+        if (currentRule is null)
+            throw new SessionDomainException($"El equipo {teamId} ya completó todos los nodos.");
+
+        // RN-04
+        bool alreadyClosed = _evidenceSubmissions.Any(e =>
+            e.TeamId == teamId &&
+            e.MissionNodeId == nodeId &&
+            e.IsValid == true);
+
+        if (alreadyClosed)
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+
+        // RN-11
+        if (currentRule.NodeId != nodeId)
+            throw new SessionDomainException(
+                $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId} (RN-11).");
+
+        if (currentRule.ValidationType != expectedType)
+            throw new SessionDomainException("Tipo de validación no coincide con el nodo actual.");
+
+        var evidence = AcceptEvidence(teamId, nodeId, payload);
+
+        // RN-12
+        bool isCorrect = string.Equals(
+            payload.Trim(),
+            currentRule.ExpectedValue.Trim(),
+            StringComparison.OrdinalIgnoreCase);
+
+        if (isCorrect)
+            MarkEvidenceAsValid(evidence.Id);
+        else
+            MarkEvidenceAsInvalid(evidence.Id, "Respuesta/código incorrecto.");
+
+        var nextRule = ResolveCurrentRule(teamId, orderedRules);
+        var baseScore = _allowedNodes.FirstOrDefault(x => x.NodeId == nodeId)?.BaseScore ?? 0;
+
+        return new SubmissionResult(
+            IsCorrect: isCorrect,
+            CurrentNodeId: nodeId,
+            NextNodeId: nextRule?.NodeId,
+            AwardedPoints: isCorrect ? baseScore : 0);
+    }
+
+    private NodeValidationRule? ResolveCurrentRule(
+        Guid teamId,
+        IReadOnlyList<NodeValidationRule> orderedRules)
+    {
+        var completedNodeIds = _evidenceSubmissions
+            .Where(e => e.TeamId == teamId && e.IsValid == true)
+            .Select(e => e.MissionNodeId)
+            .Distinct()
+            .ToHashSet();
+
+        return orderedRules.FirstOrDefault(x => !completedNodeIds.Contains(x.NodeId));
+    }
+
+    private static string GenerateJoinCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = RandomNumberGenerator.GetBytes(6);
+        return new string(bytes.Select(b => chars[b % chars.Length]).ToArray());
+    }
 }

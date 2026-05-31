@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="14.1.0" />
     <ProjectReference Include="..\SessionManagement.Domain\SessionManagement.Domain.csproj" />
   </ItemGroup>
 
