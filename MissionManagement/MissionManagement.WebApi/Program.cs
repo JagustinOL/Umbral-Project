@@ -18,8 +18,24 @@ builder.Services.AddDbContext<MissionManagement.Infrastructure.Persistence.Missi
 });
 
 builder.Services.AddScoped<MissionManagement.Domain.Repositories.IMissionRepository, MissionManagement.Infrastructure.Repositories.MissionRepository>();
-builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IIdentityService, MissionManagement.Infrastructure.External.Fakes.FakeIdentityService>();
 builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.ISessionValidationService, MissionManagement.Infrastructure.External.Fakes.FakeSessionValidationService>();
+
+builder.Services.AddOptions<MissionManagement.Infrastructure.External.Keycloak.KeycloakOptions>()
+    .Bind(builder.Configuration.GetSection(MissionManagement.Infrastructure.External.Keycloak.KeycloakOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+var useFakeIdentityService = builder.Configuration.GetValue<bool>("Identity:UseFake");
+if (useFakeIdentityService)
+{
+    builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IIdentityService, MissionManagement.Infrastructure.External.Fakes.FakeIdentityService>();
+}
+else
+{
+    builder.Services.AddHttpClient<
+        MissionManagement.Application.Common.Interfaces.IIdentityService,
+        MissionManagement.Infrastructure.External.Keycloak.KeycloakIdentityService>();
+}
 
 var app = builder.Build();
 

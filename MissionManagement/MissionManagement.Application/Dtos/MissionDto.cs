@@ -8,6 +8,7 @@ public sealed record MissionDto(
     string Difficulty,
     int? MaxDurationMinutes,
     DateTime CreatedAtUtc,
-    DateTime? LastModifiedAtUtc
+    DateTime? LastModifiedAtUtc,
+    IReadOnlyList<Guid> OperatorIds
 );
 

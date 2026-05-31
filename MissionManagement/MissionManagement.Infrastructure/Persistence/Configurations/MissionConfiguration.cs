@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MissionManagement.Domain.Aggregates;
 using MissionManagement.Domain.ValueObjects;
@@ -54,7 +55,18 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
 
         builder.Ignore(x => x.Operators);
 
-        builder.Property<List<OperatorRef>>("_operators")
+        var operatorsComparer = new ValueComparer<List<OperatorRef>>(
+            (left, right) =>
+                left == null
+                    ? right == null
+                    : right != null && left.SequenceEqual(right),
+            value =>
+                value == null
+                    ? 0
+                    : value.Aggregate(0, (current, item) => HashCode.Combine(current, item.GetHashCode())),
+            value => value == null ? new List<OperatorRef>() : value.ToList());
+
+        var operatorsProperty = builder.Property<List<OperatorRef>>("_operators")
             .HasColumnName("operators")
             .HasColumnType("jsonb")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
@@ -63,6 +75,7 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
                 value => string.IsNullOrWhiteSpace(value)
                     ? new List<OperatorRef>()
                     : JsonSerializer.Deserialize<List<OperatorRef>>(value, (JsonSerializerOptions?)null) ?? new List<OperatorRef>());
+        operatorsProperty.Metadata.SetValueComparer(operatorsComparer);
 
         builder.Metadata
             .FindNavigation(nameof(Mission.Nodes))!

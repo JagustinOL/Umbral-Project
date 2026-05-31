@@ -28,7 +28,8 @@ public sealed class GetMissionByIdHandler : IRequestHandler<GetMissionByIdQuery,
             Difficulty: mission.Difficulty.Name,
             MaxDurationMinutes: mission.MaxDurationMinutes,
             CreatedAtUtc: mission.CreatedAtUtc,
-            LastModifiedAtUtc: mission.LastModifiedAtUtc);
+            LastModifiedAtUtc: mission.LastModifiedAtUtc,
+            OperatorIds: mission.Operators.Select(x => x.OperatorId).ToList());
     }
 }
 

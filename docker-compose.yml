@@ -88,6 +88,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__MissionManagement: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
+      Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__Realm: umbral-realm
+      Keycloak__AdminRealm: master
+      Keycloak__AdminClientId: admin-cli
+      Keycloak__AdminUsername: admin
+      Keycloak__AdminPassword: admin
+      Keycloak__OperatorRole: operator
 
   session-management-service:
     build:

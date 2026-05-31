@@ -22,6 +22,24 @@
   ```json
   { }
   ```
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "id": "Guid",
+      "title": "string",
+      "description": "string",
+      "status": "Draft|Active|Inactive",
+      "difficulty": "Easy|Medium|Hard",
+      "maxDurationMinutes": 0,
+      "createdAtUtc": "2026-01-01T00:00:00Z",
+      "lastModifiedAtUtc": "2026-01-01T00:00:00Z",
+      "operatorIds": [
+        "Guid"
+      ]
+    }
+  ]
+  ```
 
 ### Consultar Misión por Id (HU-02)
 - **Microservicio:** MissionManagement
@@ -30,6 +48,22 @@
 - **Body / Payload (Request):**
   ```json
   { }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "id": "Guid",
+    "title": "string",
+    "description": "string",
+    "status": "Draft|Active|Inactive",
+    "difficulty": "Easy|Medium|Hard",
+    "maxDurationMinutes": 0,
+    "createdAtUtc": "2026-01-01T00:00:00Z",
+    "lastModifiedAtUtc": "2026-01-01T00:00:00Z",
+    "operatorIds": [
+      "Guid"
+    ]
+  }
   ```
 
 ### Modificar Misión (HU-03)
@@ -262,6 +296,15 @@
     "email": "string"
   }
   ```
+- **Response (201 Created):**
+  ```json
+  {
+    "id": "Guid"
+  }
+  ```
+- **Errores esperados:**
+  - `409 Conflict` cuando el correo ya existe en Keycloak.
+  - `400 BadRequest` para payload inválido.
 
 ### Consultar Operadores (HU-23)
 - **Microservicio:** MissionManagement
@@ -271,6 +314,21 @@
   ```json
   { }
   ```
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "operatorId": "Guid",
+      "firstName": "string",
+      "lastName": "string",
+      "email": "string",
+      "isActive": true
+    }
+  ]
+  ```
+- **Notas:**
+  - Si no existen operadores, retorna `[]`.
+  - El listado se obtiene desde Keycloak (usuarios con rol `operator`).
 
 ### Desactivar Operador (HU-26)
 - **Microservicio:** MissionManagement
@@ -291,6 +349,10 @@
     "operatorId": "Guid"
   }
   ```
+- **Response (204 No Content)**
+- **Errores esperados:**
+  - `400 BadRequest` si el operador ya está asignado a la misión.
+  - `404 NotFound` si la misión no existe.
 
 ### Revocar Operador de Misión (HU-25)
 - **Microservicio:** MissionManagement

@@ -26,7 +26,8 @@ public sealed class GetMissionsHandler : IRequestHandler<GetMissionsQuery, IRead
                 Difficulty: m.Difficulty.Name,
                 MaxDurationMinutes: m.MaxDurationMinutes,
                 CreatedAtUtc: m.CreatedAtUtc,
-                LastModifiedAtUtc: m.LastModifiedAtUtc))
+                LastModifiedAtUtc: m.LastModifiedAtUtc,
+                OperatorIds: m.Operators.Select(x => x.OperatorId).ToList()))
             .ToList();
     }
 }
