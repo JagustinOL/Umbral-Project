@@ -29,12 +29,16 @@ var useFakeIdentityService = builder.Configuration.GetValue<bool>("Identity:UseF
 if (useFakeIdentityService)
 {
     builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IIdentityService, MissionManagement.Infrastructure.External.Fakes.FakeIdentityService>();
+    builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IPlayerIdentityService, MissionManagement.Infrastructure.External.Fakes.FakePlayerIdentityService>();
 }
 else
 {
     builder.Services.AddHttpClient<
         MissionManagement.Application.Common.Interfaces.IIdentityService,
         MissionManagement.Infrastructure.External.Keycloak.KeycloakIdentityService>();
+    builder.Services.AddHttpClient<
+        MissionManagement.Application.Common.Interfaces.IPlayerIdentityService,
+        MissionManagement.Infrastructure.External.Keycloak.KeycloakPlayerIdentityService>();
 }
 
 var app = builder.Build();

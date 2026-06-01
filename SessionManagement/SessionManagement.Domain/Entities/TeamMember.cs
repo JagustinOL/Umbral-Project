@@ -19,11 +19,16 @@ public sealed class TeamMember : Entity
     /// <summary>Alias o nombre del jugador para mostrar en el tablero.</summary>
     public string DisplayName { get; private set; } = string.Empty;
 
+    public TeamMemberRole Role { get; private set; }
+
     public DateTime JoinedAtUtc { get; private set; }
 
     private TeamMember() { }
 
-    public static TeamMember Create(Guid playerRef, string displayName)
+    public static TeamMember Create(
+        Guid playerRef,
+        string displayName,
+        TeamMemberRole role = TeamMemberRole.Member)
     {
         if (playerRef == Guid.Empty)
             throw new ArgumentException("PlayerRef no puede ser un Guid vacío.", nameof(playerRef));
@@ -35,7 +40,18 @@ public sealed class TeamMember : Entity
             Id = Guid.NewGuid(),
             PlayerRef = playerRef,
             DisplayName = displayName.Trim(),
+            Role = role,
             JoinedAtUtc = DateTime.UtcNow
         };
+    }
+
+    internal void PromoteToLeader()
+    {
+        Role = TeamMemberRole.Leader;
+    }
+
+    internal void DemoteToMember()
+    {
+        Role = TeamMemberRole.Member;
     }
 }

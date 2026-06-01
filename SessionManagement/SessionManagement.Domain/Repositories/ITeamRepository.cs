@@ -19,6 +19,16 @@ public interface ITeamRepository
         string teamCode,
         CancellationToken cancellationToken = default);
 
+    Task<bool> ExistsByNameAsync(
+        string teamName,
+        Guid? excludingTeamId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsByCodeAsync(
+        string teamCode,
+        Guid? excludingTeamId = null,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Team>> GetBySessionIdAsync(
         Guid sessionId,
         CancellationToken cancellationToken = default);

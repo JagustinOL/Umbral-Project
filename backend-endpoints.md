@@ -205,8 +205,11 @@
   {
     "instructions": "string",
     "secretCode": "string",
-    "destination": "GpsCoordinateRequest",
-    "executionOrder": "int"
+    "destination": {
+      "latitude": "double",
+      "longitude": "double"
+    },
+    "executionOrder": 1
   }
   ```
 
@@ -228,7 +231,10 @@
   {
     "instructions": "string",
     "secretCode": "string",
-    "destination": "GpsCoordinateRequest"
+    "destination": {
+      "latitude": "double",
+      "longitude": "double"
+    }
   }
   ```
 
@@ -363,6 +369,100 @@
   { }
   ```
 
+## MissionManagement · Gestión de Jugadores (TeamMember / Keycloak)
+
+### Crear Jugador
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `POST /api/v1/players`
+- **Capa Application:** `CreatePlayerCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string"
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "id": "Guid"
+  }
+  ```
+- **Errores esperados:**
+  - `409 Conflict` cuando el correo ya existe en Keycloak.
+
+### Consultar Jugadores
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `GET /api/v1/players`
+- **Capa Application:** `GetPlayersQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "playerId": "Guid",
+      "firstName": "string",
+      "lastName": "string",
+      "email": "string",
+      "isActive": true
+    }
+  ]
+  ```
+
+### Consultar Jugador por Id
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `GET /api/v1/players/{playerId}`
+- **Capa Application:** `GetPlayerByIdQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "playerId": "Guid",
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string",
+    "isActive": true
+  }
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si el jugador no existe.
+
+### Modificar Jugador
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `PUT /api/v1/players/{playerId}`
+- **Capa Application:** `UpdatePlayerCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string"
+  }
+  ```
+- **Response (204 No Content)**
+- **Errores esperados:**
+  - `404 NotFound` si el jugador no existe.
+  - `409 Conflict` cuando el correo ya existe en Keycloak.
+
+### Desactivar Jugador
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `PUT /api/v1/players/{playerId}/deactivate`
+- **Capa Application:** `DeactivatePlayerCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (204 No Content)**
+- **Errores esperados:**
+  - `404 NotFound` si el jugador no existe.
+
 ## SessionManagement · Épica 4 (Gestión de Equipos e Integrantes)
 
 ### Crear Equipo (HU-27)
@@ -372,7 +472,15 @@
 - **Body / Payload (Request):**
   ```json
   {
-    "name": "string"
+    "name": "string",
+    "creatorId": "Guid",
+    "creatorDisplayName": "string (opcional)"
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "id": "Guid"
   }
   ```
 
@@ -392,18 +500,19 @@
 - **Body / Payload (Request):**
   ```json
   {
-    "newName": "string"
+    "newName": "string",
+    "requestorId": "Guid"
   }
   ```
+- **Nota:** `requestorId` debe ser el `playerRef` del miembro con rol `Leader` (tras crear equipo, usar el mismo `creatorId`).
 
 ### Disolver Equipo (HU-34)
 - **Microservicio:** SessionManagement
-- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}`
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}?requestorId={guid}`
 - **Capa Application:** `DisbandTeamCommand`
-- **Body / Payload (Request):**
-  ```json
-  { }
-  ```
+- **Query params:** `requestorId` (Guid, obligatorio) — jugador que solicita la disolución; debe ser el líder.
+- **Body / Payload (Request):** ninguno.
+- **Nota:** Tras crear equipo, usar el mismo `creatorId` como `requestorId` salvo que el liderazgo se haya delegado (consultar `GET /api/v1/teams/{teamId}` → miembro con `role: "Leader"`).
 
 ### Solicitar Unión a Equipo (HU-28/HU-35)
 - **Microservicio:** SessionManagement
@@ -420,12 +529,11 @@
 
 ### Consultar Solicitudes Pendientes de Equipo (HU-32)
 - **Microservicio:** SessionManagement
-- **Método y Ruta:** `GET /api/v1/teams/{teamId}/requests`
+- **Método y Ruta:** `GET /api/v1/teams/{teamId}/requests?requestorId={guid}`
 - **Capa Application:** `GetPendingRequestsQuery`
-- **Body / Payload (Request):**
-  ```json
-  { }
-  ```
+- **Query params:** `requestorId` (Guid, obligatorio) — debe ser el líder del equipo.
+- **Body / Payload (Request):** ninguno.
+- **Nota:** Tras crear equipo, usar el mismo `creatorId` como `requestorId`.
 
 ### Procesar Solicitud de Unión (HU-30)
 - **Microservicio:** SessionManagement
@@ -434,20 +542,18 @@
 - **Body / Payload (Request):**
   ```json
   {
-    "approve": "bool"
+    "approve": true,
+    "requestorId": "Guid"
   }
   ```
+- **Nota:** `requestorId` debe ser el `playerRef` del miembro con rol `Leader`.
 
 ### Expulsar Integrante del Equipo (HU-31)
 - **Microservicio:** SessionManagement
-- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}/members/{playerId}`
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}/members/{playerId}?requestorId={guid}`
 - **Capa Application:** `RemoveMemberCommand`
-- **Body / Payload (Request):**
-  ```json
-  { }
-  ```
-
-###IMPORTANTE: REVISAR CRUD DE USUARIO (HU 32 - HU 35)(IMPLEMENTACION CON KEYCLOAK)
+- **Query params:** `requestorId` (Guid, obligatorio) — quien ejecuta la acción (líder al expulsar a otro, o el propio jugador al abandonar).
+- **Body / Payload (Request):** ninguno.
 
 ## SessionManagement · Épica 5 (Participación Jugador/Equipo MVP)
 

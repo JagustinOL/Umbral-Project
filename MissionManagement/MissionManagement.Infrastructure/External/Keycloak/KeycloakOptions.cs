@@ -28,4 +28,7 @@ public sealed class KeycloakOptions
 
     [Required]
     public string OperatorRole { get; init; } = "operator";
+
+    [Required]
+    public string PlayerRole { get; init; } = "player";
 }

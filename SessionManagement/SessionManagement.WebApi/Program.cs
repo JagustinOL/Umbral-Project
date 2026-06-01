@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Domain.Repositories;
 using SessionManagement.Infrastructure.Integrations;
@@ -18,14 +21,33 @@ builder.Services.AddScoped<ExceptionHandlingMiddleware>();
 
 builder.Services.AddDbContext<SessionManagementDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("SessionManagement");
+    var connectionString = builder.Configuration.GetConnectionString("SessionManagement")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "No se encontró cadena de conexión. Configure ConnectionStrings:SessionManagement o ConnectionStrings:DefaultConnection.");
     options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
+builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 builder.Services.AddScoped<IMissionIntegrationService, FakeMissionIntegrationService>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<SessionManagementDbContext>();
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("SELECT 1 FROM teams LIMIT 1");
+    }
+    catch (PostgresException ex) when (ex.SqlState == "42P01")
+    {
+        // Shared database: create SessionManagement tables only when missing.
+        var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
+        databaseCreator.CreateTables();
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {

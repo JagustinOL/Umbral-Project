@@ -35,8 +35,8 @@ Este spec define la lógica de negocio y los contratos técnicos para la constit
 
 - **HU-33: Modificar Datos del Equipo**
   - **Endpoint:** `PUT /api/v1/teams/{teamId}`
-  - **Command:** `UpdateTeamCommand(Guid TeamId, string NewName)`
-  - **Validación:** Ejecutar control de RN-13 (Rechazar si `IsLocked == true`).
+  - **Command:** `UpdateTeamCommand(Guid TeamId, string NewName, Guid RequestorId)`
+  - **Validación:** Solo el *Líder* (`RequestorId`). Ejecutar control de RN-13 (Rechazar si `IsLocked == true`).
 
 - **HU-34: Disolver Equipo**
   - **Endpoint:** `DELETE /api/v1/teams/{teamId}`
@@ -52,13 +52,14 @@ Este spec define la lógica de negocio y los contratos técnicos para la constit
   - **Flujo Técnico:** El backend busca el equipo por el `TeamCode`. Si es válido y no está lleno, crea una `JoinRequest` con estado *Pendiente*.
 
 - **HU-32: Consultar Solicitudes Pendientes**
-  - **Endpoint:** `GET /api/v1/teams/{teamId}/requests`
-  - **Query:** `GetPendingRequestsQuery(Guid TeamId)`
-  - **Restricción:** Solo el *Líder* del equipo tiene autorización para consumir este endpoint.
+  - **Endpoint:** `GET /api/v1/teams/{teamId}/requests?requestorId={guid}`
+  - **Query:** `GetPendingRequestsQuery(Guid TeamId, Guid RequestorId)`
+  - **Restricción:** Solo el *Líder* del equipo (`RequestorId` debe coincidir con el miembro con rol Leader).
 
 - **HU-30: Procesar Solicitud (Aprobar/Rechazar)**
   - **Endpoint:** `PUT /api/v1/teams/{teamId}/requests/{requestId}`
-  - **Command:** `ProcessJoinRequestCommand(Guid TeamId, Guid RequestId, bool IsApproved)`
+  - **Command:** `ProcessJoinRequestCommand(Guid TeamId, Guid RequestId, bool IsApproved, Guid RequestorId)`
+  - **Restricción:** Solo el *Líder* (`RequestorId`).
   - **Validación:** Si `IsApproved == true`, validar inmediatamente los límites de capacidad y la RN-13 (No se pueden aprobar solicitudes si el equipo ya empezó a jugar). Si el equipo ya tiene 4 miembros, lanzar una excepción de dominio.
 
 - **HU-31: Salir o Remover del Equipo**
