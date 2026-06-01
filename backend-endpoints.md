@@ -279,6 +279,92 @@
   { }
   ```
 
+## SessionManagement · Épica 4 (Gestión de Equipos e Integrantes)
+
+### Crear Equipo (HU-27)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/teams`
+- **Capa Application:** `CreateTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "name": "string"
+  }
+  ```
+
+### Consultar Equipo por Id (HU-29)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/teams/{teamId}`
+- **Capa Application:** `GetTeamByIdQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Modificar Equipo (HU-33)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/teams/{teamId}`
+- **Capa Application:** `UpdateTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "newName": "string"
+  }
+  ```
+
+### Disolver Equipo (HU-34)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}`
+- **Capa Application:** `DisbandTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Solicitar Unión a Equipo (HU-28/HU-35)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/teams/join-requests`
+- **Capa Application:** `SubmitJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "teamCode": "string",
+    "playerRef": "Guid",
+    "displayName": "string"
+  }
+  ```
+
+### Consultar Solicitudes Pendientes de Equipo (HU-32)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/teams/{teamId}/requests`
+- **Capa Application:** `GetPendingRequestsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Procesar Solicitud de Unión (HU-30)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/teams/{teamId}/requests/{requestId}`
+- **Capa Application:** `ProcessJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "approve": "bool"
+  }
+  ```
+
+### Expulsar Integrante del Equipo (HU-31)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}/members/{playerId}`
+- **Capa Application:** `RemoveMemberCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+###IMPORTANTE: REVISAR CRUD DE USUARIO (HU 32 - HU 35)(IMPLEMENTACION CON KEYCLOAK)
+
 ## SessionManagement · Épica 5 (Participación Jugador/Equipo MVP)
 
 ### Listar Sesiones Activas (HU-36)

@@ -95,6 +95,7 @@ public sealed class Mission : AggregateRoot
             throw new InvalidOperationException(
                 "Un nodo raíz no puede tener ParentNodeId. Use AddChildNode para sub-nodos.");
 
+
         if (node.NodeType != MissionNodeType.Stage)
             throw new InvalidOperationException(
                 "Solo se pueden agregar nodos raíz de tipo 'Stage' (etapas) a la misión.");
@@ -386,7 +387,7 @@ public sealed class Mission : AggregateRoot
     /// Desactiva la misión. Las sesiones existentes no se ven afectadas,
     /// pero no podrán crearse nuevas sesiones con esta misión.
     /// </summary>
-    public void Deactivate()
+    public void Deactivate()  //ELIMINAR
     {
         if (Status == MissionStatus.Inactive)
             throw new InvalidOperationException($"La misión '{Title}' ya está inactiva.");
@@ -399,7 +400,7 @@ public sealed class Mission : AggregateRoot
     /// Actualiza los metadatos básicos de la misión.
     /// INVARIANTE: Solo permitido mientras la misión está en estado Borrador.
     /// </summary>
-    public void UpdateDetails(string title, string description, int? maxDurationMinutes)
+    public void UpdateDetails(string title, string description, int? maxDurationMinutes)  //MODIFICAR MISION
     {
         ThrowIfNotDraft("editar detalles");
 
