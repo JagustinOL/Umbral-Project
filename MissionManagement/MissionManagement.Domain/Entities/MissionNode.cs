@@ -177,7 +177,7 @@ public sealed class MissionNode : Entity
         _hints.Add(hint);
     }
 
-    internal void UpdateDetails(string title, string description)
+    internal void UpdateDetails(string title, string description)   //MODIFICAR MISSION NODE
     {
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("El título del nodo no puede estar vacío.", nameof(title));

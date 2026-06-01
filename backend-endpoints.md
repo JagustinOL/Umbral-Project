@@ -362,3 +362,185 @@
   ```json
   { }
   ```
+
+## SessionManagement · Épica 4 (Gestión de Equipos e Integrantes)
+
+### Crear Equipo (HU-27)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/teams`
+- **Capa Application:** `CreateTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "name": "string"
+  }
+  ```
+
+### Consultar Equipo por Id (HU-29)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/teams/{teamId}`
+- **Capa Application:** `GetTeamByIdQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Modificar Equipo (HU-33)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/teams/{teamId}`
+- **Capa Application:** `UpdateTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "newName": "string"
+  }
+  ```
+
+### Disolver Equipo (HU-34)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}`
+- **Capa Application:** `DisbandTeamCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Solicitar Unión a Equipo (HU-28/HU-35)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/teams/join-requests`
+- **Capa Application:** `SubmitJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "teamCode": "string",
+    "playerRef": "Guid",
+    "displayName": "string"
+  }
+  ```
+
+### Consultar Solicitudes Pendientes de Equipo (HU-32)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/teams/{teamId}/requests`
+- **Capa Application:** `GetPendingRequestsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Procesar Solicitud de Unión (HU-30)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/teams/{teamId}/requests/{requestId}`
+- **Capa Application:** `ProcessJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "approve": "bool"
+  }
+  ```
+
+### Expulsar Integrante del Equipo (HU-31)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `DELETE /api/v1/teams/{teamId}/members/{playerId}`
+- **Capa Application:** `RemoveMemberCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+###IMPORTANTE: REVISAR CRUD DE USUARIO (HU 32 - HU 35)(IMPLEMENTACION CON KEYCLOAK)
+
+## SessionManagement · Épica 5 (Participación Jugador/Equipo MVP)
+
+### Listar Sesiones Activas (HU-36)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/live-sessions/active`
+- **Capa Application:** `GetActiveSessionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Unirse a Sesión por Código (HU-37)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/join`
+- **Capa Application:** `JoinSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "joinCode": "string",
+    "teamId": "Guid"
+  }
+  ```
+
+### Consultar Etapa Actual del Equipo (HU-38/HU-39/HU-41)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/live-sessions/{sessionId}/teams/{teamId}/current-stage`
+- **Capa Application:** `GetTeamCurrentStageQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Enviar Código de Búsqueda del Tesoro (HU-40)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/{sessionId}/teams/{teamId}/treasure-hunt-code`
+- **Capa Application:** `SubmitTreasureHuntCodeCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "nodeId": "Guid",
+    "foundCode": "string"
+  }
+  ```
+
+### Enviar Respuesta Trivia (HU-42)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/live-sessions/{sessionId}/teams/{teamId}/trivia-answer`
+- **Capa Application:** `SubmitTriviaAnswerCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "nodeId": "Guid",
+    "answer": "string"
+  }
+  ```
+
+## SessionManagement · Épica 6 (Operador, alcance reducido)
+
+### Consultar Misiones Asignadas al Operador (HU-47)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/missions`
+- **Capa Application:** `GetOperatorAssignedMissionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Crear Sesión Live para una Misión Asignada (HU-48)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/operators/{operatorId}/sessions`
+- **Capa Application:** `CreateLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "missionId": "Guid"
+  }
+  ```
+
+### Consultar Equipos Unidos a una Sesión Pending (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/sessions/{sessionId}/teams`
+- **Capa Application:** `GetSessionTeamsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Iniciar Sesión Live (HU-50)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/sessions/{sessionId}/start`
+- **Capa Application:** `StartLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```

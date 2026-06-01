@@ -15,12 +15,20 @@ public interface ILiveSessionRepository
         Guid sessionId,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Retorna todas las sesiones activas de un operador.
-    /// Usado para la consulta del panel del Operador (RB-10).
-    /// </summary>
-    Task<IReadOnlyList<LiveSession>> GetActiveSessionsByOperatorAsync(
-        Guid operatorRef,
+    Task<LiveSession?> GetByJoinCodeAsync(
+        string joinCode,
+        CancellationToken cancellationToken = default);
+
+    Task<LiveSession?> GetByIdForOperatorAsync(
+        Guid sessionId,
+        Guid operatorId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LiveSession>> GetPendingByOperatorAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LiveSession>> GetActiveSessionsAsync(
         CancellationToken cancellationToken = default);
 
     Task SaveAsync(

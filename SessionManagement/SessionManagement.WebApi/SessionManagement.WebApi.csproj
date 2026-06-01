@@ -7,11 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.6" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SessionManagement.Application\SessionManagement.Application.csproj" />
+    <ProjectReference Include="..\SessionManagement.Infrastructure\SessionManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\SessionManagement.Domain\SessionManagement.Domain.csproj" />
   </ItemGroup>
 
 </Project>

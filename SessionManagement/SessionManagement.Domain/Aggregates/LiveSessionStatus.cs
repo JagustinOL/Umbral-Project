@@ -5,18 +5,18 @@ namespace SessionManagement.Domain.Aggregates;
 ///
 /// Transiciones válidas (Patrón State — RB-09):
 ///
-///   Scheduled ──► Preparation ──► Active ──► Paused ──► Active
+///   Pending ──► Preparation ──► Active ──► Paused ──► Active
 ///                                         └──► Finalized
 ///                                         └──► Cancelled
 ///   Preparation ──► Cancelled
-///   Scheduled   ──► Cancelled
+///   Pending   ──► Cancelled
 ///
 /// Cualquier otra transición lanza SessionDomainException.
 /// </summary>
 public enum LiveSessionStatus
 {
     /// <summary>Creada, aún no está configurando equipos.</summary>
-    Scheduled = 0,
+    Pending = 0,
 
     /// <summary>En preparación: equipos registrándose, configuración final.</summary>
     Preparation = 1,
