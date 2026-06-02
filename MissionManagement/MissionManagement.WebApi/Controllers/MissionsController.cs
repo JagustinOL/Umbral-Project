@@ -4,6 +4,7 @@ using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Application.Missions.Commands.DeactivateMission;
 using MissionManagement.Application.Missions.Commands.UpdateMissionDetails;
 using MissionManagement.Application.Missions.Queries.GetMissionById;
+using MissionManagement.Application.Missions.Queries.GetMissionNodeValidations;
 using MissionManagement.Application.Missions.Queries.GetMissions;
 using MissionManagement.WebApi.Contracts.Missions;
 
@@ -43,6 +44,13 @@ public sealed class MissionsController : ControllerBase
     public async Task<IActionResult> GetById([FromRoute] Guid id, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetMissionByIdQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/node-validations")]
+    public async Task<IActionResult> GetNodeValidations([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetMissionNodeValidationsQuery(id), cancellationToken);
         return Ok(result);
     }
 

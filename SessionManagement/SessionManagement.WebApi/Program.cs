@@ -30,7 +30,15 @@ builder.Services.AddDbContext<SessionManagementDbContext>(options =>
 
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
-builder.Services.AddScoped<IMissionIntegrationService, FakeMissionIntegrationService>();
+
+var missionManagementBaseUrl = builder.Configuration["MissionManagement:BaseUrl"];
+if (string.IsNullOrWhiteSpace(missionManagementBaseUrl))
+    throw new InvalidOperationException("No se encontró MissionManagement:BaseUrl para configurar la integración.");
+
+builder.Services.AddHttpClient<IMissionIntegrationService, HttpMissionIntegrationService>(client =>
+{
+    client.BaseAddress = new Uri(missionManagementBaseUrl, UriKind.Absolute);
+});
 
 var app = builder.Build();
 

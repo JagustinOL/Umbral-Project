@@ -112,6 +112,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
+      MissionManagement__BaseUrl: http://mission-management-service:8080
 
   scoring-audit-service:
     build:
