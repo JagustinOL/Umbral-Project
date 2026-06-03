@@ -1,4 +1,5 @@
 using MediatR;
+using SessionManagement.Application.Common;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Repositories;
 
@@ -7,10 +8,12 @@ namespace SessionManagement.Application.LiveSessions.Commands.JoinSession;
 public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Guid>
 {
     private readonly ILiveSessionRepository _repository;
+    private readonly ITeamRepository _teamRepository;
 
-    public JoinSessionHandler(ILiveSessionRepository repository)
+    public JoinSessionHandler(ILiveSessionRepository repository, ITeamRepository teamRepository)
     {
         _repository = repository;
+        _teamRepository = teamRepository;
     }
 
     public async Task<Guid> Handle(JoinSessionCommand request, CancellationToken cancellationToken)
@@ -21,6 +24,13 @@ public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Gui
 
         session.JoinTeam(request.TeamId, request.JoinCode);
         await _repository.SaveAsync(session, cancellationToken);
+
+        await TeamSessionLockService.AssignTeamToSessionAsync(
+            request.TeamId,
+            session.Id,
+            _teamRepository,
+            cancellationToken);
+
         return session.Id;
     }
 }

@@ -1,4 +1,4 @@
-namespace Common;
+namespace SessionManagement.Domain.Common;
 
 /// <summary>
 /// Marca un objeto como un Evento de Dominio.

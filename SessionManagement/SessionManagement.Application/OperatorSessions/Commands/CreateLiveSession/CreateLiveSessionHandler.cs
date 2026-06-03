@@ -31,34 +31,37 @@ public sealed class CreateLiveSessionHandler : IRequestHandler<CreateLiveSession
         if (!hasAccess)
             throw new NotFoundException("La misión no está asignada al operador (RN-16).");
 
+        var missionStatus = await _missionIntegrationService.GetMissionStatusAsync(request.MissionId, cancellationToken);
+        if (!string.Equals(missionStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictException(
+                "Solo se pueden crear sesiones para misiones en estado Active (RB-01).");
+        }
+
         var nodeValidationData = await _missionIntegrationService.GetNodeValidationDataAsync(request.MissionId, cancellationToken);
+        var difficultyMultiplier = await _missionIntegrationService.GetMissionDifficultyMultiplierAsync(
+            request.MissionId,
+            cancellationToken);
+
         var allowedNodes = nodeValidationData
             .OrderBy(x => x.ExecutionOrder)
             .Select(x => new AllowedNode(
                 NodeId: x.NodeId,
                 NodeType: x.NodeType,
-                BaseScore: ResolveBaseScore(x.NodeType)))
+                BaseScore: x.BaseScore))
             .ToList();
 
         var session = LiveSession.CreateForMission(
             missionRef: request.MissionId,
             operatorRef: request.OperatorId,
             allowedNodes: allowedNodes,
-            difficultyMultiplier: 1.0m);
+            difficultyMultiplier: difficultyMultiplier);
 
         await _repository.SaveAsync(session, cancellationToken);
 
         return new CreatedLiveSessionDto(
             SessionId: session.Id,
             JoinCode: session.JoinCode);
-    }
-
-    private static int ResolveBaseScore(string nodeType)
-    {
-        if (string.Equals(nodeType, "TreasureHunt", StringComparison.OrdinalIgnoreCase))
-            return 150;
-
-        return 100;
     }
 }
 

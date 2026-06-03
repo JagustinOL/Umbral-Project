@@ -30,8 +30,8 @@ public sealed class SubmitTriviaAnswerHandlerTests
         missionIntegrationMock
             .Setup(x => x.GetNodeValidationDataAsync(session.MissionRef, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
-                new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, "Bogota"),
-                new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, "CODE-123")
+                new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, 100, "Bogota"),
+                new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, 150, "CODE-123")
             ]);
 
         var handler = new SubmitTriviaAnswerHandler(repositoryMock.Object, missionIntegrationMock.Object);
@@ -61,8 +61,8 @@ public sealed class SubmitTriviaAnswerHandlerTests
         missionIntegrationMock
             .Setup(x => x.GetNodeValidationDataAsync(session.MissionRef, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
-                new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, "Bogota"),
-                new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, "CODE-123")
+                new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, 100, "Bogota"),
+                new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, 150, "CODE-123")
             ]);
 
         var handler = new SubmitTriviaAnswerHandler(repositoryMock.Object, missionIntegrationMock.Object);

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using MissionManagement.Application.Missions.Commands.ActivateMission;
 using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Application.Missions.Commands.DeactivateMission;
 using MissionManagement.Application.Missions.Commands.UpdateMissionDetails;
@@ -63,6 +64,13 @@ public sealed class MissionsController : ControllerBase
             Description: request.Description,
             MaxDurationMinutes: request.MaxDurationMinutes), cancellationToken);
 
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/activate")]
+    public async Task<IActionResult> Activate([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ActivateMissionCommand(id), cancellationToken);
         return NoContent();
     }
 

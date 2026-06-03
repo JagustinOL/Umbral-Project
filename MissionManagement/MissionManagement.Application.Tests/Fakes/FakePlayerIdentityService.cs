@@ -1,14 +1,19 @@
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Exceptions;
 
-namespace MissionManagement.Infrastructure.External.Fakes;
+namespace MissionManagement.Application.Tests.Fakes;
 
 public sealed class FakePlayerIdentityService : IPlayerIdentityService
 {
     private static readonly Dictionary<Guid, PlayerIdentityDto> Players = [];
     private static readonly Lock Sync = new();
 
-    public Task<Guid> CreatePlayerAsync(string firstName, string lastName, string email, CancellationToken cancellationToken = default)
+    public Task<Guid> CreatePlayerAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string password,
+        CancellationToken cancellationToken = default)
     {
         var player = new PlayerIdentityDto(
             PlayerId: Guid.NewGuid(),

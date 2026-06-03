@@ -1,4 +1,4 @@
-using Common;
+using MissionManagement.Domain.Common;
 using MissionManagement.Domain.Entities;
 using MissionManagement.Domain.Events;
 using MissionManagement.Domain.ValueObjects;

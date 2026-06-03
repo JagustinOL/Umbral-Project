@@ -39,6 +39,7 @@ public sealed class GetMissionNodeValidationsHandler
                 NodeId: node.Id,
                 NodeType: node.NodeType.ToString(),
                 ExecutionOrder: order++,
+                BaseScore: node.BaseScore,
                 ExpectedValue: ResolveExpectedValue(node)));
         }
 

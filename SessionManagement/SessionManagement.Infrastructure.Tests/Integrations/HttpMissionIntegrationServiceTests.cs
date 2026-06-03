@@ -53,8 +53,8 @@ public sealed class HttpMissionIntegrationServiceTests
 
         var validations = new object[]
         {
-            new { nodeId = nodeId1, nodeType = "Trivia", executionOrder = 1, expectedValue = "Bogota" },
-            new { nodeId = nodeId2, nodeType = "TreasureHunt", executionOrder = 2, expectedValue = "CODE-123" }
+            new { nodeId = nodeId1, nodeType = "Trivia", executionOrder = 1, baseScore = 100, expectedValue = "Bogota" },
+            new { nodeId = nodeId2, nodeType = "TreasureHunt", executionOrder = 2, baseScore = 150, expectedValue = "CODE-123" }
         };
 
         var json = JsonSerializer.Serialize(validations);
@@ -78,7 +78,46 @@ public sealed class HttpMissionIntegrationServiceTests
         result[0].NodeId.Should().Be(nodeId1);
         result[0].NodeType.Should().Be("Trivia");
         result[0].ExecutionOrder.Should().Be(1);
+        result[0].BaseScore.Should().Be(100);
         result[0].ExpectedValue.Should().Be("Bogota");
+    }
+
+    [Fact]
+    public async Task GetMissionDifficultyMultiplierAsync_ShouldReturnMissionMultiplier()
+    {
+        var missionId = Guid.NewGuid();
+        var mission = new
+        {
+            id = missionId,
+            title = "M1",
+            description = "Desc",
+            status = "Draft",
+            difficulty = "Medium",
+            difficultyScoreMultiplier = 1.5m,
+            maxDurationMinutes = 60,
+            createdAtUtc = DateTime.UtcNow,
+            lastModifiedAtUtc = (DateTime?)null,
+            operatorIds = Array.Empty<Guid>()
+        };
+
+        var json = JsonSerializer.Serialize(mission);
+
+        var handler = new StubHttpMessageHandler(req =>
+        {
+            req.Method.Should().Be(HttpMethod.Get);
+            req.RequestUri!.ToString().Should().EndWith($"/api/v1/missions/{missionId}");
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5260/") };
+        var sut = new HttpMissionIntegrationService(client);
+
+        var result = await sut.GetMissionDifficultyMultiplierAsync(missionId, CancellationToken.None);
+
+        result.Should().Be(1.5m);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

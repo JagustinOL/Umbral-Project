@@ -1,6 +1,6 @@
 using SessionManagement.Application.Common.Interfaces;
 
-namespace SessionManagement.Infrastructure.Integrations;
+namespace SessionManagement.Infrastructure.Tests.Fakes;
 
 public sealed class FakeMissionIntegrationService : IMissionIntegrationService
 {
@@ -33,15 +33,26 @@ public sealed class FakeMissionIntegrationService : IMissionIntegrationService
                 NodeId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 NodeType: "Trivia",
                 ExecutionOrder: 1,
+                BaseScore: 100,
                 ExpectedValue: "Bogota"),
             new(
                 NodeId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
                 NodeType: "TreasureHunt",
                 ExecutionOrder: 2,
+                BaseScore: 150,
                 ExpectedValue: "CODE-123")
         ];
 
         return Task.FromResult(result);
     }
-}
 
+    public Task<decimal> GetMissionDifficultyMultiplierAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(1.5m);
+
+    public Task<string?> GetMissionStatusAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<string?>("Active");
+}

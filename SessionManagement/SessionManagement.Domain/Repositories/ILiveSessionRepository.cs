@@ -31,6 +31,19 @@ public interface ILiveSessionRepository
     Task<IReadOnlyList<LiveSession>> GetActiveSessionsAsync(
         CancellationToken cancellationToken = default);
 
+    Task<bool> HasOpenSessionsByOperatorAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasOpenSessionForMissionByOperatorAsync(
+        Guid operatorId,
+        Guid missionId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasOpenSessionsByMissionAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default);
+
     Task SaveAsync(
         LiveSession session,
         CancellationToken cancellationToken = default);

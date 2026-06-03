@@ -26,7 +26,8 @@ public sealed class PlayersController : ControllerBase
         var playerId = await _mediator.Send(new CreatePlayerCommand(
             FirstName: request.FirstName,
             LastName: request.LastName,
-            Email: request.Email), cancellationToken);
+            Email: request.Email,
+            Password: request.Password), cancellationToken);
 
         return CreatedAtAction(nameof(GetById), new { playerId }, new { id = playerId });
     }

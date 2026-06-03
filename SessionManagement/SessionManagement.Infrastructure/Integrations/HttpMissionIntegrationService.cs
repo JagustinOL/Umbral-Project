@@ -1,10 +1,16 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using SessionManagement.Application.Common.Interfaces;
 
 namespace SessionManagement.Infrastructure.Integrations;
 
 public sealed class HttpMissionIntegrationService : IMissionIntegrationService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly HttpClient _httpClient;
 
     public HttpMissionIntegrationService(HttpClient httpClient)
@@ -18,6 +24,7 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
     {
         var missions = await _httpClient.GetFromJsonAsync<IReadOnlyList<MissionSummary>>(
             "api/v1/missions",
+            JsonOptions,
             cancellationToken) ?? [];
 
         return missions
@@ -36,15 +43,55 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
         return GetNodeValidationsInternalAsync(missionId, cancellationToken);
     }
 
+    public async Task<decimal> GetMissionDifficultyMultiplierAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+    {
+        var mission = await _httpClient.GetFromJsonAsync<MissionDetail>(
+            $"api/v1/missions/{missionId}",
+            JsonOptions,
+            cancellationToken);
+
+        if (mission is null)
+            throw new InvalidOperationException($"No se pudo obtener la misión con Id={missionId} desde MissionManagement.");
+
+        return mission.DifficultyScoreMultiplier;
+    }
+
+    public async Task<string?> GetMissionStatusAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+    {
+        var mission = await _httpClient.GetFromJsonAsync<MissionDetail>(
+            $"api/v1/missions/{missionId}",
+            JsonOptions,
+            cancellationToken);
+
+        return mission?.Status;
+    }
+
     private sealed record MissionSummary(
         Guid Id,
         string Title,
+        IReadOnlyList<Guid> OperatorIds);
+
+    private sealed record MissionDetail(
+        Guid Id,
+        string Title,
+        string Description,
+        string Status,
+        string Difficulty,
+        decimal DifficultyScoreMultiplier,
+        int? MaxDurationMinutes,
+        DateTime CreatedAtUtc,
+        DateTime? LastModifiedAtUtc,
         IReadOnlyList<Guid> OperatorIds);
 
     private sealed record MissionNodeValidation(
         Guid NodeId,
         string NodeType,
         int ExecutionOrder,
+        int BaseScore,
         string ExpectedValue);
 
     private async Task<IReadOnlyList<MissionNodeValidationData>> GetNodeValidationsInternalAsync(
@@ -53,6 +100,7 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
     {
         var validations = await _httpClient.GetFromJsonAsync<IReadOnlyList<MissionNodeValidation>>(
             $"api/v1/missions/{missionId}/node-validations",
+            JsonOptions,
             cancellationToken) ?? [];
 
         return validations
@@ -60,6 +108,7 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
                 NodeId: v.NodeId,
                 NodeType: v.NodeType,
                 ExecutionOrder: v.ExecutionOrder,
+                BaseScore: v.BaseScore,
                 ExpectedValue: v.ExpectedValue))
             .ToList();
     }

@@ -22,6 +22,7 @@ public sealed class KeycloakPlayerIdentityService : IPlayerIdentityService
         string firstName,
         string lastName,
         string email,
+        string password,
         CancellationToken cancellationToken = default)
     {
         var accessToken = await GetAdminAccessTokenAsync(cancellationToken);
@@ -59,6 +60,14 @@ public sealed class KeycloakPlayerIdentityService : IPlayerIdentityService
             throw new InvalidOperationException($"Keycloak devolvió un id de usuario no válido ('{keycloakUserId}').");
 
         await AssignRealmRoleAsync(accessToken, keycloakUserId, _options.PlayerRole, cancellationToken);
+        await KeycloakPasswordHelper.SetUserPasswordAsync(
+            _httpClient,
+            GetAdminRealmUrl(),
+            accessToken,
+            keycloakUserId,
+            password,
+            cancellationToken);
+
         return playerId;
     }
 

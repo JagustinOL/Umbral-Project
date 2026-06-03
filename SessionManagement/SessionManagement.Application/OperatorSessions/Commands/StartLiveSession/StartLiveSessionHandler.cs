@@ -1,4 +1,5 @@
 using MediatR;
+using SessionManagement.Application.Common;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Aggregates;
@@ -9,13 +10,16 @@ namespace SessionManagement.Application.OperatorSessions.Commands.StartLiveSessi
 public sealed class StartLiveSessionHandler : IRequestHandler<StartLiveSessionCommand>
 {
     private readonly ILiveSessionRepository _repository;
+    private readonly ITeamRepository _teamRepository;
     private readonly IMissionIntegrationService _missionIntegrationService;
 
     public StartLiveSessionHandler(
         ILiveSessionRepository repository,
+        ITeamRepository teamRepository,
         IMissionIntegrationService missionIntegrationService)
     {
         _repository = repository;
+        _teamRepository = teamRepository;
         _missionIntegrationService = missionIntegrationService;
     }
 
@@ -45,6 +49,7 @@ public sealed class StartLiveSessionHandler : IRequestHandler<StartLiveSessionCo
         }
 
         await _repository.SaveAsync(session, cancellationToken);
+        await TeamSessionLockService.LockTeamsForSessionAsync(session, _teamRepository, cancellationToken);
     }
 }
 

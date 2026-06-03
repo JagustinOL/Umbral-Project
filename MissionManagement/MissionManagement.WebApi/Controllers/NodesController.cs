@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MissionManagement.Application.Nodes.Commands.AddRootNode;
 using MissionManagement.Application.Nodes.Commands.DeleteNode;
 using MissionManagement.Application.Nodes.Commands.UpdateNode;
+using MissionManagement.Application.Nodes.Queries.GetGamesByStage;
 using MissionManagement.Application.Nodes.Queries.GetNodesByMission;
 using MissionManagement.WebApi.Contracts.Nodes;
 
@@ -35,6 +36,16 @@ public sealed class NodesController : ControllerBase
     public async Task<IActionResult> GetNodes([FromRoute] Guid missionId, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetNodesByMissionQuery(missionId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{stageId:guid}/games")]
+    public async Task<IActionResult> GetGamesByStage(
+        [FromRoute] Guid missionId,
+        [FromRoute] Guid stageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetGamesByStageQuery(missionId, stageId), cancellationToken);
         return Ok(result);
     }
 

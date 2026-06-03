@@ -24,7 +24,8 @@ public sealed class OperatorsController : ControllerBase
         var operatorId = await _mediator.Send(new CreateOperatorCommand(
             FirstName: request.FirstName,
             LastName: request.LastName,
-            Email: request.Email), cancellationToken);
+            Email: request.Email,
+            Password: request.Password), cancellationToken);
 
         return CreatedAtAction(nameof(GetAll), new { }, new { id = operatorId });
     }

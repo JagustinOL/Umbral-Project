@@ -54,6 +54,23 @@ public sealed class TeamRepository : ITeamRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Team>> GetByIdsAsync(
+        IEnumerable<Guid> teamIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(teamIds);
+
+        var ids = teamIds.Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        return await _dbContext.Teams
+            .Include(x => x.Members)
+            .Include(x => x.JoinRequests)
+            .Where(x => ids.Contains(x.Id) && !x.IsDisbanded)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> ExistsByNameAsync(
         string teamName,
         Guid? excludingTeamId = null,

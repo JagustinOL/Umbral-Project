@@ -1,4 +1,4 @@
-using Common;
+using SessionManagement.Domain.Common;
 
 namespace SessionManagement.Domain.Events;
 

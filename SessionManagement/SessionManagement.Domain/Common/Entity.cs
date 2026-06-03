@@ -1,4 +1,4 @@
-namespace Common;
+namespace SessionManagement.Domain.Common;
 
 /// <summary>
 /// Clase base para todas las Entidades del dominio.

@@ -1,4 +1,4 @@
-using Common;
+using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Aggregates;
 
 namespace SessionManagement.Domain.Events;

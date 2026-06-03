@@ -6,6 +6,7 @@ public interface IPlayerIdentityService
         string firstName,
         string lastName,
         string email,
+        string password,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PlayerIdentityDto>> GetPlayersAsync(

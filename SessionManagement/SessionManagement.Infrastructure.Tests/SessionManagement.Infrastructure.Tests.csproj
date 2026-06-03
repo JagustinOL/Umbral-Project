@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SessionManagement.Infrastructure\SessionManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\SessionManagement.Application\SessionManagement.Application.csproj" />
   </ItemGroup>
 
 </Project>

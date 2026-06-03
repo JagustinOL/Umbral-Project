@@ -1,4 +1,4 @@
-using Common;
+using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Events;
 using SessionManagement.Domain.Exceptions;

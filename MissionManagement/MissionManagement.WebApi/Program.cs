@@ -1,55 +1,57 @@
 using Microsoft.EntityFrameworkCore;
+using MissionManagement.Application.Common.Interfaces;
+using MissionManagement.Application.Missions.Commands.CreateMission;
+using MissionManagement.Domain.Repositories;
+using MissionManagement.Infrastructure.External.Keycloak;
+using MissionManagement.Infrastructure.External.SessionManagement;
+using MissionManagement.Infrastructure.Messaging;
+using MissionManagement.Infrastructure.Persistence;
+using MissionManagement.Infrastructure.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(MissionManagement.Application.Missions.Commands.CreateMission.CreateMissionCommand).Assembly));
+    cfg.RegisterServicesFromAssembly(typeof(CreateMissionCommand).Assembly));
 
 builder.Services.AddScoped<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
 
-builder.Services.AddDbContext<MissionManagement.Infrastructure.Persistence.MissionManagementDbContext>(options =>
+builder.Services.AddDbContext<MissionManagementDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("MissionManagement");
     options.UseNpgsql(connectionString);
 });
 
-builder.Services.AddScoped<MissionManagement.Domain.Repositories.IMissionRepository, MissionManagement.Infrastructure.Repositories.MissionRepository>();
-builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.ISessionValidationService, MissionManagement.Infrastructure.External.Fakes.FakeSessionValidationService>();
+builder.Services.AddScoped<IMissionRepository, MissionRepository>();
+builder.Services.AddScoped<IDomainEventPublisher, LoggingDomainEventPublisher>();
 
-builder.Services.AddOptions<MissionManagement.Infrastructure.External.Keycloak.KeycloakOptions>()
-    .Bind(builder.Configuration.GetSection(MissionManagement.Infrastructure.External.Keycloak.KeycloakOptions.SectionName))
+var sessionManagementBaseUrl = builder.Configuration["SessionManagement:BaseUrl"];
+if (string.IsNullOrWhiteSpace(sessionManagementBaseUrl))
+    throw new InvalidOperationException("No se encontró SessionManagement:BaseUrl para configurar la validación de sesiones.");
+
+builder.Services.AddHttpClient<ISessionValidationService, HttpSessionValidationService>(client =>
+{
+    client.BaseAddress = new Uri(sessionManagementBaseUrl, UriKind.Absolute);
+});
+
+builder.Services.AddOptions<KeycloakOptions>()
+    .Bind(builder.Configuration.GetSection(KeycloakOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-var useFakeIdentityService = builder.Configuration.GetValue<bool>("Identity:UseFake");
-if (useFakeIdentityService)
-{
-    builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IIdentityService, MissionManagement.Infrastructure.External.Fakes.FakeIdentityService>();
-    builder.Services.AddScoped<MissionManagement.Application.Common.Interfaces.IPlayerIdentityService, MissionManagement.Infrastructure.External.Fakes.FakePlayerIdentityService>();
-}
-else
-{
-    builder.Services.AddHttpClient<
-        MissionManagement.Application.Common.Interfaces.IIdentityService,
-        MissionManagement.Infrastructure.External.Keycloak.KeycloakIdentityService>();
-    builder.Services.AddHttpClient<
-        MissionManagement.Application.Common.Interfaces.IPlayerIdentityService,
-        MissionManagement.Infrastructure.External.Keycloak.KeycloakPlayerIdentityService>();
-}
+builder.Services.AddHttpClient<IIdentityService, KeycloakIdentityService>();
+builder.Services.AddHttpClient<IPlayerIdentityService, KeycloakPlayerIdentityService>();
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<MissionManagement.Infrastructure.Persistence.MissionManagementDbContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<MissionManagementDbContext>();
     dbContext.Database.EnsureCreated();
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

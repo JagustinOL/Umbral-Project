@@ -79,6 +79,21 @@
   }
   ```
 
+### Activar Misión
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `PUT /api/v1/missions/{id}/activate`
+- **Capa Application:** `ActivateMissionCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (204 No Content)**
+- **Errores esperados:**
+  - `400 BadRequest` si la misión no tiene nodos, ya está `Active`, o está `Inactive` (no reactivable tras desactivar).
+  - `404 NotFound` si la misión no existe.
+- **Notas:**
+  - Flujo recomendado: crear misión → etapas → juegos → **activar** → asignar operador → crear/iniciar sesión.
+
 ### Desactivar Misión (HU-04)
 - **Microservicio:** MissionManagement
 - **Método y Ruta:** `DELETE /api/v1/missions/{id}`
@@ -87,6 +102,12 @@
   ```json
   { }
   ```
+- **Response (204 No Content)**
+- **Errores esperados:**
+  - `409 Conflict` si la misión tiene sesiones abiertas (`Pending`, `Preparation`, `Active` o `Paused`) en SessionManagement (RN-01).
+  - `404 NotFound` si la misión no existe.
+- **Notas:**
+  - Desactiva lógicamente la misión (`Inactive`); no es borrado físico.
 
 ### Crear Etapa (Nodo Raíz) (HU-05)
 - **Microservicio:** MissionManagement
@@ -109,6 +130,29 @@
   ```json
   { }
   ```
+
+### Listar Juegos de una Etapa
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `GET /api/v1/missions/{missionId}/nodes/{stageId}/games`
+- **Capa Application:** `GetGamesByStageQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "id": "Guid",
+      "nodeType": "Trivia | TreasureHunt",
+      "executionOrder": 1,
+      "baseScore": 50,
+      "title": "string"
+    }
+  ]
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si la misión o la etapa no existen, o el nodo no es de tipo `Stage`.
 
 ### Modificar Etapa (HU-07)
 - **Microservicio:** MissionManagement
@@ -299,7 +343,8 @@
   {
     "firstName": "string",
     "lastName": "string",
-    "email": "string"
+    "email": "string",
+    "password": "string"
   }
   ```
 - **Response (201 Created):**
@@ -310,7 +355,9 @@
   ```
 - **Errores esperados:**
   - `409 Conflict` cuando el correo ya existe en Keycloak.
-  - `400 BadRequest` para payload inválido.
+  - `400 BadRequest` para payload inválido o contraseña menor a 8 caracteres.
+- **Notas:**
+  - Tras crear el usuario en Keycloak se asigna el rol de operador y se establece la contraseña vía Admin API (`reset-password`).
 
 ### Consultar Operadores (HU-23)
 - **Microservicio:** MissionManagement
@@ -380,7 +427,8 @@
   {
     "firstName": "string",
     "lastName": "string",
-    "email": "string"
+    "email": "string",
+    "password": "string"
   }
   ```
 - **Response (201 Created):**
@@ -391,6 +439,9 @@
   ```
 - **Errores esperados:**
   - `409 Conflict` cuando el correo ya existe en Keycloak.
+  - `400 BadRequest` para contraseña menor a 8 caracteres.
+- **Notas:**
+  - Tras crear el usuario en Keycloak se asigna el rol de jugador y se establece la contraseña vía Admin API (`reset-password`).
 
 ### Consultar Jugadores
 - **Microservicio:** MissionManagement
@@ -622,6 +673,17 @@
   { }
   ```
 
+### Validar Sesiones Abiertas por Misión
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/missions/{missionId}/session-validation/has-open`
+- **Capa Application:** `MissionHasOpenSessionsQuery`
+- **Response (200 OK):**
+  ```json
+  {
+    "hasOpenSessions": true
+  }
+  ```
+
 ### Crear Sesión Live para una Misión Asignada (HU-48)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/operators/{operatorId}/sessions`
@@ -632,6 +694,9 @@
     "missionId": "Guid"
   }
   ```
+- **Errores esperados:**
+  - `409 Conflict` si la misión no está en estado `Active` (RB-01).
+  - `404 NotFound` si la misión no está asignada al operador.
 
 ### Consultar Equipos Unidos a una Sesión Pending (HU-49)
 - **Microservicio:** SessionManagement
@@ -650,3 +715,27 @@
   ```json
   { }
   ```
+- **Notas:**
+  - Bloquea los equipos registrados (`isLocked: true`, RN-13) al pasar la sesión a `Active`.
+
+### Finalizar Sesión Live
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/sessions/{sessionId}/finalize`
+- **Capa Application:** `FinalizeLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Notas:**
+  - Desbloquea equipos y limpia su referencia a la sesión.
+
+### Cancelar Sesión Live
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/sessions/{sessionId}/cancel`
+- **Capa Application:** `CancelLiveSessionCommand`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Notas:**
+  - Desbloquea equipos y limpia su referencia a la sesión.

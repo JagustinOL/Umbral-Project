@@ -1,4 +1,4 @@
-namespace Common;
+namespace MissionManagement.Domain.Common;
 
 /// <summary>
 /// Marca un objeto como un Evento de Dominio.

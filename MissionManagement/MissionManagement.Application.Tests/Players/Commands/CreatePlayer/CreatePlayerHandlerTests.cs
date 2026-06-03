@@ -17,13 +17,15 @@ public sealed class CreatePlayerHandlerTests
         var command = new CreatePlayerCommand(
             FirstName: "Lina",
             LastName: "Ramos",
-            Email: "lina@umbral.com");
+            Email: "lina@umbral.com",
+            Password: "SecurePass1");
 
         _playerIdentityServiceMock
             .Setup(s => s.CreatePlayerAsync(
                 command.FirstName,
                 command.LastName,
                 command.Email,
+                command.Password,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(playerId);
 
@@ -39,6 +41,7 @@ public sealed class CreatePlayerHandlerTests
                 command.FirstName,
                 command.LastName,
                 command.Email,
+                command.Password,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

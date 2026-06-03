@@ -17,13 +17,15 @@ public sealed class CreateOperatorHandlerTests
         var command = new CreateOperatorCommand(
             FirstName: "Ada",
             LastName: "Lovelace",
-            Email: "ada@umbral.com");
+            Email: "ada@umbral.com",
+            Password: "SecurePass1");
 
         _identityServiceMock
             .Setup(s => s.CreateOperatorAsync(
                 command.FirstName,
                 command.LastName,
                 command.Email,
+                command.Password,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(operatorId);
 
@@ -39,6 +41,7 @@ public sealed class CreateOperatorHandlerTests
                 command.FirstName,
                 command.LastName,
                 command.Email,
+                command.Password,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

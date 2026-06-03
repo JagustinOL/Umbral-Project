@@ -1,4 +1,4 @@
-using Common;
+using MissionManagement.Domain.Common;
 
 namespace MissionManagement.Domain.Entities;
 

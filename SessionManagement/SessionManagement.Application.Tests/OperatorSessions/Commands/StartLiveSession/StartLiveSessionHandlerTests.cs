@@ -17,6 +17,7 @@ public sealed class StartLiveSessionHandlerTests
     {
         // Arrange
         var repositoryMock = new Mock<ILiveSessionRepository>();
+        var teamRepositoryMock = new Mock<ITeamRepository>();
         var missionIntegrationMock = new Mock<IMissionIntegrationService>();
         var operatorId = Guid.NewGuid();
         var session = BuildPendingSession(operatorId);
@@ -31,7 +32,14 @@ public sealed class StartLiveSessionHandlerTests
                 new AssignedMissionData(session.MissionRef, operatorId, "Mission")
             ]);
 
-        var handler = new StartLiveSessionHandler(repositoryMock.Object, missionIntegrationMock.Object);
+        teamRepositoryMock
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var handler = new StartLiveSessionHandler(
+            repositoryMock.Object,
+            teamRepositoryMock.Object,
+            missionIntegrationMock.Object);
         var command = new StartLiveSessionCommand(operatorId, session.Id);
 
         // Act
@@ -47,6 +55,7 @@ public sealed class StartLiveSessionHandlerTests
     {
         // Arrange
         var repositoryMock = new Mock<ILiveSessionRepository>();
+        var teamRepositoryMock = new Mock<ITeamRepository>();
         var missionIntegrationMock = new Mock<IMissionIntegrationService>();
         var operatorId = Guid.NewGuid();
         var session = LiveSession.CreateForMission(
@@ -68,7 +77,10 @@ public sealed class StartLiveSessionHandlerTests
                 new AssignedMissionData(session.MissionRef, operatorId, "Mission")
             ]);
 
-        var handler = new StartLiveSessionHandler(repositoryMock.Object, missionIntegrationMock.Object);
+        var handler = new StartLiveSessionHandler(
+            repositoryMock.Object,
+            teamRepositoryMock.Object,
+            missionIntegrationMock.Object);
         var command = new StartLiveSessionCommand(operatorId, session.Id);
 
         // Act

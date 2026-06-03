@@ -22,6 +22,7 @@ public sealed class KeycloakIdentityService : IIdentityService
         string firstName,
         string lastName,
         string email,
+        string password,
         CancellationToken cancellationToken = default)
     {
         var accessToken = await GetAdminAccessTokenAsync(cancellationToken);
@@ -64,6 +65,14 @@ public sealed class KeycloakIdentityService : IIdentityService
         }
 
         await AssignRealmRoleAsync(accessToken, keycloakUserId, _options.OperatorRole, cancellationToken);
+        await KeycloakPasswordHelper.SetUserPasswordAsync(
+            _httpClient,
+            GetAdminRealmUrl(),
+            accessToken,
+            keycloakUserId,
+            password,
+            cancellationToken);
+
         return operatorId;
     }
 

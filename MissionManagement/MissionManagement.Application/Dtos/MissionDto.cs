@@ -6,6 +6,7 @@ public sealed record MissionDto(
     string Description,
     string Status,
     string Difficulty,
+    decimal DifficultyScoreMultiplier,
     int? MaxDurationMinutes,
     DateTime CreatedAtUtc,
     DateTime? LastModifiedAtUtc,

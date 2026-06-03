@@ -9,5 +9,13 @@ public interface IMissionIntegrationService
     Task<IReadOnlyList<MissionNodeValidationData>> GetNodeValidationDataAsync(
         Guid missionId,
         CancellationToken cancellationToken = default);
+
+    Task<decimal> GetMissionDifficultyMultiplierAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default);
+
+    Task<string?> GetMissionStatusAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default);
 }
 

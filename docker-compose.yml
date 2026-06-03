@@ -95,6 +95,7 @@ services:
       Keycloak__AdminUsername: admin
       Keycloak__AdminPassword: admin
       Keycloak__OperatorRole: operator
+      SessionManagement__BaseUrl: http://session-management-service:8080
 
   session-management-service:
     build:

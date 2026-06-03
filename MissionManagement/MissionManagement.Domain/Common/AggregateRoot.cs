@@ -1,4 +1,4 @@
-namespace Common;
+namespace MissionManagement.Domain.Common;
 
 /// <summary>
 /// Clase base para todos los Aggregates Root del dominio.

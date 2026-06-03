@@ -1,4 +1,4 @@
-using Common;
+using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -235,7 +235,7 @@ public sealed class Team : AggregateRoot
     /// Asigna el equipo a una sesión.
     /// Llamado desde LiveSession.RegisterTeam().
     /// </summary>
-    internal void AssignToSession(Guid sessionId)
+    public void AssignToSession(Guid sessionId)
     {
         if (sessionId == Guid.Empty)
             throw new ArgumentException("SessionId no puede ser vacío.", nameof(sessionId));
@@ -272,6 +272,17 @@ public sealed class Team : AggregateRoot
             throw new SessionDomainException(
                 $"El equipo '{Name}' no está bloqueado.");
 
+        IsLocked = false;
+        CurrentSessionRef = null;
+    }
+
+    /// <summary>
+    /// Libera la asociación con la sesión al finalizar o cancelar.
+    /// No lanza si el equipo no estaba bloqueado.
+    /// </summary>
+    public void ReleaseFromSession()
+    {
+        EnsureNotDisbanded();
         IsLocked = false;
         CurrentSessionRef = null;
     }

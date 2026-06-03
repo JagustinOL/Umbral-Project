@@ -33,6 +33,10 @@ public interface ITeamRepository
         Guid sessionId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Team>> GetByIdsAsync(
+        IEnumerable<Guid> teamIds,
+        CancellationToken cancellationToken = default);
+
     Task SaveAsync(
         Team team,
         CancellationToken cancellationToken = default);

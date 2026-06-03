@@ -77,6 +77,55 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<bool> HasOpenSessionsByOperatorAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default)
+    {
+        if (operatorId == Guid.Empty)
+            throw new ArgumentException("OperatorId no puede ser vacío.", nameof(operatorId));
+
+        return await _dbContext.LiveSessions
+            .AsNoTracking()
+            .AnyAsync(x => x.OperatorRef == operatorId && IsOpenStatus(x.Status), cancellationToken);
+    }
+
+    public async Task<bool> HasOpenSessionForMissionByOperatorAsync(
+        Guid operatorId,
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (operatorId == Guid.Empty)
+            throw new ArgumentException("OperatorId no puede ser vacío.", nameof(operatorId));
+        if (missionId == Guid.Empty)
+            throw new ArgumentException("MissionId no puede ser vacío.", nameof(missionId));
+
+        return await _dbContext.LiveSessions
+            .AsNoTracking()
+            .AnyAsync(
+                x => x.OperatorRef == operatorId
+                     && x.MissionRef == missionId
+                     && IsOpenStatus(x.Status),
+                cancellationToken);
+    }
+
+    public async Task<bool> HasOpenSessionsByMissionAsync(
+        Guid missionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (missionId == Guid.Empty)
+            throw new ArgumentException("MissionId no puede ser vacío.", nameof(missionId));
+
+        return await _dbContext.LiveSessions
+            .AsNoTracking()
+            .AnyAsync(x => x.MissionRef == missionId && IsOpenStatus(x.Status), cancellationToken);
+    }
+
+    private static bool IsOpenStatus(LiveSessionStatus status) =>
+        status is LiveSessionStatus.Pending
+            or LiveSessionStatus.Preparation
+            or LiveSessionStatus.Active
+            or LiveSessionStatus.Paused;
+
     public async Task SaveAsync(LiveSession session, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);

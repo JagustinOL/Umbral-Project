@@ -24,6 +24,7 @@ public sealed class GetMissionsHandler : IRequestHandler<GetMissionsQuery, IRead
                 Description: m.Description,
                 Status: m.Status.ToString(),
                 Difficulty: m.Difficulty.Name,
+                DifficultyScoreMultiplier: m.Difficulty.ScoreMultiplier,
                 MaxDurationMinutes: m.MaxDurationMinutes,
                 CreatedAtUtc: m.CreatedAtUtc,
                 LastModifiedAtUtc: m.LastModifiedAtUtc,
