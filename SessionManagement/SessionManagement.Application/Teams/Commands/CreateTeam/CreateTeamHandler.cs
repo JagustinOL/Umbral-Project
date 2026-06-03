@@ -1,4 +1,5 @@
 using MediatR;
+using SessionManagement.Application.Common;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Repositories;
@@ -17,6 +18,11 @@ public sealed class CreateTeamHandler : IRequestHandler<CreateTeamCommand, Guid>
 
     public async Task<Guid> Handle(CreateTeamCommand request, CancellationToken cancellationToken)
     {
+        await PlayerSingleTeamGuard.EnsureCanJoinOrCreateTeamAsync(
+            _teamRepository,
+            request.CreatorId,
+            cancellationToken: cancellationToken);
+
         var creatorDisplayName = string.IsNullOrWhiteSpace(request.CreatorDisplayName)
             ? $"player-{request.CreatorId.ToString("N")[..8]}"
             : request.CreatorDisplayName.Trim();

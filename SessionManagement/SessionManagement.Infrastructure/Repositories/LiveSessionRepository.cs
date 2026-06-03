@@ -70,9 +70,14 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
     public async Task<IReadOnlyList<LiveSession>> GetActiveSessionsAsync(CancellationToken cancellationToken = default)
     {
+        // Sesiones visibles para jugadores: abiertas a registro (Pending/Preparation) y en curso.
         return await _dbContext.LiveSessions
             .AsNoTracking()
-            .Where(x => x.Status == LiveSessionStatus.Active)
+            .Where(x =>
+                x.Status == LiveSessionStatus.Pending
+                || x.Status == LiveSessionStatus.Preparation
+                || x.Status == LiveSessionStatus.Active
+                || x.Status == LiveSessionStatus.Paused)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }

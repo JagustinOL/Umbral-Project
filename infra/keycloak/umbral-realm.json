@@ -1,0 +1,31 @@
+{
+  "realm": "umbral-realm",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "player", "description": "UMBRAL player role" },
+      { "name": "operator", "description": "UMBRAL operator role" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "umbral-player-mobile",
+      "name": "UMBRAL Player Mobile",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "umbral-player://*",
+        "exp://*",
+        "http://localhost:*"
+      ],
+      "webOrigins": ["*"]
+    }
+  ]
+}

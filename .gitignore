@@ -53,6 +53,19 @@ umbral-mobile/.metro-health-check*
 umbral-mobile/.env*.local
 
 # ============================================================
+#  EXPO / REACT NATIVE  (PlayerMobile)
+# ============================================================
+PlayerMobile/node_modules/
+PlayerMobile/.expo/
+PlayerMobile/dist/
+PlayerMobile/web-build/
+PlayerMobile/android/
+PlayerMobile/ios/
+PlayerMobile/expo-env.d.ts
+PlayerMobile/.metro-health-check*
+PlayerMobile/.env*.local
+
+# ============================================================
 #  C# / .NET  (Umbral.WebAPI)
 # ============================================================
 

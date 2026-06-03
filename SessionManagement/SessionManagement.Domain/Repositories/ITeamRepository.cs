@@ -19,6 +19,14 @@ public interface ITeamRepository
         string teamCode,
         CancellationToken cancellationToken = default);
 
+    Task<Team?> GetActiveTeamByPlayerRefAsync(
+        Guid playerRef,
+        CancellationToken cancellationToken = default);
+
+    Task<Team?> GetActiveTeamWithPendingJoinRequestAsync(
+        Guid playerRef,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsByNameAsync(
         string teamName,
         Guid? excludingTeamId = null,

@@ -14,6 +14,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("UmbralDev", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:19000",
+                "http://localhost:19001",
+                "http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(SessionManagement.Application.LiveSessions.Queries.GetActiveSessions.GetActiveSessionsQuery).Assembly));
 
@@ -62,6 +76,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors("UmbralDev");
 app.UseHttpsRedirection();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.MapControllers();

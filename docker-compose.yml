@@ -53,7 +53,9 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-    command: start-dev
+    command: start-dev --import-realm
+    volumes:
+      - ./infra/keycloak:/opt/keycloak/data/import
     ports:
       - "8081:8080"
     depends_on:
@@ -95,6 +97,7 @@ services:
       Keycloak__AdminUsername: admin
       Keycloak__AdminPassword: admin
       Keycloak__OperatorRole: operator
+      Keycloak__PlayerRole: player
       SessionManagement__BaseUrl: http://session-management-service:8080
 
   session-management-service:

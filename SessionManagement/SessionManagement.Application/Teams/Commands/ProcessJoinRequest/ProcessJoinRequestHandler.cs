@@ -1,6 +1,7 @@
 using MediatR;
 using SessionManagement.Application.Common;
 using SessionManagement.Application.Exceptions;
+using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Repositories;
 
 namespace SessionManagement.Application.Teams.Commands.ProcessJoinRequest;
@@ -24,6 +25,22 @@ public sealed class ProcessJoinRequestHandler : IRequestHandler<ProcessJoinReque
 
         if (!team.IsLeader(request.RequestorId))
             throw new ConflictException("Solo el líder del equipo puede procesar solicitudes.");
+
+        if (request.IsApproved)
+        {
+            var joinRequest = team.JoinRequests.FirstOrDefault(x => x.Id == request.RequestId);
+            if (joinRequest is null)
+                throw new NotFoundException("No se encontró la solicitud de unión.");
+
+            if (joinRequest.Status != JoinRequestStatus.Pending)
+                throw new ConflictException("La solicitud ya fue procesada.");
+
+            await PlayerSingleTeamGuard.EnsureCanJoinOrCreateTeamAsync(
+                _teamRepository,
+                joinRequest.PlayerRef,
+                targetTeamId: team.Id,
+                cancellationToken);
+        }
 
         team.ProcessJoinRequest(request.RequestId, request.IsApproved);
         await _teamRepository.SaveAsync(team, cancellationToken);
