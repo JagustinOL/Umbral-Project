@@ -1,0 +1,2340 @@
+{
+  "info": {
+    "_postman_id": "b1058018-ddd9-4a98-a22e-a8d083f32ffd",
+    "name": "UMBRAL API",
+    "description": "## Variables de colección\nTras cada POST/PUT de creación, los scripts **Tests** guardan automáticamente `missionId`, `stageId`, `parentNodeId`, `nodeId`, `operatorId`, `playerId`, `teamId`, `sessionId`, `joinCode`, `teamCode`, `requestId`, `hintId`, etc.\n\n**URLs (Docker):** `{{missionManagementUrl}}` (5260) y `{{sessionManagementUrl}}` (5278).\nSi ejecutas con `dotnet run`: usa 5117 y 5240 en esas variables.\n\n**Flujo rápido:** carpeta «Flujo E2E» → Run collection (orden secuencial).\n\nEdita solo emails/contraseñas en los bodies de creación si hace falta.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Propaga creatorId → requestorId si falta (líder del equipo)",
+          "const requestorId = pm.collectionVariables.get('requestorId');",
+          "const creatorId = pm.collectionVariables.get('creatorId');",
+          "if (!requestorId && creatorId) {",
+          "    pm.collectionVariables.set('requestorId', creatorId);",
+          "}",
+          "// parentNodeId por defecto = etapa",
+          "const parentNodeId = pm.collectionVariables.get('parentNodeId');",
+          "const stageId = pm.collectionVariables.get('stageId');",
+          "if (!parentNodeId && stageId) {",
+          "    pm.collectionVariables.set('parentNodeId', stageId);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "missionManagementUrl",
+      "value": "http://localhost:5260",
+      "type": "string"
+    },
+    {
+      "key": "sessionManagementUrl",
+      "value": "http://localhost:5278",
+      "type": "string"
+    },
+    {
+      "key": "missionManagementPort",
+      "value": "5260",
+      "type": "string"
+    },
+    {
+      "key": "sessionManagementPort",
+      "value": "5278",
+      "type": "string"
+    },
+    {
+      "key": "missionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "stageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "parentNodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hintId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "playerId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "teamId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "teamCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "joinCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "requestorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "creatorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lastCreatedId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Flujo E2E (Run Collection)",
+      "description": "Ejecuta esta carpeta con Collection Runner. Las variables se rellenan solas entre pasos.",
+      "item": [
+        {
+          "name": "01 Crear Jugador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/players",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "players"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) {",
+                  "        pm.collectionVariables.set('playerId', body.id);",
+                  "        pm.collectionVariables.set('creatorId', body.id);",
+                  "        pm.collectionVariables.set('requestorId', body.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Crear Operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/operators",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "operators"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) pm.collectionVariables.set('operatorId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Crear Misión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Misión E2E\",\n  \"description\": \"Flujo automático\",\n  \"difficulty\": 1,\n  \"maxDurationMinutes\": 60\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) pm.collectionVariables.set('missionId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Crear Etapa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "nodes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Etapa 1\",\n  \"description\": \"Etapa\",\n  \"executionOrder\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) {",
+                  "        pm.collectionVariables.set('nodeId', body.id);",
+                  "        pm.collectionVariables.set('stageId', body.id);",
+                  "        pm.collectionVariables.set('parentNodeId', body.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Añadir Trivia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{parentNodeId}}/trivia",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "nodes",
+                "{{parentNodeId}}",
+                "trivia"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"¿Capital de Venezuela?\",\n      \"options\": [\n        \"Caracas\",\n        \"Valencia\",\n        \"Maracaibo\"\n      ],\n      \"correctOptionIndex\": 0\n    }\n  ],\n  \"executionOrder\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) pm.collectionVariables.set('nodeId', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Activar Misión",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/activate",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 Asignar Operador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/operators",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "operators"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operatorId\": \"{{operatorId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "08 Crear Equipo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/teams",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "teams"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Equipo E2E\",\n  \"creatorId\": \"{{creatorId}}\",\n  \"creatorDisplayName\": \"Líder\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.id) {",
+                  "        pm.collectionVariables.set('teamId', body.id);",
+                  "        if (!pm.collectionVariables.get('requestorId')) {",
+                  "            pm.collectionVariables.set('requestorId', pm.collectionVariables.get('creatorId'));",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 Crear Sesión Live",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "operators",
+                "{{operatorId}}",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"missionId\": \"{{missionId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.sessionId) pm.collectionVariables.set('sessionId', body.sessionId);",
+                  "    if (body.joinCode) pm.collectionVariables.set('joinCode', body.joinCode);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 Unir Equipo a Sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/join",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "live-sessions",
+                "join"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"joinCode\": \"{{joinCode}}\",\n  \"teamId\": \"{{teamId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.sessionId) pm.collectionVariables.set('sessionId', body.sessionId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 Iniciar Sesión",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/{{sessionId}}/start",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "operators",
+                "{{operatorId}}",
+                "sessions",
+                "{{sessionId}}",
+                "start"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MissionManagement",
+      "description": "",
+      "item": [
+        {
+          "name": "Épica 1 — Misiones y Etapas",
+          "description": "",
+          "item": [
+            {
+              "name": "1 · Crear Misión (HU-01)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Misión demo\",\n  \"description\": \"Descripción\",\n  \"difficulty\": 1,\n  \"maxDurationMinutes\": 60\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('missionId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Misiones (HU-02)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Consultar Misión por Id (HU-02)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Misión (HU-03)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Misión actualizada\",\n  \"description\": \"Nueva descripción\",\n  \"maxDurationMinutes\": 90\n}"
+                }
+              }
+            },
+            {
+              "name": "2 · Activar Misión",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/activate",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "activate"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Desactivar Misión (HU-04)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "3 · Crear Etapa (HU-05)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Etapa 1\",\n  \"description\": \"Primera etapa\",\n  \"executionOrder\": 1\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) {",
+                      "        pm.collectionVariables.set('nodeId', body.id);",
+                      "        pm.collectionVariables.set('stageId', body.id);",
+                      "        pm.collectionVariables.set('parentNodeId', body.id);",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Etapas (HU-06)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const nodes = pm.response.json();",
+                      "    if (Array.isArray(nodes) && nodes.length > 0) {",
+                      "        const stage = nodes.find(n => n.nodeType === 'Stage') || nodes[0];",
+                      "        if (stage.id) {",
+                      "            pm.collectionVariables.set('stageId', stage.id);",
+                      "            pm.collectionVariables.set('parentNodeId', stage.id);",
+                      "        }",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Listar Juegos de Etapa",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{stageId}}/games",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{stageId}}",
+                    "games"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Etapa (HU-07)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Etapa actualizada\",\n  \"description\": \"Desc\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Eliminar Etapa (HU-08)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Épica 2 — Juegos y Pistas",
+          "description": "",
+          "item": [
+            {
+              "name": "4 · Añadir Trivia (HU-09)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{parentNodeId}}/trivia",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{parentNodeId}}",
+                    "trivia"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"¿Capital de Venezuela?\",\n      \"options\": [\n        \"Caracas\",\n        \"Valencia\",\n        \"Maracaibo\"\n      ],\n      \"correctOptionIndex\": 0\n    }\n  ],\n  \"executionOrder\": 1\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('nodeId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Trivia (HU-10)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/trivia",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "trivia"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Trivia (HU-11)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/trivia",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "trivia"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"questions\": [\n    {\n      \"prompt\": \"¿2 + 2?\",\n      \"options\": [\n        \"3\",\n        \"4\",\n        \"5\"\n      ],\n      \"correctOptionIndex\": 1\n    }\n  ]\n}"
+                }
+              }
+            },
+            {
+              "name": "Eliminar Trivia (HU-12)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "5 · Añadir Treasure Hunt (HU-13)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{parentNodeId}}/treasure-hunts",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{parentNodeId}}",
+                    "treasure-hunts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"instructions\": \"Busca el punto\",\n  \"secretCode\": \"CODE-123\",\n  \"destination\": {\n    \"latitude\": 10.5,\n    \"longitude\": -66.9\n  },\n  \"executionOrder\": 2\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('nodeId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Treasure Hunt (HU-14)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/treasure-hunts",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "treasure-hunts"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Treasure Hunt (HU-15)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/treasure-hunts",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "treasure-hunts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"instructions\": \"Nuevas instrucciones\",\n  \"secretCode\": \"CODE-456\",\n  \"destination\": {\n    \"latitude\": 10.6,\n    \"longitude\": -67.0\n  }\n}"
+                }
+              }
+            },
+            {
+              "name": "Eliminar Treasure Hunt (HU-16)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear Pista (HU-17)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/hints",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "hints"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "content",
+                      "value": "Contenido de la pista",
+                      "type": "text"
+                    },
+                    {
+                      "key": "attachment",
+                      "type": "file",
+                      "src": [],
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('hintId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Pistas (HU-18)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/hints",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "hints"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Pista (HU-19)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/hints/{{hintId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "hints",
+                    "{{hintId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Pista actualizada\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Eliminar Pista (HU-20)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/hints/{{hintId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "hints",
+                    "{{hintId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Épica 3 — Operadores",
+          "description": "",
+          "item": [
+            {
+              "name": "Crear Operador (HU-22)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/operators",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('operatorId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Operadores (HU-23)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/operators",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Desactivar Operador (HU-26)",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/operators/{{operatorId}}/deactivate",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "deactivate"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "6 · Asignar Operador (HU-24)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/operators",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "operators"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"operatorId\": \"{{operatorId}}\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Revocar Operador (HU-25)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/operators/{{operatorId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "operators",
+                    "{{operatorId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gestión de Jugadores",
+          "description": "",
+          "item": [
+            {
+              "name": "Crear Jugador",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/players",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) {",
+                      "        pm.collectionVariables.set('playerId', body.id);",
+                      "        pm.collectionVariables.set('creatorId', body.id);",
+                      "        pm.collectionVariables.set('requestorId', body.id);",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Jugadores",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/players",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Consultar Jugador por Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/players/{{playerId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players",
+                    "{{playerId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Modificar Jugador",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/players/{{playerId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players",
+                    "{{playerId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Actualizado\",\n  \"email\": \"luis.nuevo@umbral.com\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Desactivar Jugador",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/players/{{playerId}}/deactivate",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players",
+                    "{{playerId}}",
+                    "deactivate"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SessionManagement",
+      "description": "",
+      "item": [
+        {
+          "name": "Épica 4 — Equipos",
+          "description": "",
+          "item": [
+            {
+              "name": "7 · Crear Equipo (HU-27)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Los Exploradores\",\n  \"creatorId\": \"{{creatorId}}\",\n  \"creatorDisplayName\": \"Líder\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) {",
+                      "        pm.collectionVariables.set('teamId', body.id);",
+                      "        if (!pm.collectionVariables.get('requestorId')) {",
+                      "            pm.collectionVariables.set('requestorId', pm.collectionVariables.get('creatorId'));",
+                      "        }",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Equipo (HU-29)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.teamCode) pm.collectionVariables.set('teamCode', body.teamCode);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Modificar Equipo (HU-33)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"newName\": \"Equipo Renombrado\",\n  \"requestorId\": \"{{requestorId}}\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Disolver Equipo (HU-34)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}?requestorId={{requestorId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "requestorId",
+                      "value": "{{requestorId}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Solicitar Unión (HU-28)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/join-requests",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "join-requests"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"teamCode\": \"{{teamCode}}\",\n  \"playerRef\": \"{{playerId}}\",\n  \"displayName\": \"Nuevo miembro\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.requestId) pm.collectionVariables.set('requestId', body.requestId);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Solicitudes Pendientes (HU-32)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}/requests?requestorId={{requestorId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}",
+                    "requests"
+                  ],
+                  "query": [
+                    {
+                      "key": "requestorId",
+                      "value": "{{requestorId}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const list = pm.response.json();",
+                      "    if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+                      "        pm.collectionVariables.set('requestId', list[0].id);",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Procesar Solicitud (HU-30)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}/requests/{{requestId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}",
+                    "requests",
+                    "{{requestId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"approve\": true,\n  \"requestorId\": \"{{requestorId}}\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Expulsar Integrante (HU-31)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/teams/{{teamId}}/members/{{playerId}}?requestorId={{requestorId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "teams",
+                    "{{teamId}}",
+                    "members",
+                    "{{playerId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "requestorId",
+                      "value": "{{requestorId}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Épica 5 — Participación Jugador",
+          "description": "",
+          "item": [
+            {
+              "name": "Sesiones Activas (HU-36)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/active",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "active"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "9 · Unirse a Sesión (HU-37)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/join",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "join"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"joinCode\": \"{{joinCode}}\",\n  \"teamId\": \"{{teamId}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.sessionId) pm.collectionVariables.set('sessionId', body.sessionId);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Etapa Actual (HU-38)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/{{sessionId}}/teams/{{teamId}}/current-stage",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "{{sessionId}}",
+                    "teams",
+                    "{{teamId}}",
+                    "current-stage"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Código Treasure Hunt (HU-40)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/{{sessionId}}/teams/{{teamId}}/treasure-hunt-code",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "{{sessionId}}",
+                    "teams",
+                    "{{teamId}}",
+                    "treasure-hunt-code"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nodeId\": \"{{nodeId}}\",\n  \"foundCode\": \"CODE-123\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Respuesta Trivia (HU-42)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/{{sessionId}}/teams/{{teamId}}/trivia-answer",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "{{sessionId}}",
+                    "teams",
+                    "{{teamId}}",
+                    "trivia-answer"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nodeId\": \"{{nodeId}}\",\n  \"answer\": \"Caracas\"\n}"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Épica 6 — Operador",
+          "description": "",
+          "item": [
+            {
+              "name": "Misiones Asignadas (HU-47)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/missions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "missions"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Validar Sesiones Abiertas por Misión",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/missions/{{missionId}}/session-validation/has-open",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "missions",
+                    "{{missionId}}",
+                    "session-validation",
+                    "has-open"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "8 · Crear Sesión Live (HU-48)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"missionId\": \"{{missionId}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.sessionId) pm.collectionVariables.set('sessionId', body.sessionId);",
+                      "    if (body.joinCode) pm.collectionVariables.set('joinCode', body.joinCode);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Equipos en Sesión Pending (HU-49)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/{{sessionId}}/teams",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions",
+                    "{{sessionId}}",
+                    "teams"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "10 · Iniciar Sesión (HU-50)",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/{{sessionId}}/start",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions",
+                    "{{sessionId}}",
+                    "start"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Finalizar Sesión",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/{{sessionId}}/finalize",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions",
+                    "{{sessionId}}",
+                    "finalize"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Cancelar Sesión",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/{{sessionId}}/cancel",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions",
+                    "{{sessionId}}",
+                    "cancel"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Integración (solo en código)",
+      "description": "",
+      "item": [
+        {
+          "name": "Node Validations (integración)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/node-validations",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "node-validations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Operador tiene sesiones activas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/session-validation/has-active",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "operators",
+                "{{operatorId}}",
+                "session-validation",
+                "has-active"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Operador supervisa misión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/missions/{{missionId}}/session-validation/is-supervising",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{sessionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "operators",
+                "{{operatorId}}",
+                "missions",
+                "{{missionId}}",
+                "session-validation",
+                "is-supervising"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

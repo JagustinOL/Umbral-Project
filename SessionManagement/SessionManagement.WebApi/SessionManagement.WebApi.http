@@ -1,0 +1,6 @@
+@SessionManagement.WebApi_HostAddress = http://localhost:5240
+
+GET {{SessionManagement.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

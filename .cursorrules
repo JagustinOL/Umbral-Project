@@ -1,0 +1,19 @@
+# Guía Global de IA para el Proyecto UMBRAL
+
+## Contexto del Proyecto
+UMBRAL es un proyecto académico para la UCAB (2026). Es una plataforma para la operación en tiempo real de experiencias de investigación interactivas inmersivas.
+La solución debe cumplir estrictamente con los requisitos académicos establecidos.
+
+## Alcance y Exclusiones
+- **PROHIBIDO** generar o sugerir código para aplicaciones móviles nativas. El acceso móvil debe resolverse obligatoriamente a través de una interfaz web responsiva (Mobile-First).
+- La solución consta de una aplicación web para Administradores/Operadores, y una aplicación web responsiva para Jugadores.
+- El proyecto involucra comunicación en tiempo real (WebSockets), mensajería asíncrona (RabbitMQ), backend en .NET Core y frontend en React.
+
+## Reglas de Arquitectura Generales
+- Utiliza una clara separación de responsabilidades (Separation of Concerns).
+- Usa siempre contenedores Docker para la infraestructura local (PostgreSQL, RabbitMQ).
+- Escribe código que sea fácilmente testeable. Las pruebas unitarias son obligatorias (objetivo: 90% de cobertura).
+
+## Pautas de Edición
+- No realices refactorizaciones masivas sin consultar primero.
+- Si modificas una entidad de dominio o un caso de uso, **DEBES** leer silenciosamente el archivo `docs/reglas_negocio.md` primero para garantizar que no rompas ninguna regla del juego.

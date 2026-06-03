@@ -1,0 +1,55 @@
+using FluentAssertions;
+using Moq;
+using SessionManagement.Application.Exceptions;
+using SessionManagement.Application.Teams.Commands.ProcessJoinRequest;
+using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Repositories;
+using Xunit;
+
+namespace SessionManagement.Application.Tests.Teams.Commands.ProcessJoinRequest;
+
+public sealed class ProcessJoinRequestHandlerTests
+{
+    [Fact]
+    public async Task Handle_WhenRequestorIdIsEmpty_ThrowsArgumentException()
+    {
+        var teamRepositoryMock = new Mock<ITeamRepository>();
+        var handler = new ProcessJoinRequestHandler(teamRepositoryMock.Object);
+        var command = new ProcessJoinRequestCommand(Guid.NewGuid(), Guid.NewGuid(), true, Guid.Empty);
+
+        var act = async () => await handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("El parámetro requestorId es obligatorio.");
+        teamRepositoryMock.Verify(
+            x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenRequestorIsNotLeader_ThrowsConflictException()
+    {
+        // Arrange
+        var teamRepositoryMock = new Mock<ITeamRepository>();
+        var leaderId = Guid.NewGuid();
+        var nonLeaderId = Guid.NewGuid();
+        var team = Team.Create("Equipo", leaderId, "Leader");
+        team.SubmitJoinRequest(Guid.NewGuid(), "Nuevo");
+        team.AddMember(SessionManagement.Domain.Entities.TeamMember.Create(nonLeaderId, "Member2"));
+
+        var requestId = team.JoinRequests.Single().Id;
+
+        teamRepositoryMock
+            .Setup(x => x.GetByIdAsync(team.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+
+        var handler = new ProcessJoinRequestHandler(teamRepositoryMock.Object);
+        var command = new ProcessJoinRequestCommand(team.Id, requestId, true, nonLeaderId);
+
+        // Act
+        var act = async () => await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+}
