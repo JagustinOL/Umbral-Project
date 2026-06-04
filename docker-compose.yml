@@ -60,9 +60,6 @@ services:
       - ./infra/keycloak:/opt/keycloak/data/import:ro
     ports:
       - "8081:8080"
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       # Sin curl en la imagen; TCP a /health/ready (KC_HEALTH_ENABLED). Primer arranque: ~2–3 min (Quarkus augment).
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200 OK'"]
@@ -70,15 +67,6 @@ services:
       timeout: 10s
       retries: 15
       start_period: 180s
-
-  sonarqube:
-    profiles: [tools]
-    image: sonarqube:10.4-community
-    container_name: umbral-sonarqube
-    ports:
-      - "9000:9000"
-    environment:
-      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
 
   # ==========================================
   # --- 3. MICROSERVICIOS BACKEND (.NET 10) ---
@@ -153,10 +141,11 @@ services:
       RabbitMQ__Host: mq
 
   # ==========================================
-  # --- 4. FRONTEND (Next.js) ---
-  # Se levantan por defecto con: docker compose up -d --build
+  # --- 4. FRONTEND (Next.js) — perfil "frontend" ---
+  # Por defecto solo infra + backend. Con UI: docker compose --profile frontend up -d --build
   # ==========================================
   admin-view-web:
+    profiles: ["frontend"]
     build:
       context: ./AdminView-WEB
       dockerfile: Dockerfile
@@ -175,6 +164,7 @@ services:
       - keycloak
 
   operador-view-web:
+    profiles: ["frontend"]
     build:
       context: ./OperadorView-WEB
       dockerfile: Dockerfile
@@ -195,6 +185,7 @@ services:
       - keycloak
 
   login-view-web:
+    profiles: ["frontend"]
     build:
       context: ./LoginView-WEB
       dockerfile: Dockerfile

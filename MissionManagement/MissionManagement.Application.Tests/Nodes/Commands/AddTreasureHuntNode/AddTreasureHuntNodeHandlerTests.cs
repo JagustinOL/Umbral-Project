@@ -20,7 +20,7 @@ public sealed class AddTreasureHuntNodeHandlerTests
         var missionId = Guid.NewGuid();
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(missionId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(missionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Mission?)null);
 
         var handler = new AddTreasureHuntNodeHandler(_repositoryMock.Object);
@@ -49,7 +49,7 @@ public sealed class AddTreasureHuntNodeHandlerTests
         mission.AddRootNode(stage);
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mission);
 
         var handler = new AddTreasureHuntNodeHandler(_repositoryMock.Object);
