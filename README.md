@@ -110,7 +110,9 @@ docker compose --profile frontend up -d --build
 | Frontend *(perfil frontend)* | http://localhost:3000 |
 | SonarQube *(perfil tools)* | http://localhost:9000 |
 
-> **Keycloak:** en modo desarrollo debes crear manualmente el realm `umbral-realm` desde la consola de administración en http://localhost:8081.
+> **Keycloak:** el realm `umbral-realm` se importa solo desde `infra/keycloak/umbral-realm.json`. El **primer** `docker compose up` puede tardar **2–3 minutos** en Keycloak (compilación Quarkus); espera `(healthy)` antes de levantar servicios que dependen de él, o usa: `docker compose up -d db mq keycloak` y luego el resto.
+>
+> **Admin de la app (realm `umbral-realm`):** `mission-management-service` crea al arrancar el usuario `admin@umbral.com` / `Admin123!` con rol `admin` (no es el usuario `admin` de la consola de Keycloak). Si recreas el contenedor de Keycloak sin volumen, reinicia también `mission-management-service` o espera ~1 min (bootstrap periódico).
 
 ---
 

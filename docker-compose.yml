@@ -56,6 +56,7 @@ services:
       KC_HEALTH_ENABLED: "true"
     command: start-dev --import-realm --spi-import-realm-strategy=OVERWRITE_EXISTING
     volumes:
+      - keycloak-data:/opt/keycloak/data
       - ./infra/keycloak:/opt/keycloak/data/import:ro
     ports:
       - "8081:8080"
@@ -63,11 +64,12 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200'"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
+      # Sin curl en la imagen; TCP a /health/ready (KC_HEALTH_ENABLED). Primer arranque: ~2–3 min (Quarkus augment).
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 180s
 
   sonarqube:
     profiles: [tools]
@@ -210,4 +212,6 @@ services:
 
 volumes:
   db-data:
+    driver: local
+  keycloak-data:
     driver: local
