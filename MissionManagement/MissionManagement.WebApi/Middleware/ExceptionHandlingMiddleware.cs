@@ -20,6 +20,11 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
             context.Response.StatusCode = StatusCodes.Status409Conflict;
             await context.Response.WriteAsJsonAsync(new { error = ex.Message });
         }
+        catch (UnauthorizedException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -28,6 +33,11 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
         catch (InvalidOperationException ex)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (ExternalDependencyException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await context.Response.WriteAsJsonAsync(new { error = ex.Message });
         }
     }

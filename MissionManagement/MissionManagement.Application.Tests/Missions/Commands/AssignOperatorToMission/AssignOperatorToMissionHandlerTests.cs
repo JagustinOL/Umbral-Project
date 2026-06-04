@@ -2,6 +2,7 @@ using FluentAssertions;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Application.Missions.Commands.AssignOperatorToMission;
 using MissionManagement.Domain.Aggregates;
+using MissionManagement.Domain.Entities;
 using MissionManagement.Domain.Repositories;
 using MissionManagement.Domain.ValueObjects;
 using Moq;
@@ -40,10 +41,12 @@ public sealed class AssignOperatorToMissionHandlerTests
     {
         // Arrange
         var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
         var operatorId = Guid.NewGuid();
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mission);
 
         var handler = new AssignOperatorToMissionHandler(_repositoryMock.Object);
@@ -56,6 +59,7 @@ public sealed class AssignOperatorToMissionHandlerTests
 
         // Assert
         mission.Operators.Should().ContainSingle(x => x.OperatorId == operatorId);
+        mission.Status.Should().Be(MissionStatus.Active);
         _repositoryMock.Verify(
             r => r.SaveAsync(mission, It.IsAny<CancellationToken>()),
             Times.Once);

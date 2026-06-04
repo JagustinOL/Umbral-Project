@@ -1,60 +1,52 @@
 'use client';
 
-import { Check, Users, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-
-interface Team {
-  id: string;
-  name: string;
-  memberCount: number;
-  joinedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
+import { UsersIcon } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TeamsListProps {
-  teams: Team[];
+  teamIds: string[];
+  isLoading: boolean;
 }
 
-export function TeamsList({ teams }: TeamsListProps) {
-  if (teams.length === 0) {
+export function TeamsList({ teamIds, isLoading }: TeamsListProps) {
+  if (isLoading && teamIds.length === 0) {
     return (
-      <div className="p-8 text-center border border-dashed border-slate-700 rounded-lg bg-slate-900/50">
-        <Users className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-        <p className="text-slate-400">No teams have joined yet</p>
-        <p className="text-sm text-slate-500 mt-1">Share the join code to invite teams</p>
+      <div className="space-y-3">
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  if (teamIds.length === 0) {
+    return (
+      <div className="p-8 text-center border border-dashed border-border rounded-lg bg-muted/30">
+        <UsersIcon className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground">Aún no hay equipos registrados</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          Comparta el código de unión para que los equipos se incorporen
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {teams.map((team) => (
+    <div className="space-y-2">
+      {teamIds.map((teamId) => (
         <div
-          key={team.id}
-          className="p-4 bg-slate-700/50 border border-slate-700 rounded-lg hover:border-slate-600 transition-colors"
+          key={teamId}
+          className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3"
         >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h4 className="font-semibold text-slate-50">{team.name}</h4>
-                <Badge variant="outline" className="text-xs bg-green-950 border-green-800 text-green-200">
-                  <Check className="w-3 h-3 mr-1" />
-                  Approved
-                </Badge>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {team.memberCount} member{team.memberCount !== 1 ? 's' : ''}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {team.joinedAt}
-                </span>
-              </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+              <UsersIcon className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className="ml-2 h-2 w-2 bg-green-500 rounded-full"></div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">Equipo registrado</p>
+              <p className="text-xs text-muted-foreground font-mono truncate">{teamId}</p>
+            </div>
           </div>
+          <span className="h-2 w-2 rounded-full bg-status-active shrink-0" />
         </div>
       ))}
     </div>

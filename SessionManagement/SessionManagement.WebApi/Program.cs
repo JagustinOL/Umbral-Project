@@ -10,9 +10,24 @@ using SessionManagement.Infrastructure.Repositories;
 using SessionManagement.WebApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(frontendCorsPolicy, policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+                "http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(SessionManagement.Application.LiveSessions.Queries.GetActiveSessions.GetActiveSessionsQuery).Assembly));
@@ -63,6 +78,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(frontendCorsPolicy);
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.MapControllers();
 

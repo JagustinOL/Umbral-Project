@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, Loader2 } from 'lucide-react';
+import { Loader2Icon, ZapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface StartSessionButtonProps {
@@ -9,30 +9,23 @@ interface StartSessionButtonProps {
   onStart: () => void;
 }
 
-export function StartSessionButton({
-  disabled,
-  loading,
-  onStart,
-}: StartSessionButtonProps) {
+export function StartSessionButton({ disabled, loading, onStart }: StartSessionButtonProps) {
   return (
     <Button
       onClick={onStart}
       disabled={disabled || loading}
-      className={`w-full gap-2 font-semibold py-6 ${
-        disabled
-          ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-          : 'bg-amber-600 hover:bg-amber-700 text-slate-50'
-      }`}
+      className="w-full gap-2"
+      size="lg"
     >
       {loading ? (
         <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Starting...
+          <Loader2Icon className="h-4 w-4 animate-spin" />
+          Iniciando…
         </>
       ) : (
         <>
-          <Zap className="w-4 h-4" />
-          Start Session (HU-50)
+          <ZapIcon className="h-4 w-4" />
+          Iniciar sesión
         </>
       )}
     </Button>

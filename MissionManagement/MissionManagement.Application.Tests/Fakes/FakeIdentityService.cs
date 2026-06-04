@@ -12,6 +12,14 @@ public sealed class FakeIdentityService : IIdentityService
         CancellationToken cancellationToken = default)
         => Task.FromResult(Guid.NewGuid());
 
+    public Task<Guid> CreateAdminAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string password,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Guid.NewGuid());
+
     public Task<IReadOnlyList<OperatorIdentityDto>> GetOperatorsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<OperatorIdentityDto>>([]);
 

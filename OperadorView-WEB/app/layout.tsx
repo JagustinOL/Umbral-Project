@@ -1,15 +1,15 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthBootstrap } from '@/components/auth/AuthBootstrap'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'UMBRAL · Operator Console',
+  description: 'Operator control panel for UMBRAL live sessions',
   icons: {
     icon: [
       {
@@ -37,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
+        <AuthBootstrap />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

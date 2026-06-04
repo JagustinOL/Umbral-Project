@@ -1,127 +1,156 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Copy, Check } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowLeftIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TeamsList } from '../lists/TeamsList';
 import { JoinCodeDisplay } from '../ui/JoinCodeDisplay';
 import { StartSessionButton } from '../buttons/StartSessionButton';
-import { getMockTeams } from '@/lib/mockData';
+import {
+  getOperatorSessionApiErrorMessage,
+  operatorSessionService,
+} from '@/lib/services/operatorSessionService';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangleIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface WaitingRoomViewProps {
+  operatorId: string;
   sessionId: string;
   missionTitle: string;
+  joinCode: string;
   onBack: () => void;
+  onStartSession: () => Promise<void>;
 }
 
 export function WaitingRoomView({
+  operatorId,
   sessionId,
   missionTitle,
+  joinCode,
   onBack,
+  onStartSession,
 }: WaitingRoomViewProps) {
   const [copiedCode, setCopiedCode] = useState(false);
-  const [teams, setTeams] = useState(getMockTeams());
+  const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(true);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
   const [sessionStarting, setSessionStarting] = useState(false);
 
-  const joinCode = 'UMBRAL-' + sessionId.slice(0, 8).toUpperCase();
+  const loadTeams = useCallback(
+    async (signal?: AbortSignal) => {
+      setTeamsError(null);
+      try {
+        const result = await operatorSessionService.getSessionTeams(
+          operatorId,
+          sessionId,
+          signal,
+        );
+        setTeamIds(result.teamIds);
+      } catch (error) {
+        if (signal?.aborted) return;
+        setTeamsError(getOperatorSessionApiErrorMessage(error));
+      } finally {
+        if (!signal?.aborted) {
+          setIsLoadingTeams(false);
+        }
+      }
+    },
+    [operatorId, sessionId],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadTeams(controller.signal);
+
+    const interval = setInterval(() => {
+      void loadTeams(controller.signal);
+    }, 5000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [loadTeams]);
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(joinCode);
+    void navigator.clipboard.writeText(joinCode);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     setSessionStarting(true);
-    // Simulate API call
-    setTimeout(() => {
-      alert('Session started! (This is a simulated action - HU-50)');
+    try {
+      await onStartSession();
+    } catch (error) {
+      toast.error(getOperatorSessionApiErrorMessage(error));
+    } finally {
       setSessionStarting(false);
-    }, 1500);
+    }
   };
 
-  // Simulate teams joining over time (demo only)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (teams.length < 4) {
-        const newTeam = {
-          id: `team-${Date.now()}`,
-          name: `Team ${teams.length + 1}`,
-          memberCount: Math.floor(Math.random() * 3) + 1,
-          joinedAt: new Date().toLocaleTimeString(),
-          status: 'approved' as const,
-        };
-        setTeams([...teams, newTeam]);
-      }
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [teams]);
+  const approvedTeamCount = teamIds.length;
 
   return (
-    <div className="p-8">
-      {/* Header */}
+    <div>
       <div className="mb-8 flex items-center gap-4">
-        <Button
-          onClick={onBack}
-          variant="ghost"
-          size="icon"
-          className="text-slate-400 hover:text-slate-50"
-        >
-          <ArrowLeft className="w-5 h-5" />
+        <Button onClick={onBack} variant="ghost" size="icon" className="shrink-0">
+          <ArrowLeftIcon className="h-5 w-5" />
         </Button>
         <div>
-          <h2 className="text-3xl font-bold text-slate-50">{missionTitle}</h2>
-          <p className="text-slate-400">Session ID: {sessionId}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{missionTitle}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Sala de espera · sesión pendiente</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Join Code Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           <JoinCodeDisplay code={joinCode} onCopy={handleCopyCode} copied={copiedCode} />
 
-          {/* Teams Joined Section - HU-49 */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-50 mb-4">
-              Teams Joined ({teams.length})
-            </h3>
-            <TeamsList teams={teams} />
+            <h2 className="text-sm font-medium text-foreground mb-3">
+              Equipos registrados ({approvedTeamCount})
+            </h2>
+
+            {teamsError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangleIcon className="h-4 w-4" />
+                <AlertTitle>Error al cargar equipos</AlertTitle>
+                <AlertDescription>{teamsError}</AlertDescription>
+              </Alert>
+            )}
+
+            <TeamsList teamIds={teamIds} isLoading={isLoadingTeams} />
           </div>
         </div>
 
-        {/* Sidebar - Start Button */}
         <div className="lg:col-span-1">
-          <div className="sticky top-8 p-6 bg-slate-800 border border-slate-700 rounded-lg">
-            <h4 className="font-semibold text-slate-50 mb-4">Session Control</h4>
-
-            {/* Status Info */}
-            <div className="mb-6 p-3 bg-slate-900 rounded text-sm text-slate-300 border border-slate-700">
-              <p className="font-medium mb-1">Status</p>
-              <p className="text-amber-400">Pending</p>
+          <div className="sticky top-8 rounded-lg border border-border bg-card p-5 space-y-5">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Estado
+              </p>
+              <p className="text-sm font-medium text-amber-700 mt-1">Pendiente</p>
             </div>
 
-            {/* Team Count Info */}
-            <div className="mb-6 p-3 bg-slate-900 rounded text-sm">
-              <p className="font-medium text-slate-300 mb-1">Teams Ready</p>
-              <p className="text-2xl font-bold text-slate-50">{teams.length}</p>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Equipos listos
+              </p>
+              <p className="text-3xl font-semibold text-foreground mt-1">{approvedTeamCount}</p>
             </div>
 
-            {/* Start Button - HU-50 with RN-15 */}
             <StartSessionButton
-              disabled={teams.length === 0}
+              disabled={approvedTeamCount === 0}
               loading={sessionStarting}
-              onStart={handleStartSession}
+              onStart={() => void handleStartSession()}
             />
 
-            {/* Business Rule Alert - RN-15 */}
-            {teams.length === 0 && (
-              <div className="mt-4 p-3 bg-red-950 border border-red-800 rounded text-xs text-red-200">
-                <p className="font-medium">Cannot start session</p>
-                <p className="mt-1">
-                  At least 1 team must be approved to start (RN-15)
-                </p>
-              </div>
+            {approvedTeamCount === 0 && (
+              <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">
+                Se requiere al menos un equipo registrado para iniciar la sesión.
+              </p>
             )}
           </div>
         </div>

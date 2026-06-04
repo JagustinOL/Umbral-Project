@@ -1,75 +1,56 @@
 'use client';
 
-import { Play, Zap } from 'lucide-react';
+import { PlayIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-
-interface Mission {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: number;
-  maxDurationMinutes?: number;
-  stageCount: number;
-}
+import { Badge } from '@/components/ui/badge';
+import { OperatorAssignedMissionDto } from '@/lib/types/api';
 
 interface AssignedMissionCardProps {
-  mission: Mission;
-  onCreateSession: (sessionId: string, missionId: string, missionTitle: string) => void;
+  mission: OperatorAssignedMissionDto;
+  hasOpenSession: boolean;
+  isCreating: boolean;
+  disabled: boolean;
+  onCreateSession: (missionId: string, missionTitle: string) => Promise<void>;
 }
 
-export function AssignedMissionCard({ mission, onCreateSession }: AssignedMissionCardProps) {
-  const [isCreating, setIsCreating] = useState(false);
-
+export function AssignedMissionCard({
+  mission,
+  hasOpenSession,
+  isCreating,
+  disabled,
+  onCreateSession,
+}: AssignedMissionCardProps) {
   const handleCreateSession = () => {
-    setIsCreating(true);
-    // Simulate API call
-    setTimeout(() => {
-      const sessionId = `session-${Date.now()}`;
-      onCreateSession(sessionId, mission.id, mission.title);
-      setIsCreating(false);
-    }, 800);
+    void onCreateSession(mission.missionId, mission.title);
   };
 
   return (
-    <div className="p-6 bg-slate-800 border border-slate-700 rounded-lg hover:border-slate-600 transition-all hover:shadow-lg hover:shadow-amber-900/20">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-slate-50 mb-1">{mission.title}</h3>
-          <p className="text-sm text-slate-400">{mission.description}</p>
-        </div>
-        <div className="ml-2 px-2 py-1 bg-amber-900/40 border border-amber-700 rounded text-xs font-medium text-amber-200">
-          Assigned
-        </div>
-      </div>
-
-      {/* Mission Meta */}
-      <div className="grid grid-cols-3 gap-2 mb-6 py-4 border-y border-slate-700">
-        <div>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Difficulty</p>
-          <p className="text-sm font-semibold text-slate-50">{mission.difficulty}/10</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Stages</p>
-          <p className="text-sm font-semibold text-slate-50">{mission.stageCount}</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Duration</p>
-          <p className="text-sm font-semibold text-slate-50">
-            {mission.maxDurationMinutes || '—'} min
+    <div className="rounded-lg border border-border bg-card p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-card-foreground truncate">{mission.title}</h3>
+          <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
+            {mission.missionId}
           </p>
         </div>
+        <Badge variant="secondary" className="shrink-0">
+          Asignada
+        </Badge>
       </div>
 
-      {/* Action Button - HU-48 */}
+      {hasOpenSession && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          Esta misión ya tiene una sesión abierta. Debe finalizarla antes de crear otra.
+        </p>
+      )}
+
       <Button
         onClick={handleCreateSession}
-        disabled={isCreating}
-        className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-slate-50"
+        disabled={disabled || hasOpenSession || isCreating}
+        className="w-full gap-2 mt-auto"
       >
-        <Play className="w-4 h-4" />
-        {isCreating ? 'Creating Session...' : 'Create Live Session'}
+        <PlayIcon className="h-4 w-4" />
+        {isCreating ? 'Creando sesión…' : 'Crear sesión en vivo'}
       </Button>
     </div>
   );

@@ -86,7 +86,13 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
         return await _dbContext.LiveSessions
             .AsNoTracking()
-            .AnyAsync(x => x.OperatorRef == operatorId && IsOpenStatus(x.Status), cancellationToken);
+            .AnyAsync(
+                x => x.OperatorRef == operatorId
+                     && (x.Status == LiveSessionStatus.Pending
+                         || x.Status == LiveSessionStatus.Preparation
+                         || x.Status == LiveSessionStatus.Active
+                         || x.Status == LiveSessionStatus.Paused),
+                cancellationToken);
     }
 
     public async Task<bool> HasOpenSessionForMissionByOperatorAsync(
@@ -104,7 +110,10 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
             .AnyAsync(
                 x => x.OperatorRef == operatorId
                      && x.MissionRef == missionId
-                     && IsOpenStatus(x.Status),
+                     && (x.Status == LiveSessionStatus.Pending
+                         || x.Status == LiveSessionStatus.Preparation
+                         || x.Status == LiveSessionStatus.Active
+                         || x.Status == LiveSessionStatus.Paused),
                 cancellationToken);
     }
 
@@ -117,14 +126,14 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
 
         return await _dbContext.LiveSessions
             .AsNoTracking()
-            .AnyAsync(x => x.MissionRef == missionId && IsOpenStatus(x.Status), cancellationToken);
+            .AnyAsync(
+                x => x.MissionRef == missionId
+                     && (x.Status == LiveSessionStatus.Pending
+                         || x.Status == LiveSessionStatus.Preparation
+                         || x.Status == LiveSessionStatus.Active
+                         || x.Status == LiveSessionStatus.Paused),
+                cancellationToken);
     }
-
-    private static bool IsOpenStatus(LiveSessionStatus status) =>
-        status is LiveSessionStatus.Pending
-            or LiveSessionStatus.Preparation
-            or LiveSessionStatus.Active
-            or LiveSessionStatus.Paused;
 
     public async Task SaveAsync(LiveSession session, CancellationToken cancellationToken = default)
     {

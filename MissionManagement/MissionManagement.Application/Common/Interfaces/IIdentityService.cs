@@ -8,6 +8,12 @@ public interface IIdentityService
         string email,
         string password,
         CancellationToken cancellationToken = default);
+    Task<Guid> CreateAdminAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string password,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OperatorIdentityDto>> GetOperatorsAsync(CancellationToken cancellationToken = default);
     Task DeactivateOperatorAsync(Guid operatorId, CancellationToken cancellationToken = default);
 }

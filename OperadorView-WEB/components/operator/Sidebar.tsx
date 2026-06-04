@@ -1,58 +1,84 @@
 'use client';
 
-import { Zap, Radio, User, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { RadioIcon, ShieldIcon } from 'lucide-react';
 import { ViewType } from './OperatorDashboard';
+
+interface OperatorProfile {
+  operatorId: string;
+  displayName: string;
+  email: string;
+}
 
 interface SidebarProps {
   currentView: ViewType;
   onNavigate: (view: ViewType) => void;
+  operatorProfile: OperatorProfile | null;
 }
 
-export function Sidebar({ currentView, onNavigate }: SidebarProps) {
+export function Sidebar({ currentView, onNavigate, operatorProfile }: SidebarProps) {
+  const initials = operatorProfile?.displayName
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'OP';
+
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-slate-800">
-        <div className="flex items-center gap-2 mb-1">
-          <Zap className="w-6 h-6 text-amber-400" />
-          <h1 className="text-xl font-bold text-slate-50">UMBRAL</h1>
+    <aside className="flex flex-col w-56 shrink-0 h-screen bg-sidebar border-r border-sidebar-border sticky top-0">
+      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
+        <div className="h-7 w-7 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
+          <ShieldIcon className="h-4 w-4 text-sidebar-primary-foreground" />
         </div>
-        <p className="text-xs text-slate-400">Operator Control Room</p>
+        <div>
+          <p className="text-sm font-bold text-sidebar-primary leading-none tracking-wide">UMBRAL</p>
+          <p className="text-xs text-sidebar-foreground/50 mt-0.5">Operator Console</p>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        <Button
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-xs font-medium text-sidebar-foreground/40 uppercase tracking-wider">
+          Navigation
+        </p>
+      </div>
+
+      <nav className="flex-1 px-3 space-y-0.5">
+        <button
           onClick={() => onNavigate('missions')}
-          variant={currentView === 'missions' ? 'default' : 'ghost'}
-          className={`w-full justify-start gap-2 ${
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors',
             currentView === 'missions'
-              ? 'bg-amber-600 hover:bg-amber-700'
-              : 'text-slate-300 hover:text-slate-50'
-          }`}
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+          )}
         >
-          <Radio className="w-4 h-4" />
-          <span>Assigned Missions</span>
-        </Button>
+          <RadioIcon className="h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium leading-none">Missions</p>
+            <p className="text-xs text-sidebar-foreground/40 mt-0.5 leading-none">Assigned & sessions</p>
+          </div>
+          {currentView === 'missions' && (
+            <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary shrink-0" />
+          )}
+        </button>
       </nav>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/50 mb-3">
-          <User className="w-4 h-4 text-slate-400" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-50 truncate">Operator One</p>
-            <p className="text-xs text-slate-400 truncate">op-001@umbral.io</p>
+      <div className="px-5 py-4 border-t border-sidebar-border">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
+            <span className="text-xs font-semibold text-sidebar-accent-foreground">{initials}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-sidebar-foreground leading-none truncate">
+              {operatorProfile?.displayName ?? 'Operador'}
+            </p>
+            {operatorProfile?.email && (
+              <p className="text-xs text-sidebar-foreground/40 truncate mt-0.5">
+                {operatorProfile.email}
+              </p>
+            )}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 text-slate-400 hover:text-slate-50"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Sign Out</span>
-        </Button>
       </div>
     </aside>
   );

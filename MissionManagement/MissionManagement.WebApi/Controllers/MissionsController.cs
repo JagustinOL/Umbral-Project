@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Missions.Commands.ActivateMission;
 using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Application.Missions.Commands.DeactivateMission;
@@ -16,10 +17,14 @@ namespace MissionManagement.WebApi.Controllers;
 public sealed class MissionsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ISessionValidationService _sessionValidationService;
 
-    public MissionsController(IMediator mediator)
+    public MissionsController(
+        IMediator mediator,
+        ISessionValidationService sessionValidationService)
     {
         _mediator = mediator;
+        _sessionValidationService = sessionValidationService;
     }
 
     [HttpPost]
@@ -53,6 +58,13 @@ public sealed class MissionsController : ControllerBase
     {
         var result = await _mediator.Send(new GetMissionNodeValidationsQuery(id), cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/session-validation/has-open")]
+    public async Task<IActionResult> HasOpenSessions([FromRoute] Guid id, CancellationToken cancellationToken)
+    {
+        var hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(id, cancellationToken);
+        return Ok(new { hasOpenSessions });
     }
 
     [HttpPut("{id:guid}")]

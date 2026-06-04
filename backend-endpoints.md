@@ -1,3 +1,61 @@
+## MissionManagement · Autenticación (Keycloak OIDC)
+
+### Autenticar Usuario (Login)
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `POST /api/v1/auth/token`
+- **Capa Application:** `AuthenticateUserCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "username": "string (email)",
+    "password": "string"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "accessToken": "string (JWT)",
+    "refreshToken": "string",
+    "expiresIn": 300,
+    "userId": "Guid",
+    "roles": ["admin", "operator", "player"]
+  }
+  ```
+- **Errores esperados:**
+  - `401 Unauthorized` si las credenciales son inválidas o la cuenta está deshabilitada.
+  - `400 BadRequest` si faltan username o password.
+  - `503 ServiceUnavailable` si Keycloak no está disponible.
+- **Notas:**
+  - El backend delega la validación de credenciales a Keycloak (`grant_type=password`, client `umbral-web`).
+  - Los roles provienen de `realm_access.roles` del JWT emitido por Keycloak.
+  - Usuarios admin deben tener el rol realm `admin`; operadores el rol `operator` (creados vía `POST /api/v1/operators`).
+  - En desarrollo, el bootstrap crea `admin@umbral.com` / `Admin123!` si `Keycloak:DefaultAdminEmail` está configurado.
+
+### Crear Administrador
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `POST /api/v1/admins`
+- **Capa Application:** `CreateAdminCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string",
+    "password": "string"
+  }
+  ```
+- **Response (201 Created):**
+  ```json
+  {
+    "id": "Guid"
+  }
+  ```
+- **Errores esperados:**
+  - `409 Conflict` cuando el correo ya existe en Keycloak.
+  - `400 BadRequest` para contraseña menor a 8 caracteres.
+- **Notas:**
+  - Tras crear el usuario en Keycloak se asigna el rol realm `admin` y se establece la contraseña vía Admin API.
+
 ## MissionManagement · Épica 1 (Misiones y Etapas)
 
 ### Crear Misión (HU-01)

@@ -31,4 +31,20 @@ public sealed class KeycloakOptions
 
     [Required]
     public string PlayerRole { get; init; } = "player";
+
+    [Required]
+    public string AdminRole { get; init; } = "admin";
+
+    [Required]
+    public string WebClientId { get; init; } = "umbral-web";
+
+    public string? WebClientSecret { get; init; }
+
+    public string? DefaultAdminEmail { get; init; }
+
+    public string? DefaultAdminPassword { get; init; }
+
+    public string DefaultAdminFirstName { get; init; } = "UMBRAL";
+
+    public string DefaultAdminLastName { get; init; } = "Administrator";
 }

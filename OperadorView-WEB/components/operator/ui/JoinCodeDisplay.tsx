@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Check } from 'lucide-react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface JoinCodeDisplayProps {
@@ -11,33 +11,28 @@ interface JoinCodeDisplayProps {
 
 export function JoinCodeDisplay({ code, onCopy, copied }: JoinCodeDisplayProps) {
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-800 to-slate-900 border border-amber-600/30 rounded-lg">
-      <p className="text-sm text-slate-400 uppercase tracking-wide mb-3">Join Code</p>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <p className="text-4xl font-mono font-bold text-amber-400 tracking-wider">{code}</p>
-        </div>
-        <Button
-          onClick={onCopy}
-          variant="outline"
-          size="lg"
-          className="border-amber-600 text-amber-400 hover:bg-amber-950 hover:text-amber-300"
-        >
+    <div className="rounded-lg border border-border bg-card p-6">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+        Código de unión
+      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <p className="text-3xl font-mono font-semibold tracking-wider text-foreground">{code}</p>
+        <Button onClick={onCopy} variant="outline" size="sm" className="shrink-0">
           {copied ? (
             <>
-              <Check className="w-4 h-4 mr-2" />
-              Copied!
+              <CheckIcon className="h-4 w-4 mr-2" />
+              Copiado
             </>
           ) : (
             <>
-              <Copy className="w-4 h-4 mr-2" />
-              Copy
+              <CopyIcon className="h-4 w-4 mr-2" />
+              Copiar
             </>
           )}
         </Button>
       </div>
-      <p className="text-xs text-slate-400 mt-3">
-        Teams can use this code to join the gaming session
+      <p className="text-xs text-muted-foreground mt-3">
+        Los equipos usan este código para unirse a la sesión
       </p>
     </div>
   );

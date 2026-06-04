@@ -2,6 +2,7 @@ using MediatR;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Domain.Repositories;
+using System.Net.Http;
 
 namespace MissionManagement.Application.Missions.Commands.DeactivateMission;
 
@@ -24,9 +25,20 @@ public sealed class DeactivateMissionHandler : IRequestHandler<DeactivateMission
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.Id}.");
 
-        var hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(
-            request.Id,
-            cancellationToken);
+        bool hasOpenSessions;
+        try
+        {
+            hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(
+                request.Id,
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        {
+            throw new ConflictException(
+                $"No fue posible validar sesiones abiertas para la misión con Id={request.Id}. " +
+                "La desactivación fue bloqueada para proteger RN-01. " +
+                $"Detalle técnico: {ex.Message}");
+        }
 
         if (hasOpenSessions)
         {

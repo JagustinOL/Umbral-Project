@@ -38,6 +38,27 @@ umbral-web-ai/.cache/
 umbral-web-ai/next-env.d.ts
 
 # ============================================================
+#  NEXT.JS  (AdminView-WEB | OperadorView-WEB | LoginView-WEB)
+# ============================================================
+AdminView-WEB/.next/
+AdminView-WEB/out/
+AdminView-WEB/node_modules/
+AdminView-WEB/.cache/
+AdminView-WEB/next-env.d.ts
+
+OperadorView-WEB/.next/
+OperadorView-WEB/out/
+OperadorView-WEB/node_modules/
+OperadorView-WEB/.cache/
+OperadorView-WEB/next-env.d.ts
+
+LoginView-WEB/.next/
+LoginView-WEB/out/
+LoginView-WEB/node_modules/
+LoginView-WEB/.cache/
+LoginView-WEB/next-env.d.ts
+
+# ============================================================
 #  EXPO / REACT NATIVE  (umbral-mobile)
 # ============================================================
 umbral-mobile/node_modules/

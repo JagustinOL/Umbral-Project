@@ -188,6 +188,7 @@ public sealed class Mission : AggregateRoot
         var node = FindNodeById(nodeId)
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
+        EnsureNodeAcceptsHints(node);
         node.AddHint(hint);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
@@ -293,6 +294,8 @@ public sealed class Mission : AggregateRoot
 
         var node = FindNodeById(nodeId)
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
+
+        EnsureNodeAcceptsHints(node);
         var hint = node.FindHint(hintId)
             ?? throw new InvalidOperationException($"No se encontró la pista con Id={hintId}.");
 
@@ -312,6 +315,7 @@ public sealed class Mission : AggregateRoot
         var node = FindNodeById(nodeId)
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
+        EnsureNodeAcceptsHints(node);
         var removed = node.RemoveHint(hintId);
         if (!removed)
             throw new InvalidOperationException($"No se encontró la pista con Id={hintId}.");
@@ -327,6 +331,10 @@ public sealed class Mission : AggregateRoot
                 $"El operador con Id={operatorRef.OperatorId} ya está asignado a la misión '{Title}'.");
 
         _operators.Add(operatorRef);
+
+        if (Status == MissionStatus.Draft && _operators.Count > 0)
+            Activate();
+
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
@@ -341,6 +349,10 @@ public sealed class Mission : AggregateRoot
                 $"El operador con Id={operatorId} no está asignado a la misión '{Title}'.");
 
         _operators.Remove(existing);
+
+        if (_operators.Count == 0 && Status == MissionStatus.Active)
+            Status = MissionStatus.Draft;
+
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
@@ -454,6 +466,15 @@ public sealed class Mission : AggregateRoot
                 $"No se puede {operation} en la misión '{Title}' " +
                 $"porque su estado actual es '{Status}'. " +
                 $"Solo las misiones en Borrador pueden modificarse.");
+    }
+
+    private static void EnsureNodeAcceptsHints(MissionNode node)
+    {
+        if (node.NodeType is not (MissionNodeType.Trivia or MissionNodeType.TreasureHunt))
+        {
+            throw new InvalidOperationException(
+                "Las pistas solo pueden asignarse a nodos de tipo 'Trivia' o 'TreasureHunt'.");
+        }
     }
 
     private static MissionNode? FindInSubtree(MissionNode node, Guid targetId)

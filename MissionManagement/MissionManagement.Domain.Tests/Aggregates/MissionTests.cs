@@ -12,6 +12,8 @@ public sealed class MissionTests
     {
         // Arrange
         var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
         var operatorId = Guid.NewGuid();
         mission.AssignOperator(operatorId);
 
@@ -28,6 +30,8 @@ public sealed class MissionTests
     {
         // Arrange
         var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
         var operatorId = Guid.NewGuid();
 
         // Act
@@ -35,6 +39,49 @@ public sealed class MissionTests
 
         // Assert
         mission.Operators.Should().ContainSingle(x => x.OperatorId == operatorId);
+    }
+
+    [Fact]
+    public void AssignOperator_WhenDraftWithNodes_ActivatesMission()
+    {
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
+        var operatorId = Guid.NewGuid();
+
+        mission.AssignOperator(operatorId);
+
+        mission.Status.Should().Be(MissionStatus.Active);
+        mission.DomainEvents.Should().ContainSingle(e => e.GetType().Name == "MissionActivatedEvent");
+    }
+
+    [Fact]
+    public void AssignOperator_WhenDraftWithoutNodes_ThrowsInvalidOperationException()
+    {
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var operatorId = Guid.NewGuid();
+
+        var action = () => mission.AssignOperator(operatorId);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*no tiene ningún nodo*");
+        mission.Status.Should().Be(MissionStatus.Draft);
+    }
+
+    [Fact]
+    public void RevokeOperator_WhenLastOperatorOnActiveMission_ReturnsToDraft()
+    {
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
+        var operatorId = Guid.NewGuid();
+        mission.AssignOperator(operatorId);
+        mission.Status.Should().Be(MissionStatus.Active);
+
+        mission.RevokeOperator(operatorId);
+
+        mission.Operators.Should().BeEmpty();
+        mission.Status.Should().Be(MissionStatus.Draft);
     }
 
     [Fact]
@@ -84,19 +131,38 @@ public sealed class MissionTests
         var mission = Mission.Create("Misión activa", "Descripción", DifficultyLevel.Medium);
         var stage = MissionNode.Create("Etapa 1", "Desc etapa", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
         mission.AddRootNode(stage);
+        var triviaId = mission.AddTriviaNode(
+            stage.Id,
+            [new TriviaQuestion("¿Pregunta?", ["A", "B"], correctOptionIndex: 0)],
+            executionOrder: 1);
         mission.Activate();
 
         var hint = Hint.Create(
-            missionNodeId: stage.Id,
+            missionNodeId: triviaId,
             order: 1,
             content: "Pista inicial");
 
         // Act
-        var action = () => mission.AddHintToNode(stage.Id, hint);
+        var action = () => mission.AddHintToNode(triviaId, hint);
 
         // Assert
         action.Should().Throw<InvalidOperationException>()
             .WithMessage("*estado actual es 'Active'*");
+    }
+
+    [Fact]
+    public void AddHintToNode_WhenNodeIsStage_ThrowsInvalidOperationException()
+    {
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage = MissionNode.Create("Etapa 1", "Desc etapa", MissionNodeType.Stage, executionOrder: 1, baseScore: 10);
+        mission.AddRootNode(stage);
+
+        var hint = Hint.Create(stage.Id, order: 1, content: "Pista en etapa");
+
+        var action = () => mission.AddHintToNode(stage.Id, hint);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Trivia*TreasureHunt*");
     }
 
     [Fact]
