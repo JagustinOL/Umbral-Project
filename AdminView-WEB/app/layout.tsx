@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthBootstrap } from '@/components/auth/AuthBootstrap'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -34,11 +35,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const enableVercelAnalytics =
+    process.env.NODE_ENV === "production" &&
+    (process.env.VERCEL === "1" || process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === "true");
+
   return (
     <html lang="en" className="bg-background">
       <body className="font-sans antialiased">
+        <AuthBootstrap />
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {enableVercelAnalytics && <Analytics />}
       </body>
     </html>
   )

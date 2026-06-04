@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import {
   PlusIcon,
   UserXIcon,
-  UserCheckIcon,
-  ChevronDownIcon,
   ShieldIcon,
   XIcon,
+  Loader2Icon,
+  AlertTriangleIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -50,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "./StatusBadge";
 import { Operator, Mission, CreateOperatorPayload } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -57,8 +59,19 @@ import { cn } from "@/lib/utils";
 interface OperatorManagementProps {
   operators: Operator[];
   missions: Mission[];
-  onOperatorsChange: (operators: Operator[]) => void;
-  onMissionsChange: (missions: Mission[]) => void;
+  onCreateOperator: (payload: CreateOperatorPayload) => Promise<void>;
+  onDeactivateOperator: (operatorId: string) => Promise<void>;
+  onAssignOperator: (missionId: string, operatorId: string) => Promise<void>;
+  onRevokeOperator: (missionId: string, operatorId: string) => Promise<void>;
+  isLoading: boolean;
+  isCreating: boolean;
+  isDeactivating: boolean;
+  isAssigning: boolean;
+  isRevoking: boolean;
+  errorMessage: string | null;
+  assignmentError: string | null;
+  onRetry: () => void;
+  onClearAssignmentError: () => void;
 }
 
 // ─── Create Operator Modal ─────────────────────────────────────────────────────
@@ -66,21 +79,28 @@ interface OperatorManagementProps {
 interface CreateOperatorModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateOperatorPayload) => void;
+  onSubmit: (data: CreateOperatorPayload) => Promise<void>;
+  isSubmitting: boolean;
 }
 
-function CreateOperatorModal({ open, onClose, onSubmit }: CreateOperatorModalProps) {
+function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOperatorModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    onSubmit({ firstName, lastName, email });
-    setFirstName("");
-    setLastName("");
-    setEmail("");
-    onClose();
+    try {
+      await onSubmit({ firstName, lastName, email, password });
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPassword("");
+      onClose();
+    } catch {
+      // Error is handled at page-level and rendered as alert.
+    }
   };
 
   return (
@@ -88,6 +108,9 @@ function CreateOperatorModal({ open, onClose, onSubmit }: CreateOperatorModalPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Create Operator Account</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Create an operator user in Keycloak and assign the operator role.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="grid grid-cols-2 gap-3">
@@ -104,12 +127,28 @@ function CreateOperatorModal({ open, onClose, onSubmit }: CreateOperatorModalPro
             <Label htmlFor="op-email">Email <span className="text-destructive">*</span></Label>
             <Input id="op-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@umbral.ops" required />
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="op-password">
+              Password <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="op-password"
+              type="password"
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimum 8 characters"
+              required
+            />
+          </div>
           <p className="text-xs text-muted-foreground">
             A Keycloak account will be created and the <strong>operator</strong> role assigned automatically.
           </p>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Create Account</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Account"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -124,8 +163,12 @@ interface AssignOperatorSheetProps {
   onClose: () => void;
   missions: Mission[];
   operators: Operator[];
-  onAssign: (missionId: string, operatorId: string) => void;
-  onRevoke: (missionId: string, operatorId: string) => void;
+  onAssign: (missionId: string, operatorId: string) => Promise<void>;
+  onRevoke: (missionId: string, operatorId: string) => Promise<void>;
+  isAssigning: boolean;
+  isRevoking: boolean;
+  assignmentError: string | null;
+  onClearAssignmentError: () => void;
 }
 
 function AssignOperatorSheet({
@@ -135,10 +178,15 @@ function AssignOperatorSheet({
   operators,
   onAssign,
   onRevoke,
+  isAssigning,
+  isRevoking,
+  assignmentError,
+  onClearAssignmentError,
 }: AssignOperatorSheetProps) {
   const [selectedMissionId, setSelectedMissionId] = useState<string>("");
   const selectedMission = missions.find((m) => m.id === selectedMissionId);
   const assigned = selectedMission?.assignedOperators ?? [];
+  const isBusy = isAssigning || isRevoking;
 
   const assignedOperators = assigned
     .map((ref) => operators.find((o) => o.id === ref.operatorId))
@@ -152,17 +200,35 @@ function AssignOperatorSheet({
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="w-[420px] sm:max-w-[420px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-base font-semibold">Assign Operators to Mission</SheetTitle>
+          <SheetTitle className="text-base font-semibold">Asignar operadores a misión</SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-5">
+          {assignmentError && (
+            <Alert variant="destructive">
+              <AlertTriangleIcon className="h-4 w-4" />
+              <AlertTitle>Error de asignación</AlertTitle>
+              <AlertDescription className="flex items-center justify-between gap-2">
+                <span>{assignmentError}</span>
+                <Button variant="outline" size="sm" onClick={onClearAssignmentError}>
+                  Cerrar
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-1.5">
-            <Label>Select Mission</Label>
-            <Select value={selectedMissionId} onValueChange={setSelectedMissionId}>
+            <Label>Seleccionar misión</Label>
+            <Select
+              value={selectedMissionId}
+              onValueChange={(value) => {
+                onClearAssignmentError();
+                setSelectedMissionId(value);
+              }}
+            >
               <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Choose a mission…" />
               </SelectTrigger>
               <SelectContent>
-                {missions.map((m) => (
+                {missions.filter((m) => m.status !== "Inactive").map((m) => (
                   <SelectItem key={m.id} value={m.id}>
                     <div className="flex items-center gap-2">
                       <span>{m.title}</span>
@@ -184,7 +250,7 @@ function AssignOperatorSheet({
               {/* Assigned operators */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Assigned ({assignedOperators.length})
+                  Asignados ({assignedOperators.length}) — HU-24
                 </p>
                 {assignedOperators.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">No operators assigned.</p>
@@ -210,11 +276,16 @@ function AssignOperatorSheet({
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-                          onClick={() => onRevoke(selectedMissionId, op.id)}
-                          title="Revoke operator (RN-16, RN-25)"
+                          disabled={isBusy}
+                          onClick={() => void onRevoke(selectedMissionId, op.id)}
+                          title="Revocar operador (HU-25 / RN-16)"
                         >
-                          <XIcon className="h-3.5 w-3.5" />
-                          <span className="sr-only">Revoke</span>
+                          {isRevoking ? (
+                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <XIcon className="h-3.5 w-3.5" />
+                          )}
+                          <span className="sr-only">Revocar</span>
                         </Button>
                       </div>
                     ))}
@@ -225,7 +296,7 @@ function AssignOperatorSheet({
               {/* Available operators */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Available to Assign ({unassignedOperators.length})
+                  Disponibles ({unassignedOperators.length})
                 </p>
                 {unassignedOperators.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">All active operators are already assigned.</p>
@@ -251,10 +322,15 @@ function AssignOperatorSheet({
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs gap-1 shrink-0"
-                          onClick={() => onAssign(selectedMissionId, op.id)}
+                          disabled={isBusy}
+                          onClick={() => void onAssign(selectedMissionId, op.id)}
                         >
-                          <PlusIcon className="h-3 w-3" />
-                          Assign
+                          {isAssigning ? (
+                            <Loader2Icon className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <PlusIcon className="h-3 w-3" />
+                          )}
+                          Asignar
                         </Button>
                       </div>
                     ))}
@@ -274,71 +350,36 @@ function AssignOperatorSheet({
 export function OperatorManagement({
   operators,
   missions,
-  onOperatorsChange,
-  onMissionsChange,
+  onCreateOperator,
+  onDeactivateOperator,
+  onAssignOperator,
+  onRevokeOperator,
+  isLoading,
+  isCreating,
+  isDeactivating,
+  isAssigning,
+  isRevoking,
+  errorMessage,
+  assignmentError,
+  onRetry,
+  onClearAssignmentError,
 }: OperatorManagementProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Operator | null>(null);
 
-  const handleCreate = (data: CreateOperatorPayload) => {
-    const existing = operators.find((o) => o.email === data.email);
-    if (existing) return; // Keycloak uniqueness guard
-    const newOp: Operator = {
-      id: `op-${Date.now()}`,
-      ...data,
-      status: "Active",
-      assignedMissions: [],
-    };
-    onOperatorsChange([...operators, newOp]);
+  const handleCreate = async (data: CreateOperatorPayload) => {
+    await onCreateOperator(data);
   };
 
-  const handleDeactivate = () => {
+  const handleDeactivate = async () => {
     if (!deactivateTarget) return;
-    // RN-26: Would check for active sessions in real implementation
-    onOperatorsChange(
-      operators.map((o) =>
-        o.id === deactivateTarget.id ? { ...o, status: "Inactive" } : o
-      )
-    );
-    setDeactivateTarget(null);
-  };
-
-  const handleAssign = (missionId: string, operatorId: string) => {
-    // Update mission assigned operators (RN-24)
-    onMissionsChange(
-      missions.map((m) =>
-        m.id === missionId
-          ? { ...m, assignedOperators: [...(m.assignedOperators ?? []), { operatorId }] }
-          : m
-      )
-    );
-    // Update operator assigned missions
-    onOperatorsChange(
-      operators.map((o) =>
-        o.id === operatorId
-          ? { ...o, assignedMissions: [...(o.assignedMissions ?? []), missionId] }
-          : o
-      )
-    );
-  };
-
-  const handleRevoke = (missionId: string, operatorId: string) => {
-    // RN-25: Would check active live sessions in real implementation
-    onMissionsChange(
-      missions.map((m) =>
-        m.id === missionId
-          ? { ...m, assignedOperators: (m.assignedOperators ?? []).filter((r) => r.operatorId !== operatorId) }
-          : m
-      )
-    );
-    onOperatorsChange(
-      operators.map((o) =>
-        o.id === operatorId
-          ? { ...o, assignedMissions: (o.assignedMissions ?? []).filter((id) => id !== missionId) }
-          : o
-      )
-    );
+    try {
+      await onDeactivateOperator(deactivateTarget.id);
+      setDeactivateTarget(null);
+    } catch {
+      // Error is handled at page-level and rendered as alert.
+    }
   };
 
   return (
@@ -348,13 +389,13 @@ export function OperatorManagement({
         <div>
           <h1 className="text-xl font-semibold text-foreground text-balance">Operator Management</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {operators.filter((o) => o.status === "Active").length} active · {operators.filter((o) => o.status === "Inactive").length} inactive
+            {operators.length} active operator{operators.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAssignOpen(true)}>
             <ShieldIcon className="h-4 w-4" />
-            Assign to Mission
+            Asignar a misión
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4" />
@@ -365,6 +406,17 @@ export function OperatorManagement({
 
       {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {errorMessage && (
+          <Alert variant="destructive" className="m-3 mb-0">
+            <AlertTitle>Operator API error</AlertTitle>
+            <AlertDescription className="flex items-center justify-between gap-2">
+              <span>{errorMessage}</span>
+              <Button variant="outline" size="sm" onClick={onRetry}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -376,7 +428,13 @@ export function OperatorManagement({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {operators.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                  Loading operators...
+                </TableCell>
+              </TableRow>
+            ) : operators.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
                   No operators registered yet.
@@ -384,9 +442,11 @@ export function OperatorManagement({
               </TableRow>
             ) : (
               operators.map((op) => {
-                const assignedMissions = op.assignedMissions
-                  ?.map((id) => missions.find((m) => m.id === id)?.title)
-                  .filter(Boolean);
+                const assignedMissions = missions
+                  .filter((m) =>
+                    (m.assignedOperators ?? []).some((assigned) => assigned.operatorId === op.id),
+                  )
+                  .map((m) => m.title);
 
                 return (
                   <TableRow key={op.id} className="hover:bg-muted/30 transition-colors">
@@ -436,6 +496,7 @@ export function OperatorManagement({
                           size="sm"
                           className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive"
                           onClick={() => setDeactivateTarget(op)}
+                          disabled={isDeactivating}
                         >
                           <UserXIcon className="h-3.5 w-3.5" />
                           Deactivate
@@ -452,15 +513,27 @@ export function OperatorManagement({
         </Table>
       </div>
 
-      <CreateOperatorModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />
+      <CreateOperatorModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={handleCreate}
+        isSubmitting={isCreating}
+      />
 
       <AssignOperatorSheet
         open={assignOpen}
-        onClose={() => setAssignOpen(false)}
+        onClose={() => {
+          onClearAssignmentError();
+          setAssignOpen(false);
+        }}
         missions={missions}
         operators={operators}
-        onAssign={handleAssign}
-        onRevoke={handleRevoke}
+        onAssign={onAssignOperator}
+        onRevoke={onRevokeOperator}
+        isAssigning={isAssigning}
+        isRevoking={isRevoking}
+        assignmentError={assignmentError}
+        onClearAssignmentError={onClearAssignmentError}
       />
 
       <AlertDialog open={!!deactivateTarget} onOpenChange={(v) => !v && setDeactivateTarget(null)}>
@@ -475,10 +548,11 @@ export function OperatorManagement({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeactivate}
+              onClick={() => void handleDeactivate()}
               className="bg-destructive text-white hover:bg-destructive/90"
+              disabled={isDeactivating}
             >
-              Deactivate
+              {isDeactivating ? "Deactivating..." : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

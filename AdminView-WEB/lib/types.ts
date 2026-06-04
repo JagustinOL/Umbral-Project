@@ -29,6 +29,8 @@ export interface Hint {
   id: string;
   nodeId: string;
   content: string;
+  order: number;
+  penaltyPoints: number;
   attachmentUrl?: string;
 }
 
@@ -40,6 +42,7 @@ export interface MissionNode {
   title: string;
   description: string;
   executionOrder: number;
+  baseScore?: number;
   children?: MissionNode[];
   hints?: Hint[];
   // Trivia-specific
@@ -121,6 +124,7 @@ export interface CreateOperatorPayload {
   firstName: string;
   lastName: string;
   email: string;
+  password: string;
 }
 
 export interface AssignOperatorPayload {

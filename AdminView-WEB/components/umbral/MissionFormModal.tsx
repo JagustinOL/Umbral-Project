@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -17,8 +18,9 @@ import { Mission, CreateMissionPayload, UpdateMissionPayload } from "@/lib/types
 interface MissionFormModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateMissionPayload | UpdateMissionPayload) => void;
+  onSubmit: (data: CreateMissionPayload | UpdateMissionPayload) => void | Promise<void>;
   mission?: Mission | null;
+  isSubmitting?: boolean;
 }
 
 export function MissionFormModal({
@@ -26,6 +28,7 @@ export function MissionFormModal({
   onClose,
   onSubmit,
   mission,
+  isSubmitting = false,
 }: MissionFormModalProps) {
   const isEdit = !!mission;
 
@@ -48,7 +51,7 @@ export function MissionFormModal({
     }
   }, [mission, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       title,
@@ -56,7 +59,7 @@ export function MissionFormModal({
       ...(isEdit ? {} : { difficulty }),
       maxDurationMinutes: maxDurationMinutes ? parseInt(maxDurationMinutes) : undefined,
     };
-    onSubmit(payload);
+    await onSubmit(payload);
   };
 
   return (
@@ -66,6 +69,11 @@ export function MissionFormModal({
           <DialogTitle className="text-base font-semibold">
             {isEdit ? "Edit Mission" : "Create New Mission"}
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {isEdit
+              ? "Update mission details and save your changes."
+              : "Provide mission details to create a new mission in the catalog."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
@@ -91,15 +99,15 @@ export function MissionFormModal({
           {!isEdit && (
             <div className="space-y-1.5">
               <Label htmlFor="mission-difficulty">
-                Difficulty <span className="text-muted-foreground text-xs">(1–5)</span>
+                Difficulty <span className="text-muted-foreground text-xs">(1–3)</span>
               </Label>
               <Input
                 id="mission-difficulty"
                 type="number"
                 min={1}
-                max={5}
+                max={3}
                 value={difficulty}
-                onChange={(e) => setDifficulty(parseInt(e.target.value))}
+                onChange={(e) => setDifficulty(Math.min(3, Math.max(1, parseInt(e.target.value) || 1)))}
                 required
               />
             </div>
@@ -122,7 +130,9 @@ export function MissionFormModal({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{isEdit ? "Save Changes" : "Create Mission"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : isEdit ? "Save Changes" : "Create Mission"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
