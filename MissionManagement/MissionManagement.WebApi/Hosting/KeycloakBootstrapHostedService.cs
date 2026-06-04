@@ -31,13 +31,16 @@ public sealed class KeycloakBootstrapHostedService : BackgroundService
                     _options,
                     _logger,
                     stoppingToken);
-                return;
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "Keycloak OIDC bootstrap failed. Retrying in 5s…");
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                continue;
             }
+
+            // Re-sync tras reinicios de Keycloak (datos en memoria en start-dev sin volumen).
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
     }
 }

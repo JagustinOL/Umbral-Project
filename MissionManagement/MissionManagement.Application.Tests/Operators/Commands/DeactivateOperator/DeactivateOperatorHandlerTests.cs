@@ -3,6 +3,7 @@ using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Application.Operators.Commands.DeactivateOperator;
 using Moq;
+using System.Net.Http;
 
 namespace MissionManagement.Application.Tests.Operators.Commands.DeactivateOperator;
 
@@ -60,6 +61,23 @@ public sealed class DeactivateOperatorHandlerTests
         _identityServiceMock.Verify(
             s => s.DeactivateOperatorAsync(operatorId, It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSessionValidationFails_ThrowsConflictException()
+    {
+        var operatorId = Guid.NewGuid();
+        _sessionValidationServiceMock
+            .Setup(s => s.HasActiveSessionsAsync(operatorId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("down"));
+
+        var handler = new DeactivateOperatorHandler(
+            _identityServiceMock.Object,
+            _sessionValidationServiceMock.Object);
+        var act = () => handler.Handle(new DeactivateOperatorCommand(operatorId), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*No fue posible validar sesiones*");
     }
 }
 

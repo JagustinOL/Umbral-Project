@@ -103,6 +103,7 @@ PlayerMobile/.env*.local
 **/*.log
 **/*.tmp
 **/TestResults/
+coverage-report/
 
 # ============================================================
 #  DOCKER

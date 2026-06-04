@@ -43,4 +43,27 @@ public sealed class SubmitJoinRequestHandlerTests
             x => x.SaveAsync(It.IsAny<Team>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WhenValid_SubmitsJoinRequest()
+    {
+        var targetTeam = Team.Create("EquipoB", Guid.NewGuid(), "Líder");
+        var playerId = Guid.NewGuid();
+        var teamRepositoryMock = new Mock<ITeamRepository>();
+        teamRepositoryMock.Setup(x => x.GetByCodeAsync(targetTeam.Code.Value, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(targetTeam);
+        teamRepositoryMock.Setup(x => x.GetActiveTeamByPlayerRefAsync(playerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Team?)null);
+        teamRepositoryMock.Setup(x => x.GetActiveTeamWithPendingJoinRequestAsync(playerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Team?)null);
+
+        var handler = new SubmitJoinRequestHandler(teamRepositoryMock.Object);
+        var result = await handler.Handle(
+            new SubmitJoinRequestCommand(targetTeam.Code.Value, playerId, "Nuevo"),
+            CancellationToken.None);
+
+        result.RequestId.Should().NotBe(Guid.Empty);
+        targetTeam.JoinRequests.Should().ContainSingle();
+        teamRepositoryMock.Verify(x => x.SaveAsync(targetTeam, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

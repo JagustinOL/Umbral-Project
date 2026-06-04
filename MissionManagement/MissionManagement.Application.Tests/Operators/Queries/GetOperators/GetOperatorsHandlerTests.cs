@@ -1,13 +1,16 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Operators.Queries.GetOperators;
 using Moq;
+using System.Net.Http;
 
 namespace MissionManagement.Application.Tests.Operators.Queries.GetOperators;
 
 public sealed class GetOperatorsHandlerTests
 {
     private readonly Mock<IIdentityService> _identityServiceMock = new();
+    private readonly Mock<ILogger<GetOperatorsHandler>> _loggerMock = new();
 
     [Fact]
     public async Task Handle_WhenCalled_InvokesGetOperatorsOnceAndReturnsResult()
@@ -27,7 +30,7 @@ public sealed class GetOperatorsHandlerTests
             .Setup(s => s.GetOperatorsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
-        var handler = new GetOperatorsHandler(_identityServiceMock.Object);
+        var handler = new GetOperatorsHandler(_identityServiceMock.Object, _loggerMock.Object);
         var query = new GetOperatorsQuery();
 
         // Act
@@ -38,6 +41,19 @@ public sealed class GetOperatorsHandlerTests
         _identityServiceMock.Verify(
             s => s.GetOperatorsAsync(It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenIdentityServiceFails_ReturnsEmptyList()
+    {
+        _identityServiceMock
+            .Setup(s => s.GetOperatorsAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("unavailable"));
+
+        var handler = new GetOperatorsHandler(_identityServiceMock.Object, _loggerMock.Object);
+        var result = await handler.Handle(new GetOperatorsQuery(), CancellationToken.None);
+
+        result.Should().BeEmpty();
     }
 }
 

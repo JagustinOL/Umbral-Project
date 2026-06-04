@@ -72,4 +72,31 @@ public sealed class CreateMissionHandlerTests
             r => r.SaveAsync(It.IsAny<Mission>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Theory]
+    [InlineData(1, "Easy")]
+    [InlineData(3, "Hard")]
+    public async Task Handle_WhenValidDifficulty_MapsCorrectly(int difficulty, string expectedName)
+    {
+        _repositoryMock.Setup(r => r.TitleExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        Mission? saved = null;
+        _repositoryMock.Setup(r => r.SaveAsync(It.IsAny<Mission>(), It.IsAny<CancellationToken>()))
+            .Callback<Mission, CancellationToken>((m, _) => saved = m);
+
+        var handler = new CreateMissionHandler(_repositoryMock.Object);
+        await handler.Handle(new CreateMissionCommand("T", "D", difficulty, null), CancellationToken.None);
+
+        saved!.Difficulty.Name.Should().Be(expectedName);
+    }
+
+    [Fact]
+    public async Task Handle_WhenInvalidDifficulty_ThrowsArgumentOutOfRangeException()
+    {
+        _repositoryMock.Setup(r => r.TitleExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var handler = new CreateMissionHandler(_repositoryMock.Object);
+        var act = () => handler.Handle(new CreateMissionCommand("T", "D", 99, null), CancellationToken.None);
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
 }

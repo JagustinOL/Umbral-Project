@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Application.Teams.Commands.CreateTeam;
+using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Repositories;
 using Xunit;
 

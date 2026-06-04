@@ -20,7 +20,7 @@ public sealed class AddTriviaNodeHandlerTests
         var missionId = Guid.NewGuid();
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(missionId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(missionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Mission?)null);
 
         var handler = new AddTriviaNodeHandler(_repositoryMock.Object);
@@ -50,7 +50,7 @@ public sealed class AddTriviaNodeHandlerTests
         mission.AddRootNode(stage);
 
         _repositoryMock
-            .Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mission);
 
         var handler = new AddTriviaNodeHandler(_repositoryMock.Object);
