@@ -242,6 +242,17 @@ public sealed class Team : AggregateRoot
 
         EnsureNotDisbanded();
 
+        if (CurrentSessionRef == sessionId)
+            return;
+
+        if (IsLocked)
+            throw new SessionDomainException(
+                "El equipo participa en una sesión en curso y no puede unirse a otra (RN-13).");
+
+        if (CurrentSessionRef is Guid otherSessionId)
+            throw new SessionDomainException(
+                "El equipo ya está registrado en otra sesión. Espere a que finalice antes de unirse a otra.");
+
         CurrentSessionRef = sessionId;
     }
 

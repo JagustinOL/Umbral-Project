@@ -15,22 +15,33 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { colors, typography } from '../../src/constants/theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import * as liveSessionService from '../../src/services/liveSessionService';
+import * as teamService from '../../src/services/teamService';
+import type { TeamDetails } from '../../src/types/team';
 import type { LiveSessionSummary } from '../../src/types/liveSession';
-import { canRequestSessionJoin } from '../../src/types/liveSession';
+import { getSessionJoinBlockReason } from '../../src/types/liveSession';
 import { confirmDestructive } from '../../src/utils/confirm';
 
 export default function ActiveSessionsScreen() {
   const { session } = useAuth();
   const teamId = session?.teamId;
   const [sessions, setSessions] = useState<LiveSessionSummary[]>([]);
+  const [team, setTeam] = useState<TeamDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
 
   const loadSessions = useCallback(async () => {
+    if (!teamId) {
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const list = await liveSessionService.getActiveSessions();
+      const [list, teamDetails] = await Promise.all([
+        liveSessionService.getActiveSessions(),
+        teamService.getTeamById(teamId),
+      ]);
       setSessions(list);
+      setTeam(teamDetails);
     } catch (error) {
       Alert.alert(
         'Could not load sessions',
@@ -39,7 +50,7 @@ export default function ActiveSessionsScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [teamId]);
 
   useEffect(() => {
     void loadSessions();
@@ -56,11 +67,15 @@ export default function ActiveSessionsScreen() {
       return;
     }
 
-    if (!canRequestSessionJoin(entry.status)) {
-      Alert.alert(
-        'Registration closed',
-        'This session is no longer accepting new teams.',
-      );
+    const blockReason = getSessionJoinBlockReason({
+      sessionStatus: entry.status,
+      teamIsLocked: team?.isLocked ?? false,
+      teamCurrentSessionRef: team?.currentSessionRef ?? null,
+      targetSessionId: entry.sessionId,
+    });
+
+    if (blockReason) {
+      Alert.alert('Cannot join session', blockReason);
       return;
     }
 
@@ -123,10 +138,19 @@ export default function ActiveSessionsScreen() {
           <Text style={styles.empty}>No live sessions available right now.</Text>
         ) : null}
 
+        {team?.isLocked ? (
+          <Text style={styles.teamLocked}>
+            Your team is in an active live session (RN-13). Join requests to other
+            sessions are disabled until the operator ends the current game.
+          </Text>
+        ) : null}
+
         {sessions.map((entry) => (
           <LiveSessionCard
             key={entry.sessionId}
             session={entry}
+            teamIsLocked={team?.isLocked ?? false}
+            teamCurrentSessionRef={team?.currentSessionRef ?? null}
             loading={joiningSessionId === entry.sessionId}
             onRequestJoin={() => handleRequestJoin(entry)}
           />
@@ -162,5 +186,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.body,
     marginBottom: 20,
+  },
+  teamLocked: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginBottom: 16,
+    padding: 12,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
   },
 });

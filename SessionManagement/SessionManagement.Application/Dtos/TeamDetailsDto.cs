@@ -5,6 +5,7 @@ public sealed record TeamDetailsDto(
     string Name,
     string TeamCode,
     bool IsLocked,
+    Guid? CurrentSessionRef,
     bool IsDisbanded,
     IReadOnlyList<TeamMemberDto> Members
 );

@@ -23,21 +23,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:3002",
-                "http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("UmbralDev", policy =>
-    {
-        policy
-            .WithOrigins(
+                "http://localhost:5173",
                 "http://localhost:19000",
-                "http://localhost:19001",
-                "http://localhost:3000")
+                "http://localhost:19001")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -90,9 +78,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseCors("UmbralDev");
-app.UseHttpsRedirection();
 app.UseCors(frontendCorsPolicy);
+app.UseHttpsRedirection();
 app.UseMiddleware<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
 app.MapControllers();
 

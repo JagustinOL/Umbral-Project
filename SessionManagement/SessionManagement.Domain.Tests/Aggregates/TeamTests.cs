@@ -58,6 +58,33 @@ public sealed class TeamTests
     }
 
     [Fact]
+    public void AssignToSession_WhenLocked_ThrowsDomainException()
+    {
+        var team = Team.Create("Delta", Guid.NewGuid(), "Lider");
+        team.AssignToSession(Guid.NewGuid());
+        team.Lock();
+
+        var act = () => team.AssignToSession(Guid.NewGuid());
+
+        act.Should().Throw<SessionDomainException>()
+            .WithMessage("*RN-13*");
+    }
+
+    [Fact]
+    public void AssignToSession_WhenAlreadyLinkedToOtherSession_ThrowsDomainException()
+    {
+        var team = Team.Create("Echo", Guid.NewGuid(), "Lider");
+        var firstSessionId = Guid.NewGuid();
+
+        team.AssignToSession(firstSessionId);
+
+        var act = () => team.AssignToSession(Guid.NewGuid());
+
+        act.Should().Throw<SessionDomainException>()
+            .WithMessage("*otra sesión*");
+    }
+
+    [Fact]
     public void UpdateName_WhenLocked_ThrowsDomainException()
     {
         // Arrange

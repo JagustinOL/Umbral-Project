@@ -40,6 +40,10 @@ public interface ILiveSessionRepository
         Guid missionId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<LiveSession>> GetOpenSessionsByOperatorAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasOpenSessionsByMissionAsync(
         Guid missionId,
         CancellationToken cancellationToken = default);

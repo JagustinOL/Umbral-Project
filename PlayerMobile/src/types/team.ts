@@ -20,6 +20,7 @@ export type TeamDetails = {
   name: string;
   teamCode: string;
   isLocked: boolean;
+  currentSessionRef: string | null;
   isDisbanded: boolean;
   members: TeamMember[];
   pendingRequests: JoinRequest[];

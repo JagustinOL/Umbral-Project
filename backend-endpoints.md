@@ -624,6 +624,7 @@
   ```json
   { }
   ```
+- **Response (200 OK):** incluye `isLocked` y `currentSessionRef` (Guid o null) para validar RN-13 en la app jugador.
 
 ### Modificar Equipo (HU-33)
 - **Microservicio:** SessionManagement
@@ -718,6 +719,9 @@
     "teamId": "Guid"
   }
   ```
+- **Errores esperados:**
+  - `409 Conflict` si el equipo está bloqueado en una sesión en curso (RN-13) o ya vinculado a otra sesión abierta.
+  - `404 NotFound` si el código o el equipo no existen.
 
 ### Consultar Etapa Actual del Equipo (HU-38/HU-39/HU-41)
 - **Microservicio:** SessionManagement
@@ -787,6 +791,29 @@
 - **Errores esperados:**
   - `409 Conflict` si la misión no está en estado `Active` (RB-01).
   - `404 NotFound` si la misión no está asignada al operador.
+
+### Consultar Sesiones Abiertas del Operador
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/sessions/open`
+- **Capa Application:** `GetOperatorOpenSessionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "sessionId": "Guid",
+      "missionId": "Guid",
+      "joinCode": "string",
+      "status": "Pending | Preparation | Active | Paused"
+    }
+  ]
+  ```
+- **Notas:**
+  - Permite reanudar la sala de espera tras recargar la consola del operador.
+  - Solo devuelve sesiones del operador en estados no terminales.
 
 ### Consultar Equipos Unidos a una Sesión Pending (HU-49)
 - **Microservicio:** SessionManagement

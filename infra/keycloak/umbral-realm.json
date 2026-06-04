@@ -1,16 +1,47 @@
 {
   "realm": "umbral-realm",
   "enabled": true,
+  "displayName": "Umbral Realm",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "roles": {
     "realm": [
-      { "name": "player", "description": "UMBRAL player role" },
-      { "name": "operator", "description": "UMBRAL operator role" }
+      {
+        "name": "admin",
+        "description": "UMBRAL administrator role"
+      },
+      {
+        "name": "operator",
+        "description": "UMBRAL operator role"
+      },
+      {
+        "name": "player",
+        "description": "UMBRAL player role"
+      }
     ]
   },
   "clients": [
+    {
+      "clientId": "umbral-web",
+      "name": "UMBRAL Web Applications",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*",
+        "http://localhost:3002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002"
+      ],
+      "protocol": "openid-connect"
+    },
     {
       "clientId": "umbral-player-mobile",
       "name": "UMBRAL Player Mobile",
@@ -25,7 +56,8 @@
         "exp://*",
         "http://localhost:*"
       ],
-      "webOrigins": ["*"]
+      "webOrigins": ["*"],
+      "protocol": "openid-connect"
     }
   ]
 }

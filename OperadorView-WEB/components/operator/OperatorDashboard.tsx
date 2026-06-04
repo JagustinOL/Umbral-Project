@@ -14,7 +14,7 @@ import {
   getOperatorProfileErrorMessage,
   operatorService,
 } from "@/lib/services/operatorService";
-import { OperatorAssignedMissionDto } from "@/lib/types/api";
+import { OperatorAssignedMissionDto, OperatorOpenSessionDto } from "@/lib/types/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangleIcon } from "lucide-react";
 
@@ -39,6 +39,9 @@ export function OperatorDashboard() {
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [missions, setMissions] = useState<OperatorAssignedMissionDto[]>([]);
   const [openSessionByMission, setOpenSessionByMission] = useState<Record<string, boolean>>({});
+  const [openSessionDetailsByMission, setOpenSessionDetailsByMission] = useState<
+    Record<string, OperatorOpenSessionDto>
+  >({});
   const [operatorProfile, setOperatorProfile] = useState<OperatorProfile | null>(null);
   const [isLoadingMissions, setIsLoadingMissions] = useState(true);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -65,20 +68,28 @@ export function OperatorDashboard() {
         const assigned = await operatorSessionService.getAssignedMissions(operatorId, signal);
         setMissions(assigned);
 
-        const openFlags = await Promise.all(
-          assigned.map(async (mission) => {
-            try {
-              const hasOpen = await operatorSessionService.missionHasOpenSessions(
-                mission.missionId,
-                signal,
-              );
-              return [mission.missionId, hasOpen] as const;
-            } catch {
-              return [mission.missionId, false] as const;
-            }
-          }),
+        let openSessions: OperatorOpenSessionDto[] = [];
+        try {
+          openSessions = await operatorSessionService.getOpenSessions(operatorId, signal);
+        } catch (openSessionsError) {
+          if (!signal?.aborted) {
+            console.warn(getOperatorSessionApiErrorMessage(openSessionsError));
+          }
+        }
+
+        const detailsByMission: Record<string, OperatorOpenSessionDto> = {};
+        for (const session of openSessions) {
+          detailsByMission[session.missionId] = session;
+        }
+        setOpenSessionDetailsByMission(detailsByMission);
+        setOpenSessionByMission(
+          Object.fromEntries(
+            assigned.map((mission) => [
+              mission.missionId,
+              Boolean(detailsByMission[mission.missionId]),
+            ]),
+          ),
         );
-        setOpenSessionByMission(Object.fromEntries(openFlags));
       } catch (error) {
         if (signal?.aborted) return;
         setMissions([]);
@@ -132,6 +143,19 @@ export function OperatorDashboard() {
     return () => controller.abort();
   }, [operatorId]);
 
+  const handleOpenSession = (missionId: string, missionTitle: string) => {
+    const open = openSessionDetailsByMission[missionId];
+    if (!open) return;
+
+    setActiveSession({
+      sessionId: open.sessionId,
+      missionId,
+      missionTitle,
+      joinCode: open.joinCode,
+    });
+    setCurrentView("waiting-room");
+  };
+
   const handleCreateSession = async (missionId: string, missionTitle: string) => {
     if (!operatorId) return;
 
@@ -145,6 +169,17 @@ export function OperatorDashboard() {
 
     try {
       const created = await operatorSessionService.createSession(operatorId, missionId);
+      const openSession: OperatorOpenSessionDto = {
+        sessionId: created.sessionId,
+        missionId,
+        joinCode: created.joinCode,
+        status: "Pending",
+      };
+      setOpenSessionDetailsByMission((prev) => ({
+        ...prev,
+        [missionId]: openSession,
+      }));
+      setOpenSessionByMission((prev) => ({ ...prev, [missionId]: true }));
       setActiveSession({
         sessionId: created.sessionId,
         missionId,
@@ -173,7 +208,6 @@ export function OperatorDashboard() {
 
   const handleBackToMissions = () => {
     setCurrentView("missions");
-    setActiveSession(null);
     void loadMissions();
   };
 
@@ -200,12 +234,14 @@ export function OperatorDashboard() {
             <MissionsView
               missions={missions}
               openSessionByMission={openSessionByMission}
+              openSessionDetailsByMission={openSessionDetailsByMission}
               isLoading={isLoadingMissions}
               isCreating={isCreatingSession}
               creatingMissionId={creatingMissionId}
               errorMessage={missionsError}
               onRetry={() => void loadMissions()}
               onCreateSession={handleCreateSession}
+              onOpenSession={handleOpenSession}
             />
           )}
 

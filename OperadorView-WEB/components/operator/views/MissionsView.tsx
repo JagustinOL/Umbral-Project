@@ -2,7 +2,7 @@
 
 import { AssignedMissionCard } from '../cards/AssignedMissionCard';
 import { InfoAlert } from '../ui/InfoAlert';
-import { OperatorAssignedMissionDto } from '@/lib/types/api';
+import { OperatorAssignedMissionDto, OperatorOpenSessionDto } from '@/lib/types/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,23 +11,27 @@ import { AlertTriangleIcon } from 'lucide-react';
 interface MissionsViewProps {
   missions: OperatorAssignedMissionDto[];
   openSessionByMission: Record<string, boolean>;
+  openSessionDetailsByMission: Record<string, OperatorOpenSessionDto>;
   isLoading: boolean;
   isCreating: boolean;
   creatingMissionId: string | null;
   errorMessage: string | null;
   onRetry: () => void;
   onCreateSession: (missionId: string, missionTitle: string) => Promise<void>;
+  onOpenSession: (missionId: string, missionTitle: string) => void;
 }
 
 export function MissionsView({
   missions,
   openSessionByMission,
+  openSessionDetailsByMission,
   isLoading,
   isCreating,
   creatingMissionId,
   errorMessage,
   onRetry,
   onCreateSession,
+  onOpenSession,
 }: MissionsViewProps) {
   return (
     <div>
@@ -39,8 +43,8 @@ export function MissionsView({
       </div>
 
       <InfoAlert
-        title="Acceso restringido"
-        description="Solo puede operar misiones asignadas a su cuenta. Contacte al administrador si necesita acceso adicional."
+        title="Misiones asignadas"
+        description="Solo aparecen las misiones vinculadas a su operador. Si ya hay una sesión activa, puede volver a la sala de espera; crear otra sesión queda bloqueado hasta finalizarla."
       />
 
       {errorMessage && (
@@ -69,9 +73,11 @@ export function MissionsView({
               key={mission.missionId}
               mission={mission}
               hasOpenSession={openSessionByMission[mission.missionId] ?? false}
+              openSession={openSessionDetailsByMission[mission.missionId]}
               isCreating={isCreating && creatingMissionId === mission.missionId}
               disabled={isCreating}
               onCreateSession={onCreateSession}
+              onOpenSession={onOpenSession}
             />
           ))}
         </div>

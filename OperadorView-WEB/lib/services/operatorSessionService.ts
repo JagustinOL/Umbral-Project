@@ -4,6 +4,7 @@ import {
   CreateLiveSessionRequest,
   MissionHasOpenSessionsResponse,
   OperatorAssignedMissionDto,
+  OperatorOpenSessionDto,
   SessionTeamsDto,
 } from "@/lib/types/api";
 
@@ -62,6 +63,16 @@ export const operatorSessionService = {
       { signal },
     );
     return response.hasOpenSessions;
+  },
+
+  async getOpenSessions(
+    operatorId: string,
+    signal?: AbortSignal,
+  ): Promise<OperatorOpenSessionDto[]> {
+    return sessionApiRequest<OperatorOpenSessionDto[]>(
+      `/operators/${operatorId}/sessions/open`,
+      { signal },
+    );
   },
 };
 

@@ -1,6 +1,6 @@
 using MediatR;
-using SessionManagement.Application.Common;
 using SessionManagement.Application.Exceptions;
+using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.Repositories;
 
 namespace SessionManagement.Application.LiveSessions.Commands.JoinSession;
@@ -22,14 +22,30 @@ public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Gui
         if (session is null)
             throw new NotFoundException($"No se encontró una sesión con código '{request.JoinCode}'.");
 
-        session.JoinTeam(request.TeamId, request.JoinCode);
-        await _repository.SaveAsync(session, cancellationToken);
+        var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
+            ?? throw new NotFoundException($"No se encontró el equipo con Id={request.TeamId}.");
 
-        await TeamSessionLockService.AssignTeamToSessionAsync(
-            request.TeamId,
-            session.Id,
-            _teamRepository,
-            cancellationToken);
+        try
+        {
+            team.AssignToSession(session.Id);
+        }
+        catch (SessionDomainException ex)
+        {
+            throw new ConflictException(ex.Message);
+        }
+
+        try
+        {
+            session.JoinTeam(request.TeamId, request.JoinCode);
+        }
+        catch (SessionDomainException ex) when (team.CurrentSessionRef == session.Id)
+        {
+            // Idempotente: el equipo ya estaba registrado en esta misma sesión.
+            return session.Id;
+        }
+
+        await _repository.SaveAsync(session, cancellationToken);
+        await _teamRepository.SaveAsync(team, cancellationToken);
 
         return session.Id;
     }

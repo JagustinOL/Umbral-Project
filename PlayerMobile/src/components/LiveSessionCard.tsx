@@ -1,21 +1,31 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, typography } from '../constants/theme';
 import type { LiveSessionSummary } from '../types/liveSession';
-import { canRequestSessionJoin } from '../types/liveSession';
+import { getSessionJoinBlockReason } from '../types/liveSession';
 import { PrimaryButton } from './PrimaryButton';
 
 type LiveSessionCardProps = {
   session: LiveSessionSummary;
+  teamIsLocked: boolean;
+  teamCurrentSessionRef: string | null;
   loading?: boolean;
   onRequestJoin: () => void;
 };
 
 export function LiveSessionCard({
   session,
+  teamIsLocked,
+  teamCurrentSessionRef,
   loading,
   onRequestJoin,
 }: LiveSessionCardProps) {
-  const joinable = canRequestSessionJoin(session.status);
+  const blockReason = getSessionJoinBlockReason({
+    sessionStatus: session.status,
+    teamIsLocked,
+    teamCurrentSessionRef,
+    targetSessionId: session.sessionId,
+  });
+  const joinable = blockReason === null;
 
   return (
     <View style={styles.card}>
@@ -24,8 +34,11 @@ export function LiveSessionCard({
       <Text style={styles.meta}>
         Code · {session.joinCode}
       </Text>
+      {blockReason ? (
+        <Text style={styles.blocked}>{blockReason}</Text>
+      ) : null}
       <PrimaryButton
-        label={joinable ? 'Request session join' : 'Registration closed'}
+        label={joinable ? 'Request session join' : 'Join not available'}
         variant={joinable ? 'primary' : 'ghost'}
         locked={!joinable}
         loading={loading}
@@ -54,5 +67,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.caption,
     marginBottom: 4,
+  },
+  blocked: {
+    color: colors.textMuted,
+    fontSize: typography.caption,
+    lineHeight: 18,
+    marginBottom: 10,
+    marginTop: 4,
   },
 });

@@ -25,6 +25,7 @@ public sealed class GetTeamByIdHandler : IRequestHandler<GetTeamByIdQuery, TeamD
             Name: team.Name,
             TeamCode: team.Code.Value,
             IsLocked: team.IsLocked,
+            CurrentSessionRef: team.CurrentSessionRef,
             IsDisbanded: team.IsDisbanded,
             Members: team.Members
                 .OrderBy(x => x.JoinedAtUtc)

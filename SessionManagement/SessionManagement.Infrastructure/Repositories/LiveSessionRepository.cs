@@ -122,6 +122,25 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyList<LiveSession>> GetOpenSessionsByOperatorAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default)
+    {
+        if (operatorId == Guid.Empty)
+            throw new ArgumentException("OperatorId no puede ser vacío.", nameof(operatorId));
+
+        return await _dbContext.LiveSessions
+            .AsNoTracking()
+            .Where(x =>
+                x.OperatorRef == operatorId
+                && (x.Status == LiveSessionStatus.Pending
+                    || x.Status == LiveSessionStatus.Preparation
+                    || x.Status == LiveSessionStatus.Active
+                    || x.Status == LiveSessionStatus.Paused))
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> HasOpenSessionsByMissionAsync(
         Guid missionId,
         CancellationToken cancellationToken = default)

@@ -5,6 +5,7 @@ using SessionManagement.Application.OperatorSessions.Commands.CreateLiveSession;
 using SessionManagement.Application.OperatorSessions.Commands.FinalizeLiveSession;
 using SessionManagement.Application.OperatorSessions.Commands.StartLiveSession;
 using SessionManagement.Application.OperatorSessions.Queries.GetOperatorAssignedMissions;
+using SessionManagement.Application.OperatorSessions.Queries.GetOperatorOpenSessions;
 using SessionManagement.Application.OperatorSessions.Queries.GetSessionTeams;
 using SessionManagement.Application.OperatorSessions.Queries.OperatorHasActiveSessions;
 using SessionManagement.Application.OperatorSessions.Queries.OperatorIsSupervisingMission;
@@ -51,6 +52,15 @@ public sealed class OperatorSessionsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetOperatorAssignedMissionsQuery(operatorId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("sessions/open")]
+    public async Task<IActionResult> GetOpenSessions(
+        [FromRoute] Guid operatorId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetOperatorOpenSessionsQuery(operatorId), cancellationToken);
         return Ok(result);
     }
 

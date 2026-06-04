@@ -23,6 +23,13 @@ export interface MissionHasOpenSessionsResponse {
   hasOpenSessions: boolean;
 }
 
+export interface OperatorOpenSessionDto {
+  sessionId: string;
+  missionId: string;
+  joinCode: string;
+  status: string;
+}
+
 export interface OperatorDto {
   operatorId: string;
   firstName: string;
