@@ -574,6 +574,27 @@
 
 ## SessionManagement · Épica 4 (Gestión de Equipos e Integrantes)
 
+### Consultar membresía de equipo del jugador
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/players/{playerId}/team-membership`
+- **Capa Application:** `GetPlayerTeamMembershipQuery`
+- **Body / Payload (Request):** ninguno.
+- **Response (200 OK):**
+  ```json
+  {
+    "isMember": true,
+    "teamId": "Guid",
+    "teamName": "string",
+    "teamCode": "string",
+    "role": "Leader|Member",
+    "hasPendingJoinRequest": false,
+    "pendingTeamId": null
+  }
+  ```
+- **Notas:**
+  - Si el jugador no pertenece a ningún equipo ni tiene solicitud pendiente, `isMember` y `hasPendingJoinRequest` son `false` y los demás campos son `null`.
+  - Usar tras login para restaurar el workspace de equipo en la app móvil.
+
 ### Crear Equipo (HU-27)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/teams`
@@ -592,10 +613,12 @@
     "id": "Guid"
   }
   ```
+- **Validación:** el `creatorId` no puede pertenecer ya a otro equipo activo ni tener otra solicitud de unión pendiente (409 Conflict).
 
 ### Consultar Equipo por Id (HU-29)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `GET /api/v1/teams/{teamId}`
+- **Nota:** No hay `GET /api/v1/teams` (listado). Tras `POST` crear equipo, usar el `id` devuelto en `201` como `{teamId}` en Postman o en la app (dashboard → TEAM ID).
 - **Capa Application:** `GetTeamByIdQuery`
 - **Body / Payload (Request):**
   ```json
@@ -635,6 +658,14 @@
     "displayName": "string"
   }
   ```
+- **Response (200 OK):**
+  ```json
+  {
+    "requestId": "Guid",
+    "teamId": "Guid"
+  }
+  ```
+- **Validación:** `playerRef` no puede estar en otro equipo activo ni tener solicitud pendiente en otro equipo (409 Conflict). Al aprobar (`PUT .../requests/{requestId}`), se vuelve a validar que el solicitante siga sin equipo.
 
 ### Consultar Solicitudes Pendientes de Equipo (HU-32)
 - **Microservicio:** SessionManagement
@@ -674,6 +705,7 @@
   ```json
   { }
   ```
+- **Nota:** Devuelve sesiones en estado `Pending`, `Preparation`, `Active` o `Paused` (no finalizadas ni canceladas). El equipo solo puede registrarse con `POST .../join` cuando la sesión está en `Pending` o `Preparation`.
 
 ### Unirse a Sesión por Código (HU-37)
 - **Microservicio:** SessionManagement

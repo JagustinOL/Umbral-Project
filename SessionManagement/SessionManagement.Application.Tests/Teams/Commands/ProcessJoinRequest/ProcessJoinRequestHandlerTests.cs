@@ -52,4 +52,38 @@ public sealed class ProcessJoinRequestHandlerTests
         // Assert
         await act.Should().ThrowAsync<ConflictException>();
     }
+
+    [Fact]
+    public async Task Handle_WhenApprovingPlayerAlreadyInAnotherTeam_ThrowsConflictException()
+    {
+        // Arrange
+        var leaderId = Guid.NewGuid();
+        var applicantId = Guid.NewGuid();
+        var team = Team.Create("EquipoDestino", leaderId, "Leader");
+        team.SubmitJoinRequest(applicantId, "Applicant");
+
+        var existingTeam = Team.Create("EquipoOrigen", applicantId, "ApplicantLeader");
+        var requestId = team.JoinRequests.Single().Id;
+
+        var teamRepositoryMock = new Mock<ITeamRepository>();
+        teamRepositoryMock
+            .Setup(x => x.GetByIdAsync(team.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(team);
+        teamRepositoryMock
+            .Setup(x => x.GetActiveTeamByPlayerRefAsync(applicantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingTeam);
+
+        var handler = new ProcessJoinRequestHandler(teamRepositoryMock.Object);
+        var command = new ProcessJoinRequestCommand(team.Id, requestId, true, leaderId);
+
+        // Act
+        var act = async () => await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("*ya pertenece a un equipo activo*");
+        teamRepositoryMock.Verify(
+            x => x.SaveAsync(It.IsAny<Team>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

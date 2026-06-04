@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Repositories;
 using SessionManagement.Domain.ValueObjects;
 using SessionManagement.Infrastructure.Persistence;
@@ -39,6 +40,39 @@ public sealed class TeamRepository : ITeamRepository
             .Include(x => x.JoinRequests)
             .FirstOrDefaultAsync(
                 x => x.Code == normalizedTeamCode && !x.IsDisbanded,
+                cancellationToken);
+    }
+
+    public async Task<Team?> GetActiveTeamByPlayerRefAsync(
+        Guid playerRef,
+        CancellationToken cancellationToken = default)
+    {
+        if (playerRef == Guid.Empty)
+            throw new ArgumentException("PlayerRef no puede ser vacío.", nameof(playerRef));
+
+        return await _dbContext.Teams
+            .Include(x => x.Members)
+            .Include(x => x.JoinRequests)
+            .FirstOrDefaultAsync(
+                x => !x.IsDisbanded && x.Members.Any(m => m.PlayerRef == playerRef),
+                cancellationToken);
+    }
+
+    public async Task<Team?> GetActiveTeamWithPendingJoinRequestAsync(
+        Guid playerRef,
+        CancellationToken cancellationToken = default)
+    {
+        if (playerRef == Guid.Empty)
+            throw new ArgumentException("PlayerRef no puede ser vacío.", nameof(playerRef));
+
+        return await _dbContext.Teams
+            .Include(x => x.Members)
+            .Include(x => x.JoinRequests)
+            .FirstOrDefaultAsync(
+                x => !x.IsDisbanded &&
+                     x.JoinRequests.Any(j =>
+                         j.PlayerRef == playerRef &&
+                         j.Status == JoinRequestStatus.Pending),
                 cancellationToken);
     }
 

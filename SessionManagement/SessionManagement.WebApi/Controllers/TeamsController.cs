@@ -71,12 +71,12 @@ public sealed class TeamsController : ControllerBase
         [FromBody] SubmitJoinRequestRequest request,
         CancellationToken cancellationToken)
     {
-        var requestId = await _mediator.Send(new SubmitJoinRequestCommand(
+        var result = await _mediator.Send(new SubmitJoinRequestCommand(
             TeamCode: request.TeamCode,
             PlayerId: request.PlayerRef,
             DisplayName: request.DisplayName), cancellationToken);
 
-        return Ok(new { requestId });
+        return Ok(new { requestId = result.RequestId, teamId = result.TeamId });
     }
 
     [HttpGet("{teamId:guid}/requests")]

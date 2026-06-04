@@ -6,4 +6,4 @@ public sealed record SubmitJoinRequestCommand(
     string TeamCode,
     Guid PlayerId,
     string DisplayName
-) : IRequest<Guid>;
+) : IRequest<SubmitJoinRequestResult>;

@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "UMBRAL Player",
+    "slug": "umbral-player-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "umbral-player",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0e14"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.umbral.player"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0e14"
+      },
+      "package": "com.umbral.player"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}
