@@ -154,6 +154,7 @@ Con el operador y una sesión live activa, `IsLocked` vendrá del backend. Mient
 |---------|-------------|
 | `Invalid email or password` tras registro | Keycloak arriba; realm `umbral-realm`; cliente `umbral-player-mobile` con **Direct access grants** ON |
 | Error de red al registrar | `mission-management-service` en `docker compose ps`; URL en `.env` |
+| CORS / registro solo falla en **navegador (web)** | El bundler web suele usar `:8082` (Keycloak ocupa `:8081`). En Development las APIs permiten cualquier `http://localhost:*`. Tras cambiar CORS en el backend: `docker compose build mission-management-service session-management-service` y `docker compose up -d` esos servicios. En Expo Go o emulador nativo no aplica CORS. |
 | Error al crear equipo | `session-management-service`; logs: `docker compose logs session-management-service` |
 | Expo no ve el `.env` | Reinicia `npm start` desde `PlayerMobile/` |
 | Teléfono no conecta | IP de la PC en `.env`, mismo WiFi, firewall permite 5260, 5278, 8081 |
