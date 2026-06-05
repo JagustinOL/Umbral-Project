@@ -38,6 +38,27 @@ umbral-web-ai/.cache/
 umbral-web-ai/next-env.d.ts
 
 # ============================================================
+#  NEXT.JS  (AdminView-WEB | OperadorView-WEB | LoginView-WEB)
+# ============================================================
+AdminView-WEB/.next/
+AdminView-WEB/out/
+AdminView-WEB/node_modules/
+AdminView-WEB/.cache/
+AdminView-WEB/next-env.d.ts
+
+OperadorView-WEB/.next/
+OperadorView-WEB/out/
+OperadorView-WEB/node_modules/
+OperadorView-WEB/.cache/
+OperadorView-WEB/next-env.d.ts
+
+LoginView-WEB/.next/
+LoginView-WEB/out/
+LoginView-WEB/node_modules/
+LoginView-WEB/.cache/
+LoginView-WEB/next-env.d.ts
+
+# ============================================================
 #  EXPO / REACT NATIVE  (umbral-mobile)
 # ============================================================
 umbral-mobile/node_modules/
@@ -53,34 +74,36 @@ umbral-mobile/.metro-health-check*
 umbral-mobile/.env*.local
 
 # ============================================================
+#  EXPO / REACT NATIVE  (PlayerMobile)
+# ============================================================
+PlayerMobile/node_modules/
+PlayerMobile/.expo/
+PlayerMobile/dist/
+PlayerMobile/web-build/
+PlayerMobile/android/
+PlayerMobile/ios/
+PlayerMobile/expo-env.d.ts
+PlayerMobile/.metro-health-check*
+PlayerMobile/.env*.local
+
+# ============================================================
 #  C# / .NET  (Umbral.WebAPI)
 # ============================================================
 
-# Artefactos de compilación
-Umbral.WebAPI/**/bin/
-Umbral.WebAPI/**/obj/
+# Ignorar artefactos de compilación y archivos temporales en cualquier proyecto .NET
+**/bin/
+**/obj/
 
-# Archivos de usuario de Visual Studio
-Umbral.WebAPI/**/*.user
-Umbral.WebAPI/**/*.suo
-Umbral.WebAPI/**/.vs/
-Umbral.WebAPI/**/*.userprefs
-
-# Publicaciones y paquetes NuGet locales
-Umbral.WebAPI/**/publish/
-Umbral.WebAPI/**/*.nupkg
-Umbral.WebAPI/**/*.nuspec
-
-# Configuraciones sensibles de entorno
-Umbral.WebAPI/**/appsettings.Development.json
-Umbral.WebAPI/**/appsettings.Production.json
-Umbral.WebAPI/**/*.pfx
-Umbral.WebAPI/**/*.cer
+# Configuraciones sensibles de entorno (appsettings) y certificados
+**/appsettings*.json
+**/*.pfx
+**/*.cer
 
 # Logs y archivos temporales .NET
-Umbral.WebAPI/**/*.log
-Umbral.WebAPI/**/*.tmp
-Umbral.WebAPI/**/TestResults/
+**/*.log
+**/*.tmp
+**/TestResults/
+coverage-report/
 
 # ============================================================
 #  DOCKER

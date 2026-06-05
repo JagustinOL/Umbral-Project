@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ScoringAudit.Application/ScoringAudit.Application.csproj" />
+  <Project Path="ScoringAudit.Domain/ScoringAudit.Domain.csproj" />
+  <Project Path="ScoringAudit.Infrastructure/ScoringAudit.Infrastructure.csproj" />
+  <Project Path="ScoringAudit.WebApi/ScoringAudit.WebApi.csproj" />
+</Solution>

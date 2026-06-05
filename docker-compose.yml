@@ -1,0 +1,208 @@
+services:
+  # ==========================================
+  # --- 1. INFRAESTRUCTURA Y DATOS ---
+  # ==========================================
+  db:
+    image: postgres:17-alpine
+    container_name: umbral-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: umbral_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d umbral_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: umbral-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@umbral.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  mq:
+    image: rabbitmq:3-management-alpine
+    container_name: umbral-mq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s
+
+  # ==========================================
+  # --- 2. SEGURIDAD (Keycloak) ---
+  # ==========================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: umbral-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    command: start-dev --import-realm --spi-import-realm-strategy=OVERWRITE_EXISTING
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./infra/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "8081:8080"
+    healthcheck:
+      # Sin curl en la imagen; TCP a /health/ready (KC_HEALTH_ENABLED). Primer arranque: ~2–3 min (Quarkus augment).
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 180s
+
+  # ==========================================
+  # --- 3. MICROSERVICIOS BACKEND (.NET 10) ---
+  # ==========================================
+  mission-management-service:
+    build:
+      context: ./MissionManagement
+      dockerfile: Dockerfile
+    container_name: umbral-mission-management-service
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "5260:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__MissionManagement: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
+      RabbitMQ__Host: mq
+      Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__Realm: umbral-realm
+      Keycloak__AdminRealm: master
+      Keycloak__AdminClientId: admin-cli
+      Keycloak__AdminUsername: admin
+      Keycloak__AdminPassword: admin
+      Keycloak__OperatorRole: operator
+      Keycloak__AdminRole: admin
+      Keycloak__WebClientId: umbral-web
+      Keycloak__DefaultAdminEmail: admin@umbral.com
+      Keycloak__DefaultAdminPassword: Admin123!
+      Keycloak__DefaultAdminFirstName: UMBRAL
+      Keycloak__DefaultAdminLastName: Admin
+      Keycloak__PlayerRole: player
+      SessionManagement__BaseUrl: http://session-management-service:8080
+
+  session-management-service:
+    build:
+      context: ./SessionManagement
+      dockerfile: Dockerfile
+    container_name: umbral-session-management-service
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    ports:
+      - "5278:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
+      RabbitMQ__Host: mq
+      MissionManagement__BaseUrl: http://mission-management-service:8080
+
+  scoring-audit-service:
+    build:
+      context: ./ScoringAudit
+      dockerfile: Dockerfile
+    container_name: umbral-scoring-audit-service
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    ports:
+      - "5290:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
+      RabbitMQ__Host: mq
+
+  # ==========================================
+  # --- 4. FRONTEND (Next.js) — perfil "frontend" ---
+  # Por defecto solo infra + backend. Con UI: docker compose --profile frontend up -d --build
+  # ==========================================
+  admin-view-web:
+    profiles: ["frontend"]
+    build:
+      context: ./AdminView-WEB
+      dockerfile: Dockerfile
+    container_name: umbral-admin-view-web
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
+      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
+      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
+      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+    depends_on:
+      - mission-management-service
+      - session-management-service
+      - scoring-audit-service
+      - keycloak
+
+  operador-view-web:
+    profiles: ["frontend"]
+    build:
+      context: ./OperadorView-WEB
+      dockerfile: Dockerfile
+    container_name: umbral-operador-view-web
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
+      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
+      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
+      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+      # Fallback when not signing in via LoginView-WEB
+      NEXT_PUBLIC_OPERATOR_ID: ${NEXT_PUBLIC_OPERATOR_ID:-}
+    depends_on:
+      - mission-management-service
+      - session-management-service
+      - scoring-audit-service
+      - keycloak
+
+  login-view-web:
+    profiles: ["frontend"]
+    build:
+      context: ./LoginView-WEB
+      dockerfile: Dockerfile
+    container_name: umbral-login-view-web
+    ports:
+      - "3002:3000"
+    environment:
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3000
+      NEXT_PUBLIC_OPERATOR_URL: http://localhost:3001
+      NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+    depends_on:
+      - mission-management-service
+      - keycloak
+
+volumes:
+  db-data:
+    driver: local
+  keycloak-data:
+    driver: local
