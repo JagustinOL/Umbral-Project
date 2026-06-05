@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import { colors, typography } from '../constants/theme';
 import { isPasswordMinLength } from '../utils/validation';
 
@@ -12,7 +12,7 @@ export function PasswordStrengthIndicator({ password }: { password: string }) {
         style={[
           styles.bar,
           isValid ? styles.barValid : styles.barInvalid,
-          !isValid ? { width: progressWidth } : undefined,
+          !isValid ? { width: progressWidth as DimensionValue } : undefined,
         ]}
       />
       <Text style={[styles.text, isValid ? styles.valid : styles.invalid]}>
