@@ -19,7 +19,9 @@ public sealed class RankingController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetRanking(SessionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRanking(
+        [FromRoute] SessionRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);

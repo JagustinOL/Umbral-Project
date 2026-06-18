@@ -54,6 +54,16 @@ public sealed class KeycloakIdentityService : IIdentityService
                 "No fue posible crear la cuenta de operador en Keycloak.",
                 cancellationToken);
 
+            await PersistOperatorSetupAttributesAsync(
+                accessToken,
+                userId.ToString(),
+                firstName,
+                lastName,
+                email,
+                setupCodeHash,
+                expiresUtc,
+                cancellationToken);
+
             await AssignRealmRoleAsync(accessToken, userId.ToString(), _options.OperatorRole, cancellationToken);
 
             return new CreateOperatorResult(userId, setupCode);
@@ -249,7 +259,7 @@ public sealed class KeycloakIdentityService : IIdentityService
         var encodedEmail = Uri.EscapeDataString(email);
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"{GetAdminRealmUrl()}/users?email={encodedEmail}&exact=true");
+            $"{GetAdminRealmUrl()}/users?email={encodedEmail}&exact=true&briefRepresentation=false");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -307,6 +317,76 @@ public sealed class KeycloakIdentityService : IIdentityService
             string.Equals(credential.Type, "password", StringComparison.OrdinalIgnoreCase));
     }
 
+    private async Task PersistOperatorSetupAttributesAsync(
+        string accessToken,
+        string userId,
+        string firstName,
+        string lastName,
+        string email,
+        string setupCodeHash,
+        DateTimeOffset expiresUtc,
+        CancellationToken cancellationToken)
+    {
+        var payload = new UpdateOperatorSetupAttributesRequest(
+            Id: userId,
+            Username: email,
+            Email: email,
+            FirstName: firstName,
+            LastName: lastName,
+            Enabled: false,
+            EmailVerified: true,
+            Attributes: new Dictionary<string, List<string>>
+            {
+                [OperatorSetupCodeHelper.SetupCodeHashAttribute] = [setupCodeHash],
+                [OperatorSetupCodeHelper.SetupCodeExpiresAttribute] = [expiresUtc.ToString("O")]
+            });
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"{GetAdminRealmUrl()}/users/{userId}")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new ExternalDependencyException(await BuildKeycloakErrorAsync(
+                "No fue posible guardar el código de activación del operador en Keycloak.",
+                response,
+                cancellationToken));
+        }
+    }
+
+    private async Task<KeycloakUserRepresentation> GetUserByIdAsync(
+        string accessToken,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{GetAdminRealmUrl()}/users/{userId}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            throw new NotFoundException($"No se encontró el usuario con Id={userId} en Keycloak.");
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new ExternalDependencyException(await BuildKeycloakErrorAsync(
+                "No fue posible consultar el usuario en Keycloak.",
+                response,
+                cancellationToken));
+        }
+
+        return await response.Content.ReadFromJsonAsync<KeycloakUserRepresentation>(cancellationToken)
+            ?? throw new ExternalDependencyException("Keycloak devolvió una representación de usuario vacía.");
+    }
+
     private async Task UpdateUserActivationAsync(
         string accessToken,
         string userId,
@@ -314,15 +394,30 @@ public sealed class KeycloakIdentityService : IIdentityService
         bool clearSetupAttributes,
         CancellationToken cancellationToken)
     {
-        var payload = new UpdateUserActivationRequest(
+        var user = await GetUserByIdAsync(accessToken, userId, cancellationToken);
+        var username = !string.IsNullOrWhiteSpace(user.Username)
+            ? user.Username
+            : user.Email ?? userId;
+
+        var attributes = user.Attributes is null
+            ? new Dictionary<string, List<string>>()
+            : new Dictionary<string, List<string>>(user.Attributes);
+
+        if (clearSetupAttributes)
+        {
+            attributes[OperatorSetupCodeHelper.SetupCodeHashAttribute] = [];
+            attributes[OperatorSetupCodeHelper.SetupCodeExpiresAttribute] = [];
+        }
+
+        var payload = new UpdateOperatorSetupAttributesRequest(
+            Id: userId,
+            Username: username,
+            Email: user.Email ?? username,
+            FirstName: user.FirstName ?? string.Empty,
+            LastName: user.LastName ?? string.Empty,
             Enabled: enabled,
-            Attributes: clearSetupAttributes
-                ? new Dictionary<string, List<string>>
-                {
-                    [OperatorSetupCodeHelper.SetupCodeHashAttribute] = [],
-                    [OperatorSetupCodeHelper.SetupCodeExpiresAttribute] = []
-                }
-                : null);
+            EmailVerified: true,
+            Attributes: attributes);
 
         using var request = new HttpRequestMessage(
             HttpMethod.Put,
@@ -401,29 +496,16 @@ public sealed class KeycloakIdentityService : IIdentityService
         try
         {
             var accessToken = await GetAdminAccessTokenAsync(cancellationToken);
-            var payload = new UpdateUserEnabledRequest(Enabled: false);
-
-            using var request = new HttpRequestMessage(
-                HttpMethod.Put,
-                $"{GetAdminRealmUrl()}/users/{operatorId}")
-            {
-                Content = JsonContent.Create(payload)
-            };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                throw new NotFoundException($"No existe un operador con Id={operatorId}.");
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new ExternalDependencyException(await BuildKeycloakErrorAsync(
-                    $"No fue posible desactivar el operador con Id={operatorId} en Keycloak.",
-                    response,
-                    cancellationToken));
-            }
+            await UpdateUserActivationAsync(
+                accessToken,
+                operatorId.ToString(),
+                enabled: false,
+                clearSetupAttributes: false,
+                cancellationToken);
+        }
+        catch (NotFoundException)
+        {
+            throw new NotFoundException($"No existe un operador con Id={operatorId}.");
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -586,11 +668,15 @@ public sealed class KeycloakIdentityService : IIdentityService
         bool EmailVerified,
         Dictionary<string, List<string>>? Attributes = null);
 
-    private sealed record UpdateUserEnabledRequest(bool Enabled);
-
-    private sealed record UpdateUserActivationRequest(
+    private sealed record UpdateOperatorSetupAttributesRequest(
+        string Id,
+        string Username,
+        string Email,
+        string FirstName,
+        string LastName,
         bool Enabled,
-        Dictionary<string, List<string>>? Attributes);
+        bool EmailVerified,
+        Dictionary<string, List<string>> Attributes);
 
     private sealed record RoleMappingRequest(string Id, string Name, string? Description);
 
@@ -616,6 +702,9 @@ public sealed class KeycloakIdentityService : IIdentityService
     {
         [JsonPropertyName("id")]
         public string Id { get; init; } = string.Empty;
+
+        [JsonPropertyName("username")]
+        public string? Username { get; init; }
 
         [JsonPropertyName("firstName")]
         public string? FirstName { get; init; }

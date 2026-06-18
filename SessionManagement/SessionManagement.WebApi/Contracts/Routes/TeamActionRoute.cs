@@ -1,3 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
+
 namespace SessionManagement.WebApi.Contracts.Routes;
 
-public readonly record struct TeamActionRoute(Guid TeamId, Guid RequestorId);
+public sealed record TeamActionRoute(
+    [FromRoute(Name = "teamId")] Guid TeamId,
+    [FromQuery] Guid RequestorId);

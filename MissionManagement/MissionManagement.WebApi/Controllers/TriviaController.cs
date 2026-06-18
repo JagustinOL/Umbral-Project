@@ -33,7 +33,9 @@ public sealed class TriviaController : ControllerBase
     }
 
     [HttpGet("{nodeId:guid}/trivia")]
-    public async Task<IActionResult> GetTriviaById(MissionNodeRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTriviaById(
+        [FromRoute] MissionNodeRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToTriviaByIdQuery(), cancellationToken);
         return Ok(result);

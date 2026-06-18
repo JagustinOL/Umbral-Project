@@ -30,7 +30,9 @@ public sealed class MissionOperatorsController : ControllerBase
     }
 
     [HttpDelete("{operatorId:guid}")]
-    public async Task<IActionResult> Revoke(MissionOperatorRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Revoke(
+        [FromRoute] MissionOperatorRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();

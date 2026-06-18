@@ -37,7 +37,9 @@ public sealed class OperatorsController : ControllerBase
     }
 
     [HttpPut("{operatorId:guid}/deactivate")]
-    public async Task<IActionResult> Deactivate(OperatorRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(
+        [FromRoute] OperatorRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();

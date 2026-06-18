@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +12,12 @@ namespace Umbral.Shared;
 public static class UmbralServiceCollectionExtensions
 {
     public static IMvcBuilder AddUmbralControllers(this IServiceCollection services) =>
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+            });
 
     public static IServiceCollection AddUmbralCrossCutting(
         this IServiceCollection services,

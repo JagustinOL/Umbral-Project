@@ -52,7 +52,7 @@ export function getOperatorApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 400) {
-    return "Operator payload failed validation. Verify the form fields and password policy.";
+    return error.message || "Operator request failed validation. Refresh the list and try again.";
   }
 
   if (error.status === 404) {

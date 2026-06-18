@@ -21,6 +21,7 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create(
         [FromBody] CreatePlayerRequest body,
         CancellationToken cancellationToken)
@@ -37,7 +38,9 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpGet("{playerId:guid}")]
-    public async Task<IActionResult> GetById(PlayerRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(
+        [FromRoute] PlayerRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
@@ -54,7 +57,9 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpPut("{playerId:guid}/deactivate")]
-    public async Task<IActionResult> Deactivate(PlayerRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(
+        [FromRoute] PlayerRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();

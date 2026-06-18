@@ -34,7 +34,9 @@ public sealed class HintsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetHintsByNode(HintParentRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetHintsByNode(
+        [FromRoute] HintParentRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
@@ -51,7 +53,9 @@ public sealed class HintsController : ControllerBase
     }
 
     [HttpDelete("{hintId:guid}")]
-    public async Task<IActionResult> DeleteHint(HintRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteHint(
+        [FromRoute] HintRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();

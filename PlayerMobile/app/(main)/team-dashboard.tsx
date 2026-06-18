@@ -24,7 +24,7 @@ import { DOMAIN_ERRORS } from '../../src/constants/api';
 import { colors, typography } from '../../src/constants/theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useTeamWorkspace } from '../../src/hooks/useTeamWorkspace';
-import { confirmDestructive } from '../../src/utils/confirm';
+import { confirmDestructive, showUserAlert } from '../../src/utils/confirm';
 import { isTeamLeaderRole, samePlayerRef } from '../../src/utils/uuid';
 
 export default function TeamDashboardScreen() {
@@ -68,7 +68,7 @@ export default function TeamDashboardScreen() {
   const managementLocked = isLocked;
 
   const handleDomainError = (error: unknown) => {
-    Alert.alert(
+    showUserAlert(
       'Action blocked',
       error instanceof Error ? error.message : 'Operation failed.',
     );
@@ -103,7 +103,7 @@ export default function TeamDashboardScreen() {
   const handleRename = () => {
     guardLockedAction(isLocked, async () => {
       if (!renameValue.trim()) {
-        Alert.alert('Validation', DOMAIN_ERRORS.emptyTeamName);
+        showUserAlert('Validation', DOMAIN_ERRORS.emptyTeamName);
         return;
       }
 
@@ -111,7 +111,7 @@ export default function TeamDashboardScreen() {
       try {
         await renameTeam(renameValue);
         setRenameValue('');
-        Alert.alert('Success', 'Team name updated.');
+        showUserAlert('Success', 'Team name updated.');
       } catch (error) {
         handleDomainError(error);
       } finally {

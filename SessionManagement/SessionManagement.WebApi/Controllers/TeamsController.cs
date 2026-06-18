@@ -1,5 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SessionManagement.Application.Teams.Commands.DisbandTeam;
+using SessionManagement.Application.Teams.Commands.RemoveMember;
+using SessionManagement.Application.Teams.Queries.GetPendingRequests;
 using SessionManagement.WebApi.Contracts.Routes;
 using SessionManagement.WebApi.Contracts.Teams;
 using SessionManagement.WebApi.Mapping;
@@ -27,7 +30,9 @@ public sealed class TeamsController : ControllerBase
     }
 
     [HttpGet("{teamId:guid}")]
-    public async Task<IActionResult> GetById(TeamRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(
+        [FromRoute] TeamRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
@@ -44,9 +49,12 @@ public sealed class TeamsController : ControllerBase
     }
 
     [HttpDelete("{teamId:guid}")]
-    public async Task<IActionResult> Disband(TeamActionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Disband(
+        [FromRoute(Name = "teamId")] Guid teamId,
+        [FromQuery] Guid requestorId,
+        CancellationToken cancellationToken)
     {
-        await _mediator.Send(route.ToCommand(), cancellationToken);
+        await _mediator.Send(new DisbandTeamCommand(teamId, requestorId), cancellationToken);
         return NoContent();
     }
 
@@ -61,10 +69,13 @@ public sealed class TeamsController : ControllerBase
 
     [HttpGet("{teamId:guid}/requests")]
     public async Task<IActionResult> GetPendingRequests(
-        [FromRoute] TeamActionRoute route,
+        [FromRoute(Name = "teamId")] Guid teamId,
+        [FromQuery] Guid requestorId,
         CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
+        var result = await _mediator.Send(
+            new GetPendingRequestsQuery(teamId, requestorId),
+            cancellationToken);
         return Ok(result);
     }
 
@@ -80,10 +91,14 @@ public sealed class TeamsController : ControllerBase
 
     [HttpDelete("{teamId:guid}/members/{playerId:guid}")]
     public async Task<IActionResult> RemoveMember(
-        [FromRoute] TeamMemberActionRoute route,
+        [FromRoute(Name = "teamId")] Guid teamId,
+        [FromRoute(Name = "playerId")] Guid playerId,
+        [FromQuery] Guid requestorId,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(route.ToCommand(), cancellationToken);
+        await _mediator.Send(
+            new RemoveMemberCommand(teamId, playerId, requestorId),
+            cancellationToken);
         return NoContent();
     }
 }

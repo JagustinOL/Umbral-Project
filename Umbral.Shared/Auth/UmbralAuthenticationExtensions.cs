@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +26,15 @@ public static class UmbralAuthenticationExtensions
         var options = configuration.GetSection(KeycloakAuthOptions.SectionName).Get<KeycloakAuthOptions>()
             ?? new KeycloakAuthOptions();
 
+        var validIssuers = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { options.Authority };
+        if (!string.IsNullOrWhiteSpace(options.PublicAuthority))
+            validIssuers.Add(options.PublicAuthority);
+
+        var isDevelopment = string.Equals(
+            configuration["ASPNETCORE_ENVIRONMENT"],
+            "Development",
+            StringComparison.OrdinalIgnoreCase);
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(jwt =>
             {
@@ -34,9 +45,11 @@ public static class UmbralAuthenticationExtensions
                 {
                     ValidateAudience = false,
                     ValidateIssuer = true,
-                    ValidIssuer = options.Authority,
+                    ValidIssuers = validIssuers,
                     NameClaimType = "preferred_username",
-                    RoleClaimType = "role"
+                    RoleClaimType = "role",
+                    IssuerValidator = (issuer, _, _) =>
+                        ValidateIssuer(issuer, options.Realm, validIssuers, isDevelopment)
                 };
                 jwt.Events = new JwtBearerEvents
                 {
@@ -78,5 +91,48 @@ public static class UmbralAuthenticationExtensions
                 .Build());
 
         return services;
+    }
+
+    private static string ValidateIssuer(
+        string issuer,
+        string realm,
+        IReadOnlySet<string> validIssuers,
+        bool allowDevelopmentLanIssuers)
+    {
+        if (validIssuers.Contains(issuer))
+            return issuer;
+
+        if (allowDevelopmentLanIssuers && IsAllowedDevelopmentIssuer(issuer, realm))
+            return issuer;
+
+        throw new SecurityTokenInvalidIssuerException(
+            $"Issuer validation failed. Issuer: '{issuer}'. Valid issuers: {string.Join(", ", validIssuers)}.");
+    }
+
+    private static bool IsAllowedDevelopmentIssuer(string issuer, string realm)
+    {
+        if (!Uri.TryCreate(issuer, UriKind.Absolute, out var uri))
+            return false;
+
+        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var expectedPath = $"/realms/{realm}";
+        if (!uri.AbsolutePath.Equals(expectedPath, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (uri.Host is "localhost" or "127.0.0.1")
+            return true;
+
+        if (!IPAddress.TryParse(uri.Host, out var ip) || ip.AddressFamily != AddressFamily.InterNetwork)
+            return false;
+
+        var bytes = ip.GetAddressBytes();
+        if (bytes[0] == 10)
+            return true;
+        if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+            return true;
+
+        return bytes[0] == 192 && bytes[1] == 168;
     }
 }

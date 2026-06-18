@@ -1,3 +1,3 @@
 namespace MissionManagement.WebApi.Contracts.Routes;
 
-public readonly record struct MissionStageRoute(Guid MissionId, Guid StageId);
+public sealed record MissionStageRoute(Guid MissionId, Guid StageId);

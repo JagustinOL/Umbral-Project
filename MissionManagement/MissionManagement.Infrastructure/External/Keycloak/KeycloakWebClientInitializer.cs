@@ -61,6 +61,12 @@ public sealed class KeycloakWebClientInitializer
     {
         var adminToken = await GetAdminAccessTokenAsync(httpClient, options, cancellationToken);
         await EnsureRealmRoleAsync(httpClient, options, adminToken, options.AdminRole, cancellationToken);
+        await KeycloakOperatorProfileInitializer.EnsureConfiguredAsync(
+            httpClient,
+            options,
+            adminToken,
+            logger,
+            cancellationToken);
         await EnsureWebClientAsync(httpClient, options, adminToken, logger, cancellationToken);
         await EnsureDefaultAdminUserAsync(httpClient, options, adminToken, logger, cancellationToken);
     }

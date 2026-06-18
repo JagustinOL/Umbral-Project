@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +13,7 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { colors, typography } from '../../src/constants/theme';
 import { useAuth } from '../../src/hooks/useAuth';
 import * as playerApi from '../../src/services/playerApi';
-import { confirmDestructive } from '../../src/utils/confirm';
+import { confirmDestructive, showUserAlert } from '../../src/utils/confirm';
 import { isNonEmpty, isValidEmail } from '../../src/utils/validation';
 
 export default function ProfileScreen() {
@@ -43,7 +42,7 @@ export default function ProfileScreen() {
       setIsActive(profile.isActive ?? true);
       await updatePlayerProfile(profile);
     } catch (error) {
-      Alert.alert(
+      showUserAlert(
         'Could not load profile',
         error instanceof Error ? error.message : 'Request failed.',
       );
@@ -81,9 +80,9 @@ export default function ProfileScreen() {
       await playerApi.updatePlayer(playerId, { firstName, lastName, email });
       const refreshed = await playerApi.getPlayerById(playerId);
       await updatePlayerProfile(refreshed);
-      Alert.alert('Profile updated', 'Your account details were saved.');
+      showUserAlert('Profile updated', 'Your account details were saved.');
     } catch (error) {
-      Alert.alert(
+      showUserAlert(
         'Update failed',
         error instanceof Error ? error.message : 'Unable to update profile.',
       );
@@ -112,7 +111,7 @@ export default function ProfileScreen() {
       await logout();
       router.replace('/(auth)/login');
     } catch (error) {
-      Alert.alert(
+      showUserAlert(
         'Deactivation failed',
         error instanceof Error ? error.message : 'Unable to deactivate account.',
       );

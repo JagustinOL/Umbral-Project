@@ -44,7 +44,9 @@ public sealed class MissionsController : ControllerBase
 
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetById(MissionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(
+        [FromRoute] MissionRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
@@ -52,7 +54,9 @@ public sealed class MissionsController : ControllerBase
 
     [HttpGet("{id:guid}/node-validations")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetNodeValidations(MissionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNodeValidations(
+        [FromRoute] MissionRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToNodeValidationsQuery(), cancellationToken);
         return Ok(result);
@@ -60,7 +64,9 @@ public sealed class MissionsController : ControllerBase
 
     [HttpGet("{id:guid}/session-validation/has-open")]
     [AllowAnonymous]
-    public async Task<IActionResult> HasOpenSessions(MissionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> HasOpenSessions(
+        [FromRoute] MissionRoute route,
+        CancellationToken cancellationToken)
     {
         var hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(
             route.Id, cancellationToken);
@@ -78,14 +84,18 @@ public sealed class MissionsController : ControllerBase
     }
 
     [HttpPut("{id:guid}/activate")]
-    public async Task<IActionResult> Activate(MissionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Activate(
+        [FromRoute] MissionRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToActivateCommand(), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Deactivate(MissionRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(
+        [FromRoute] MissionRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToDeactivateCommand(), cancellationToken);
         return NoContent();

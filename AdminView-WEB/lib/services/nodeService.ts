@@ -106,13 +106,36 @@ export function getNodeApiErrorMessage(error: unknown): string {
     return "Error inesperado al comunicarse con la API de etapas.";
   }
 
+  if (error.status === 401) {
+    return "Sesión expirada o no autorizada. Vuelve a iniciar sesión en Login (puerto 3002).";
+  }
+
   if (isRecord(error.details)) {
+    const errors = error.details.errors;
+    if (isRecord(errors)) {
+      const messages = Object.entries(errors).flatMap(([field, value]) => {
+        if (Array.isArray(value)) {
+          return value
+            .filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+            .map((entry) => (field === "$" ? entry : `${field}: ${entry}`));
+        }
+        return [];
+      });
+      if (messages.length > 0) {
+        return messages.join(" ");
+      }
+    }
+
     const detail = error.details.detail;
     if (typeof detail === "string" && detail.length > 0) {
       return detail;
     }
     const title = error.details.title;
-    if (typeof title === "string" && title.length > 0) {
+    if (
+      typeof title === "string" &&
+      title.length > 0 &&
+      title !== "One or more validation errors occurred."
+    ) {
       return title;
     }
   }

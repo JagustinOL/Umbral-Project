@@ -1,0 +1,44 @@
+'use client'
+
+import { useEffect, useState, type ReactNode } from 'react'
+import {
+  captureAuthFromHash,
+  getAuthSession,
+  hasRole,
+  isAuthSessionValid,
+  redirectToLogin,
+} from '@/lib/auth/session'
+
+interface AuthGuardProps {
+  children: ReactNode
+}
+
+function hasOperatorAccess(session: NonNullable<ReturnType<typeof getAuthSession>>): boolean {
+  return hasRole(session, 'operator') || hasRole(session, 'admin')
+}
+
+export function AuthGuard({ children }: AuthGuardProps) {
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    captureAuthFromHash()
+    const session = getAuthSession()
+
+    if (!isAuthSessionValid(session) || !hasOperatorAccess(session)) {
+      redirectToLogin()
+      return
+    }
+
+    setIsAuthorized(true)
+  }, [])
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Verificando sesión…</p>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}

@@ -33,7 +33,9 @@ public sealed class TreasureHuntsController : ControllerBase
     }
 
     [HttpGet("{nodeId:guid}/treasure-hunts")]
-    public async Task<IActionResult> GetTreasureHuntById(MissionNodeRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTreasureHuntById(
+        [FromRoute] MissionNodeRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToTreasureHuntByIdQuery(), cancellationToken);
         return Ok(result);

@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Hints;
 using MissionManagement.Application.Missions.Commands.CreateMission;
@@ -11,6 +13,7 @@ using MissionManagement.Infrastructure.Messaging;
 using MissionManagement.Infrastructure.Persistence;
 using MissionManagement.Infrastructure.Repositories;
 using MissionManagement.WebApi.Hosting;
+using Npgsql;
 using Umbral.Shared;
 using Umbral.Shared.Auth;
 using Umbral.Shared.Messaging;
@@ -102,7 +105,15 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MissionManagementDbContext>();
-    dbContext.Database.EnsureCreated();
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("SELECT 1 FROM missions LIMIT 1");
+    }
+    catch (PostgresException ex) when (ex.SqlState == "42P01")
+    {
+        var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
+        databaseCreator.CreateTables();
+    }
 }
 
 if (app.Environment.IsDevelopment())

@@ -1,3 +1,3 @@
 namespace SessionManagement.WebApi.Contracts.Routes;
 
-public readonly record struct LiveSessionTeamRoute(Guid SessionId, Guid TeamId);
+public sealed record LiveSessionTeamRoute(Guid SessionId, Guid TeamId);

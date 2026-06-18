@@ -1,3 +1,3 @@
 namespace MissionManagement.WebApi.Contracts.Routes;
 
-public readonly record struct HintParentRoute(Guid MissionId, Guid NodeId);
+public sealed record HintParentRoute(Guid MissionId, Guid NodeId);

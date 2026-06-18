@@ -19,5 +19,17 @@ public sealed class KeycloakAuthOptions
     public string OperatorRole { get; init; } = "operator";
     public string PlayerRole { get; init; } = "player";
 
-    public string Authority => $"{BaseUrl.TrimEnd('/')}/realms/{Realm}";
+    /// <summary>
+    /// Browser-facing Keycloak URL (e.g. http://localhost:8081 in Docker dev).
+    /// When set, JWT validation accepts tokens issued for this host as well as <see cref="BaseUrl"/>.
+    /// </summary>
+    public string? PublicBaseUrl { get; init; }
+
+    public string Authority => BuildAuthority(BaseUrl);
+
+    public string? PublicAuthority =>
+        string.IsNullOrWhiteSpace(PublicBaseUrl) ? null : BuildAuthority(PublicBaseUrl);
+
+    private string BuildAuthority(string baseUrl) =>
+        $"{baseUrl.TrimEnd('/')}/realms/{Realm}";
 }

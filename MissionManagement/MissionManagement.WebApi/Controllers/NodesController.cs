@@ -30,7 +30,9 @@ public sealed class NodesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetNodes(MissionNodesRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNodes(
+        [FromRoute] MissionNodesRoute route,
+        CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
@@ -56,7 +58,9 @@ public sealed class NodesController : ControllerBase
     }
 
     [HttpDelete("{nodeId:guid}")]
-    public async Task<IActionResult> DeleteNode(MissionNodeRoute route, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteNode(
+        [FromRoute] MissionNodeRoute route,
+        CancellationToken cancellationToken)
     {
         await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();

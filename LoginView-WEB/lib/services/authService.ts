@@ -67,15 +67,26 @@ async function parseAuthResponse(response: Response): Promise<AuthTokenResponse>
   }
 
   if (!response.ok) {
-    const message =
-      typeof body === 'object' &&
-      body !== null &&
-      'error' in body &&
-      typeof (body as { error: unknown }).error === 'string'
-        ? (body as { error: string }).error
-        : `Authentication failed (${response.status}).`
+    const message = extractApiErrorMessage(body, response.status)
     throw new AuthApiError(message, response.status)
   }
 
   return body as AuthTokenResponse
+}
+
+function extractApiErrorMessage(body: unknown, status: number): string {
+  if (typeof body === 'object' && body !== null) {
+    const record = body as Record<string, unknown>
+    if (typeof record.detail === 'string' && record.detail.length > 0) {
+      return record.detail
+    }
+    if (typeof record.error === 'string' && record.error.length > 0) {
+      return record.error
+    }
+    if (typeof record.title === 'string' && record.title.length > 0 && status !== 500) {
+      return record.title
+    }
+  }
+
+  return `Authentication failed (${status}).`
 }

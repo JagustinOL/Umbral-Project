@@ -17,9 +17,11 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions,
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (!options.skipAuth) {
     const token = await getAccessToken();

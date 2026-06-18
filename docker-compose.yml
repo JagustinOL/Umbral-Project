@@ -90,6 +90,7 @@ services:
       ConnectionStrings__MissionManagement: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
       Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__PublicBaseUrl: http://localhost:8081
       Keycloak__Realm: umbral-realm
       Keycloak__AdminRealm: master
       Keycloak__AdminClientId: admin-cli
@@ -122,6 +123,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
       Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__PublicBaseUrl: http://localhost:8081
       Keycloak__Realm: umbral-realm
       Keycloak__WebClientId: umbral-web
       MissionManagement__BaseUrl: http://mission-management-service:8080
@@ -143,6 +145,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
       Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__PublicBaseUrl: http://localhost:8081
       Keycloak__Realm: umbral-realm
       Keycloak__WebClientId: umbral-web
 
@@ -163,6 +166,7 @@ services:
       NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
       NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+      NEXT_PUBLIC_LOGIN_URL: http://localhost:3002
     depends_on:
       - mission-management-service
       - session-management-service
@@ -182,6 +186,7 @@ services:
       NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
       NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+      NEXT_PUBLIC_LOGIN_URL: http://localhost:3002
       # Fallback when not signing in via LoginView-WEB
       NEXT_PUBLIC_OPERATOR_ID: ${NEXT_PUBLIC_OPERATOR_ID:-}
     depends_on:
