@@ -54,12 +54,13 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "./StatusBadge";
 import { Operator, Mission, CreateOperatorPayload } from "@/lib/types";
+import { CreateOperatorResponse } from "@/lib/types/api";
 import { cn } from "@/lib/utils";
 
 interface OperatorManagementProps {
   operators: Operator[];
   missions: Mission[];
-  onCreateOperator: (payload: CreateOperatorPayload) => Promise<void>;
+  onCreateOperator: (payload: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
   onDeactivateOperator: (operatorId: string) => Promise<void>;
   onAssignOperator: (missionId: string, operatorId: string) => Promise<void>;
   onRevokeOperator: (missionId: string, operatorId: string) => Promise<void>;
@@ -79,25 +80,25 @@ interface OperatorManagementProps {
 interface CreateOperatorModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateOperatorPayload) => Promise<void>;
+  onSubmit: (data: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
   isSubmitting: boolean;
+  onActivated: (setupCode: string) => void;
 }
 
-function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOperatorModalProps) {
+function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivated }: CreateOperatorModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await onSubmit({ firstName, lastName, email, password });
+      const result = await onSubmit({ firstName, lastName, email });
       setFirstName("");
       setLastName("");
       setEmail("");
-      setPassword("");
       onClose();
+      onActivated(result.setupCode);
     } catch {
       // Error is handled at page-level and rendered as alert.
     }
@@ -109,7 +110,7 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Create Operator Account</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Create an operator user in Keycloak and assign the operator role.
+            Create a pending operator account. Share the activation code so they can set their password at login.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -127,22 +128,8 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
             <Label htmlFor="op-email">Email <span className="text-destructive">*</span></Label>
             <Input id="op-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@umbral.ops" required />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="op-password">
-              Password <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="op-password"
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 8 characters"
-              required
-            />
-          </div>
           <p className="text-xs text-muted-foreground">
-            A Keycloak account will be created and the <strong>operator</strong> role assigned automatically.
+            The account is created inactive in Keycloak. The operator must activate it with the one-time code shown after creation.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
@@ -151,6 +138,41 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface SetupCodeDialogProps {
+  open: boolean;
+  setupCode: string | null;
+  onClose: () => void;
+}
+
+function SetupCodeDialog({ open, setupCode, onClose }: SetupCodeDialogProps) {
+  const handleCopy = async () => {
+    if (!setupCode) return;
+    await navigator.clipboard.writeText(setupCode);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold">Activation Code</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Share this code with the operator. It is shown only once and expires in 7 days.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md border bg-muted/40 px-4 py-3 text-center font-mono text-lg tracking-widest">
+          {setupCode}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => void handleCopy()}>
+            Copy Code
+          </Button>
+          <Button type="button" onClick={onClose}>Done</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -367,10 +389,9 @@ export function OperatorManagement({
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Operator | null>(null);
+  const [setupCode, setSetupCode] = useState<string | null>(null);
 
-  const handleCreate = async (data: CreateOperatorPayload) => {
-    await onCreateOperator(data);
-  };
+  const handleCreate = async (data: CreateOperatorPayload) => onCreateOperator(data);
 
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
@@ -518,6 +539,13 @@ export function OperatorManagement({
         onClose={() => setCreateOpen(false)}
         onSubmit={handleCreate}
         isSubmitting={isCreating}
+        onActivated={(code) => setSetupCode(code)}
+      />
+
+      <SetupCodeDialog
+        open={!!setupCode}
+        setupCode={setupCode}
+        onClose={() => setSetupCode(null)}
       />
 
       <AssignOperatorSheet

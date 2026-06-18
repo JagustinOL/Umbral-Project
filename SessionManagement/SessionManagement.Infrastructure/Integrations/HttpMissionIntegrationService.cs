@@ -70,6 +70,27 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
         return mission?.Status;
     }
 
+    public async Task<IReadOnlyList<MissionHintData>> GetHintsForNodeAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var hints = await _httpClient.GetFromJsonAsync<IReadOnlyList<MissionHintResponse>>(
+            $"api/v1/missions/{missionId}/nodes/{nodeId}/hints",
+            JsonOptions,
+            cancellationToken) ?? [];
+
+        return hints
+            .Select(h => new MissionHintData(h.Id, h.Order, h.Content, h.PenaltyPoints))
+            .ToList();
+    }
+
+    private sealed record MissionHintResponse(
+        Guid Id,
+        int Order,
+        string Content,
+        int PenaltyPoints);
+
     private sealed record MissionSummary(
         Guid Id,
         string Title,

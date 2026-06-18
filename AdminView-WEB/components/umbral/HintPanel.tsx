@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LightbulbIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -31,7 +29,6 @@ import {
   logHintApiProblem,
   sortHintsByOrder,
   toHintViewModel,
-  validateHintAttachment,
   validateHintContent,
 } from "@/lib/services/hintService";
 import { getStructureLockTooltip } from "@/lib/services/nodeService";
@@ -68,7 +65,6 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
   const [isInitialLoading, setIsInitialLoading] = useState(() => (node.hints ?? []).length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newContent, setNewContent] = useState("");
-  const [newAttachment, setNewAttachment] = useState<File | null>(null);
   const [editingHintId, setEditingHintId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Hint | null>(null);
@@ -127,17 +123,10 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       return;
     }
 
-    const attachmentError = validateHintAttachment(newAttachment);
-    if (attachmentError) {
-      toast.error(attachmentError);
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      await hintService.addHint(missionId, nodeId, newContent.trim(), newAttachment);
+      await hintService.addHint(missionId, nodeId, newContent.trim());
       setNewContent("");
-      setNewAttachment(null);
       await loadHints(undefined, { silent: true });
       toast.success("Pista creada (HU-17).");
     } catch (error) {
@@ -296,22 +285,6 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
             className="text-xs resize-none"
             disabled={isSubmitting}
           />
-          <div className="space-y-1">
-            <Label htmlFor={`hint-file-${nodeId}`} className="text-xs text-muted-foreground">
-              Adjunto opcional (JPG/PNG, máx. 5 MB)
-            </Label>
-            <Input
-              id={`hint-file-${nodeId}`}
-              type="file"
-              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-              className="text-xs h-8"
-              disabled={isSubmitting}
-              onChange={(e) => setNewAttachment(e.target.files?.[0] ?? null)}
-            />
-            {newAttachment && (
-              <p className="text-xs text-muted-foreground truncate">{newAttachment.name}</p>
-            )}
-          </div>
           <Button
             size="sm"
             variant="outline"

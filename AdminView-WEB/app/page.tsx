@@ -175,8 +175,9 @@ export default function DashboardPage() {
     setIsCreatingOperator(true);
     setOperatorsError(null);
     try {
-      await operatorService.createOperator(payload);
+      const result = await operatorService.createOperator(payload);
       await loadOperators();
+      return result;
     } catch (error) {
       setOperatorsError(getOperatorApiErrorMessage(error));
       throw error;

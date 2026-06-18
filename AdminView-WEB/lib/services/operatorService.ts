@@ -1,4 +1,4 @@
-import { Operator } from "@/lib/types";
+import { CreateOperatorPayload, Operator } from "@/lib/types";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import {
   CreateOperatorRequest,
@@ -22,17 +22,11 @@ export const operatorService = {
     return apiRequest<OperatorDto[]>("/operators", { signal });
   },
 
-  async createOperator(payload: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }): Promise<CreateOperatorResponse> {
+  async createOperator(payload: CreateOperatorPayload): Promise<CreateOperatorResponse> {
     const request: CreateOperatorRequest = {
       firstName: payload.firstName,
       lastName: payload.lastName,
       email: payload.email,
-      password: payload.password,
     };
 
     return apiRequest<CreateOperatorResponse>("/operators", {

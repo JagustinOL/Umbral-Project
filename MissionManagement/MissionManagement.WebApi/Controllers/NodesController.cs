@@ -1,16 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Nodes.Commands.AddRootNode;
-using MissionManagement.Application.Nodes.Commands.DeleteNode;
-using MissionManagement.Application.Nodes.Commands.UpdateNode;
-using MissionManagement.Application.Nodes.Queries.GetGamesByStage;
-using MissionManagement.Application.Nodes.Queries.GetNodesByMission;
 using MissionManagement.WebApi.Contracts.Nodes;
+using MissionManagement.WebApi.Contracts.Routes;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/missions/{missionId:guid}/nodes")]
+[Authorize(Roles = "admin,operator")]
 public sealed class NodesController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -21,51 +20,45 @@ public sealed class NodesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddRootNode([FromRoute] Guid missionId, [FromBody] AddRootNodeRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddRootNode(
+        [FromRoute] MissionNodesRoute route,
+        [FromBody] AddRootNodeRequest body,
+        CancellationToken cancellationToken)
     {
-        var nodeId = await _mediator.Send(new AddRootNodeCommand(
-            MissionId: missionId,
-            Title: request.Title,
-            Description: request.Description,
-            ExecutionOrder: request.ExecutionOrder), cancellationToken);
-
-        return CreatedAtAction(nameof(GetNodes), new { missionId }, new { id = nodeId });
+        var nodeId = await _mediator.Send(body.ToCommand(route), cancellationToken);
+        return CreatedAtAction(nameof(GetNodes), new { missionId = route.MissionId }, new { id = nodeId });
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetNodes([FromRoute] Guid missionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetNodes(MissionNodesRoute route, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetNodesByMissionQuery(missionId), cancellationToken);
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{stageId:guid}/games")]
     public async Task<IActionResult> GetGamesByStage(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid stageId,
+        [FromRoute] MissionStageRoute route,
         CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetGamesByStageQuery(missionId, stageId), cancellationToken);
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpPut("{nodeId:guid}")]
-    public async Task<IActionResult> UpdateNode([FromRoute] Guid missionId, [FromRoute] Guid nodeId, [FromBody] UpdateNodeRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateNode(
+        [FromRoute] MissionNodeRoute route,
+        [FromBody] UpdateNodeRequest body,
+        CancellationToken cancellationToken)
     {
-        await _mediator.Send(new UpdateNodeCommand(
-            MissionId: missionId,
-            NodeId: nodeId,
-            Title: request.Title,
-            Description: request.Description), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{nodeId:guid}")]
-    public async Task<IActionResult> DeleteNode([FromRoute] Guid missionId, [FromRoute] Guid nodeId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteNode(MissionNodeRoute route, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeleteNodeCommand(missionId, nodeId), cancellationToken);
+        await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();
     }
 }
-

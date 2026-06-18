@@ -1,5 +1,8 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MissionManagement.Application.Common.Interfaces;
+using MissionManagement.Application.Hints;
 using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Domain.Repositories;
 using MissionManagement.Infrastructure.External.Keycloak;
@@ -8,12 +11,16 @@ using MissionManagement.Infrastructure.Messaging;
 using MissionManagement.Infrastructure.Persistence;
 using MissionManagement.Infrastructure.Repositories;
 using MissionManagement.WebApi.Hosting;
+using Umbral.Shared;
+using Umbral.Shared.Auth;
+using Umbral.Shared.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddUmbralSerilog("MissionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddUmbralControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
@@ -43,10 +50,11 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddUmbralAuthentication(builder.Configuration);
+builder.Services.AddUmbralCrossCutting(typeof(CreateMissionCommand));
+
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateMissionCommand).Assembly));
-
-builder.Services.AddScoped<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
 
 builder.Services.AddDbContext<MissionManagementDbContext>(options =>
 {
@@ -54,8 +62,20 @@ builder.Services.AddDbContext<MissionManagementDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+builder.Services.AddOptions<RabbitMqOptions>()
+    .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
+
 builder.Services.AddScoped<IMissionRepository, MissionRepository>();
-builder.Services.AddScoped<IDomainEventPublisher, LoggingDomainEventPublisher>();
+builder.Services.AddScoped<MissionHintService>();
+builder.Services.AddScoped<IHintAccessService>(sp => new DraftOnlyHintProxy(
+    sp.GetRequiredService<MissionHintService>(),
+    sp.GetRequiredService<IMissionRepository>(),
+    sp.GetRequiredService<ICurrentUser>()));
 
 var sessionManagementBaseUrl = builder.Configuration["SessionManagement:BaseUrl"];
 if (string.IsNullOrWhiteSpace(sessionManagementBaseUrl))
@@ -86,13 +106,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseMiddleware<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
+app.UseUmbralCrossCutting();
 app.MapControllers();
 
 app.Run();

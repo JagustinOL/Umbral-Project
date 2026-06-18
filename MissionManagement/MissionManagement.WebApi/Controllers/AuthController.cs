@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Auth.Commands.AuthenticateUser;
+using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.WebApi.Contracts.Auth;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
@@ -17,19 +19,31 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("token")]
-    public async Task<IActionResult> Token([FromBody] AuthenticateRequest request, CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> Token(
+        [FromBody] AuthenticateRequest body,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(
-            new AuthenticateUserCommand(request.Username, request.Password),
-            cancellationToken);
-
-        return Ok(new
-        {
-            accessToken = result.AccessToken,
-            refreshToken = result.RefreshToken,
-            expiresIn = result.ExpiresIn,
-            userId = result.UserId,
-            roles = result.Roles
-        });
+        var result = await _mediator.Send(body.ToCommand(), cancellationToken);
+        return Ok(ToTokenResponse(result));
     }
+
+    [HttpPost("operator/setup-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetupOperatorPassword(
+        [FromBody] SetupOperatorPasswordRequest body,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(body.ToCommand(), cancellationToken);
+        return Ok(ToTokenResponse(result));
+    }
+
+    private static object ToTokenResponse(AuthTokenResult result) => new
+    {
+        accessToken = result.AccessToken,
+        refreshToken = result.RefreshToken,
+        expiresIn = result.ExpiresIn,
+        userId = result.UserId,
+        roles = result.Roles
+    };
 }

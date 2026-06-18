@@ -1,12 +1,14 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Admins.Commands.CreateAdmin;
 using MissionManagement.WebApi.Contracts.Admins;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/admins")]
+[Authorize(Roles = "admin")]
 public sealed class AdminsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -17,14 +19,11 @@ public sealed class AdminsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateAdminRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateAdminRequest body,
+        CancellationToken cancellationToken)
     {
-        var adminId = await _mediator.Send(new CreateAdminCommand(
-            FirstName: request.FirstName,
-            LastName: request.LastName,
-            Email: request.Email,
-            Password: request.Password), cancellationToken);
-
+        var adminId = await _mediator.Send(body.ToCommand(), cancellationToken);
         return Created(string.Empty, new { id = adminId });
     }
 }

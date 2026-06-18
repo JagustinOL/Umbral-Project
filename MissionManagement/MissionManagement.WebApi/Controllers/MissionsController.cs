@@ -1,19 +1,17 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Common.Interfaces;
-using MissionManagement.Application.Missions.Commands.ActivateMission;
-using MissionManagement.Application.Missions.Commands.CreateMission;
-using MissionManagement.Application.Missions.Commands.DeactivateMission;
-using MissionManagement.Application.Missions.Commands.UpdateMissionDetails;
-using MissionManagement.Application.Missions.Queries.GetMissionById;
-using MissionManagement.Application.Missions.Queries.GetMissionNodeValidations;
 using MissionManagement.Application.Missions.Queries.GetMissions;
+using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.WebApi.Contracts.Missions;
+using MissionManagement.WebApi.Contracts.Routes;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/missions")]
+[Authorize(Roles = "admin,operator")]
 public sealed class MissionsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -28,18 +26,16 @@ public sealed class MissionsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateMissionRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateMissionRequest body,
+        CancellationToken cancellationToken)
     {
-        var id = await _mediator.Send(new CreateMissionCommand(
-            Title: request.Title,
-            Description: request.Description,
-            Difficulty: request.Difficulty,
-            MaxDurationMinutes: request.MaxDurationMinutes), cancellationToken);
-
+        var id = await _mediator.Send(body.ToCommand(), cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id }, new { id });
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetMissionsQuery(), cancellationToken);
@@ -47,50 +43,51 @@ public sealed class MissionsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetById([FromRoute] Guid id, CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> GetById(MissionRoute route, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetMissionByIdQuery(id), cancellationToken);
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{id:guid}/node-validations")]
-    public async Task<IActionResult> GetNodeValidations([FromRoute] Guid id, CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> GetNodeValidations(MissionRoute route, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetMissionNodeValidationsQuery(id), cancellationToken);
+        var result = await _mediator.Send(route.ToNodeValidationsQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("{id:guid}/session-validation/has-open")]
-    public async Task<IActionResult> HasOpenSessions([FromRoute] Guid id, CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> HasOpenSessions(MissionRoute route, CancellationToken cancellationToken)
     {
-        var hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(id, cancellationToken);
+        var hasOpenSessions = await _sessionValidationService.HasOpenSessionsForMissionAsync(
+            route.Id, cancellationToken);
         return Ok(new { hasOpenSessions });
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateDetails([FromRoute] Guid id, [FromBody] UpdateMissionDetailsRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateDetails(
+        [FromRoute] MissionRoute route,
+        [FromBody] UpdateMissionDetailsRequest body,
+        CancellationToken cancellationToken)
     {
-        await _mediator.Send(new UpdateMissionDetailsCommand(
-            Id: id,
-            Title: request.Title,
-            Description: request.Description,
-            MaxDurationMinutes: request.MaxDurationMinutes), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 
     [HttpPut("{id:guid}/activate")]
-    public async Task<IActionResult> Activate([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Activate(MissionRoute route, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new ActivateMissionCommand(id), cancellationToken);
+        await _mediator.Send(route.ToActivateCommand(), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Deactivate([FromRoute] Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(MissionRoute route, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeactivateMissionCommand(id), cancellationToken);
+        await _mediator.Send(route.ToDeactivateCommand(), cancellationToken);
         return NoContent();
     }
 }
-

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using MissionManagement.Application.Common;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Exceptions;
 using Microsoft.Extensions.Options;
@@ -19,29 +20,104 @@ public sealed class KeycloakIdentityService : IIdentityService
         _options = options.Value;
     }
 
-    public async Task<Guid> CreateOperatorAsync(
+    public async Task<CreateOperatorResult> CreateOperatorAsync(
         string firstName,
         string lastName,
         string email,
-        string password,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return await CreateRealmUserAsync(
-                firstName,
-                lastName,
-                email,
-                password,
-                _options.OperatorRole,
+            var setupCode = OperatorSetupCodeHelper.GenerateSetupCode();
+            var setupCodeHash = OperatorSetupCodeHelper.HashSetupCode(setupCode, _options.OperatorSetupCodeSalt);
+            var expiresUtc = OperatorSetupCodeHelper.ComputeExpiryUtc(_options.OperatorSetupCodeTtlDays);
+
+            var accessToken = await GetAdminAccessTokenAsync(cancellationToken);
+            var userPayload = new CreateUserRequest(
+                Username: email,
+                Email: email,
+                FirstName: firstName,
+                LastName: lastName,
+                Enabled: false,
+                EmailVerified: true,
+                Attributes: new Dictionary<string, List<string>>
+                {
+                    [OperatorSetupCodeHelper.SetupCodeHashAttribute] = [setupCodeHash],
+                    [OperatorSetupCodeHelper.SetupCodeExpiresAttribute] =
+                        [expiresUtc.ToString("O")]
+                });
+
+            var userId = await CreateRealmUserAsync(
+                accessToken,
+                userPayload,
                 $"Ya existe un operador registrado con el correo '{email}'.",
                 "No fue posible crear la cuenta de operador en Keycloak.",
                 cancellationToken);
+
+            await AssignRealmRoleAsync(accessToken, userId.ToString(), _options.OperatorRole, cancellationToken);
+
+            return new CreateOperatorResult(userId, setupCode);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             throw new ExternalDependencyException(
                 "No fue posible comunicarse con Keycloak durante la creación del operador.",
+                ex);
+        }
+    }
+
+    public async Task SetupOperatorPasswordAsync(
+        string email,
+        string setupCode,
+        string password,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var accessToken = await GetAdminAccessTokenAsync(cancellationToken);
+            var user = await FindUserByEmailAsync(accessToken, email, cancellationToken);
+            if (user is null || string.IsNullOrWhiteSpace(user.Id))
+                throw new NotFoundException("No se encontró una cuenta de operador pendiente de activación.");
+
+            if (!await UserHasRealmRoleAsync(accessToken, user.Id, _options.OperatorRole, cancellationToken))
+                throw new NotFoundException("No se encontró una cuenta de operador pendiente de activación.");
+
+            if (user.Enabled)
+                throw new ConflictException("La cuenta ya está activada. Inicie sesión con su contraseña.");
+
+            if (await UserHasPasswordCredentialAsync(accessToken, user.Id, cancellationToken))
+                throw new ConflictException(
+                    "La cuenta fue desactivada por un administrador. Contacte al administrador para reactivarla.");
+
+            var storedHash = GetAttributeValue(user, OperatorSetupCodeHelper.SetupCodeHashAttribute);
+            var expiresRaw = GetAttributeValue(user, OperatorSetupCodeHelper.SetupCodeExpiresAttribute);
+
+            if (OperatorSetupCodeHelper.IsExpired(expiresRaw))
+                throw new ConflictException("El código de activación expiró. Solicite uno nuevo al administrador.");
+
+            if (string.IsNullOrWhiteSpace(storedHash)
+                || !OperatorSetupCodeHelper.CodesMatch(setupCode, storedHash, _options.OperatorSetupCodeSalt))
+                throw new ConflictException("El código de activación no es válido.");
+
+            await KeycloakPasswordHelper.SetUserPasswordAsync(
+                _httpClient,
+                GetAdminRealmUrl(),
+                accessToken,
+                user.Id,
+                password,
+                cancellationToken);
+
+            await UpdateUserActivationAsync(
+                accessToken,
+                user.Id,
+                enabled: true,
+                clearSetupAttributes: true,
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            throw new ExternalDependencyException(
+                "No fue posible comunicarse con Keycloak durante la activación del operador.",
                 ex);
         }
     }
@@ -92,6 +168,32 @@ public sealed class KeycloakIdentityService : IIdentityService
             Enabled: true,
             EmailVerified: true);
 
+        var userId = await CreateRealmUserAsync(
+            accessToken,
+            userPayload,
+            conflictMessage,
+            failureMessage,
+            cancellationToken);
+
+        await AssignRealmRoleAsync(accessToken, userId.ToString(), realmRole, cancellationToken);
+        await KeycloakPasswordHelper.SetUserPasswordAsync(
+            _httpClient,
+            GetAdminRealmUrl(),
+            accessToken,
+            userId.ToString(),
+            password,
+            cancellationToken);
+
+        return userId;
+    }
+
+    private async Task<Guid> CreateRealmUserAsync(
+        string accessToken,
+        CreateUserRequest userPayload,
+        string conflictMessage,
+        string failureMessage,
+        CancellationToken cancellationToken)
+    {
         using var createRequest = new HttpRequestMessage(
             HttpMethod.Post,
             $"{GetAdminRealmUrl()}/users")
@@ -136,16 +238,120 @@ public sealed class KeycloakIdentityService : IIdentityService
                 $"Keycloak devolvió un id de usuario no válido ('{keycloakUserId}').");
         }
 
-        await AssignRealmRoleAsync(accessToken, keycloakUserId, realmRole, cancellationToken);
-        await KeycloakPasswordHelper.SetUserPasswordAsync(
-            _httpClient,
-            GetAdminRealmUrl(),
-            accessToken,
-            keycloakUserId,
-            password,
-            cancellationToken);
-
         return userId;
+    }
+
+    private async Task<KeycloakUserRepresentation?> FindUserByEmailAsync(
+        string accessToken,
+        string email,
+        CancellationToken cancellationToken)
+    {
+        var encodedEmail = Uri.EscapeDataString(email);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{GetAdminRealmUrl()}/users?email={encodedEmail}&exact=true");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new ExternalDependencyException(await BuildKeycloakErrorAsync(
+                "No fue posible consultar el usuario en Keycloak.",
+                response,
+                cancellationToken));
+        }
+
+        var users = await response.Content.ReadFromJsonAsync<List<KeycloakUserRepresentation>>(cancellationToken)
+            ?? [];
+        return users.FirstOrDefault();
+    }
+
+    private async Task<bool> UserHasRealmRoleAsync(
+        string accessToken,
+        string userId,
+        string roleName,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{GetAdminRealmUrl()}/users/{userId}/role-mappings/realm");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return false;
+
+        var roles = await response.Content.ReadFromJsonAsync<List<KeycloakRoleRepresentation>>(cancellationToken)
+            ?? [];
+        return roles.Any(role =>
+            string.Equals(role.Name, roleName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<bool> UserHasPasswordCredentialAsync(
+        string accessToken,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{GetAdminRealmUrl()}/users/{userId}/credentials");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return false;
+
+        var credentials = await response.Content.ReadFromJsonAsync<List<KeycloakCredentialRepresentation>>(cancellationToken)
+            ?? [];
+        return credentials.Any(credential =>
+            string.Equals(credential.Type, "password", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task UpdateUserActivationAsync(
+        string accessToken,
+        string userId,
+        bool enabled,
+        bool clearSetupAttributes,
+        CancellationToken cancellationToken)
+    {
+        var payload = new UpdateUserActivationRequest(
+            Enabled: enabled,
+            Attributes: clearSetupAttributes
+                ? new Dictionary<string, List<string>>
+                {
+                    [OperatorSetupCodeHelper.SetupCodeHashAttribute] = [],
+                    [OperatorSetupCodeHelper.SetupCodeExpiresAttribute] = []
+                }
+                : null);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"{GetAdminRealmUrl()}/users/{userId}")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new ExternalDependencyException(await BuildKeycloakErrorAsync(
+                "No fue posible activar la cuenta del operador en Keycloak.",
+                response,
+                cancellationToken));
+        }
+    }
+
+    private static string? GetAttributeValue(KeycloakUserRepresentation user, string attributeName)
+    {
+        if (user.Attributes is null
+            || !user.Attributes.TryGetValue(attributeName, out var values)
+            || values.Count == 0)
+        {
+            return null;
+        }
+
+        return values[0];
     }
 
     public async Task<IReadOnlyList<OperatorIdentityDto>> GetOperatorsAsync(CancellationToken cancellationToken = default)
@@ -377,9 +583,14 @@ public sealed class KeycloakIdentityService : IIdentityService
         string FirstName,
         string LastName,
         bool Enabled,
-        bool EmailVerified);
+        bool EmailVerified,
+        Dictionary<string, List<string>>? Attributes = null);
 
     private sealed record UpdateUserEnabledRequest(bool Enabled);
+
+    private sealed record UpdateUserActivationRequest(
+        bool Enabled,
+        Dictionary<string, List<string>>? Attributes);
 
     private sealed record RoleMappingRequest(string Id, string Name, string? Description);
 
@@ -417,5 +628,14 @@ public sealed class KeycloakIdentityService : IIdentityService
 
         [JsonPropertyName("enabled")]
         public bool Enabled { get; init; }
+
+        [JsonPropertyName("attributes")]
+        public Dictionary<string, List<string>>? Attributes { get; init; }
+    }
+
+    private sealed class KeycloakCredentialRepresentation
+    {
+        [JsonPropertyName("type")]
+        public string? Type { get; init; }
     }
 }

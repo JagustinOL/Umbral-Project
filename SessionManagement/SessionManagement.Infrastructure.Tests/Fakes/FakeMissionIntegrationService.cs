@@ -55,4 +55,10 @@ public sealed class FakeMissionIntegrationService : IMissionIntegrationService
         Guid missionId,
         CancellationToken cancellationToken = default)
         => Task.FromResult<string?>("Active");
+
+    public Task<IReadOnlyList<MissionHintData>> GetHintsForNodeAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<MissionHintData>>([]);
 }

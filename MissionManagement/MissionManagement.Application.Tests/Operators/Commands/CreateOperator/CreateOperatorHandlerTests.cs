@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MissionManagement.Application.Common;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Operators.Commands.CreateOperator;
 using Moq;
@@ -10,40 +11,33 @@ public sealed class CreateOperatorHandlerTests
     private readonly Mock<IIdentityService> _identityServiceMock = new();
 
     [Fact]
-    public async Task Handle_WhenValidCommand_InvokesCreateOperatorOnceAndReturnsId()
+    public async Task Handle_WhenValidCommand_InvokesCreateOperatorOnceAndReturnsResult()
     {
-        // Arrange
-        var operatorId = Guid.NewGuid();
+        var expected = new CreateOperatorResult(Guid.NewGuid(), "WXYZ-9876");
         var command = new CreateOperatorCommand(
             FirstName: "Ada",
             LastName: "Lovelace",
-            Email: "ada@umbral.com",
-            Password: "SecurePass1");
+            Email: "ada@umbral.com");
 
         _identityServiceMock
             .Setup(s => s.CreateOperatorAsync(
                 command.FirstName,
                 command.LastName,
                 command.Email,
-                command.Password,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(operatorId);
+            .ReturnsAsync(expected);
 
         var handler = new CreateOperatorHandler(_identityServiceMock.Object);
 
-        // Act
         var result = await handler.Handle(command, CancellationToken.None);
 
-        // Assert
-        result.Should().Be(operatorId);
+        result.Should().Be(expected);
         _identityServiceMock.Verify(
             s => s.CreateOperatorAsync(
                 command.FirstName,
                 command.LastName,
                 command.Email,
-                command.Password,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
-

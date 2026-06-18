@@ -1,4 +1,5 @@
 using MediatR;
+using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.Repositories;
@@ -9,11 +10,16 @@ public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Gui
 {
     private readonly ILiveSessionRepository _repository;
     private readonly ITeamRepository _teamRepository;
+    private readonly IDomainEventPublisher _eventPublisher;
 
-    public JoinSessionHandler(ILiveSessionRepository repository, ITeamRepository teamRepository)
+    public JoinSessionHandler(
+        ILiveSessionRepository repository,
+        ITeamRepository teamRepository,
+        IDomainEventPublisher eventPublisher)
     {
         _repository = repository;
         _teamRepository = teamRepository;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<Guid> Handle(JoinSessionCommand request, CancellationToken cancellationToken)
@@ -40,14 +46,19 @@ public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Gui
         }
         catch (SessionDomainException ex) when (team.CurrentSessionRef == session.Id)
         {
-            // Idempotente: el equipo ya estaba registrado en esta misma sesión.
             return session.Id;
         }
 
         await _repository.SaveAsync(session, cancellationToken);
         await _teamRepository.SaveAsync(team, cancellationToken);
 
+        var events = session.DomainEvents.ToList();
+        if (events.Count > 0)
+        {
+            await _eventPublisher.PublishAsync(events, cancellationToken);
+            session.ClearDomainEvents();
+        }
+
         return session.Id;
     }
 }
-

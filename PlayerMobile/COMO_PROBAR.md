@@ -36,9 +36,35 @@ Usa `10.0.2.2` en lugar de `localhost` (ver comentarios en `.env.example`).
 
 ---
 
-## 2. Levantar el backend (Docker)
+## 2. Levantar el entorno
+
+### Opción A — Todo en Docker (recomendado para navegador)
 
 En la **raíz del repo** (`Umbral-Project`):
+
+```powershell
+docker compose --profile full up -d --build
+```
+
+Levanta infra, backends, Admin/Operador/Login y PlayerMobile en modo web. Abre http://localhost:19000 (no hace falta `npm install` en `PlayerMobile/`).
+
+Solo backends + Player web:
+
+```powershell
+docker compose --profile player up -d --build
+```
+
+### Opción B — Expo Go / emulador nativo (Metro en el host)
+
+Desde la raíz:
+
+```powershell
+.\scripts\dev-expo-go.ps1
+```
+
+El script levanta Docker (backends) y luego `npm start` en `PlayerMobile/`. Requiere Node.js LTS instalado.
+
+### Opción C — Manual (solo backends en Docker)
 
 ```powershell
 docker compose up -d db mq keycloak mission-management-service session-management-service
@@ -68,9 +94,11 @@ Consola Keycloak (opcional): http://localhost:8081 — usuario `admin` / `admin`
 
 ---
 
-## 3. Instalar y arrancar la app móvil
+## 3. Instalar y arrancar la app móvil (solo si usas Opción B o C)
 
-**Docker no abre la app.** Docker solo levanta backend (APIs + Keycloak). La app React Native se ejecuta aparte en tu PC con Node.js.
+Si usaste **Opción A** (`--profile full` o `--profile player`), la app web ya corre en http://localhost:19000; salta esta sección.
+
+Con **Opción B** (`scripts/dev-expo-go.ps1`) o **Opción C**, la app React Native se ejecuta en tu PC con Node.js.
 
 ### Requisito: Node.js
 
@@ -172,12 +200,20 @@ docker compose logs -f keycloak
 ## 6. Resumen en una línea
 
 ```powershell
-# Raíz del repo
-docker compose up -d db mq keycloak mission-management-service session-management-service
+# Todo el stack (navegador, sin Node local en PlayerMobile)
+docker compose --profile full up -d --build
+# Abre http://localhost:19000 y registra ana.lider@umbral.com / SecurePass1
+```
 
-# App
+```powershell
+# Expo Go / emulador (Metro en el host)
+.\scripts\dev-expo-go.ps1
+```
+
+```powershell
+# Solo backends + app manual
+docker compose up -d db mq keycloak mission-management-service session-management-service
 cd PlayerMobile
 npm install
 npm start
-# Pulsa w (web) y registra ana.lider@umbral.com / SecurePass1
 ```

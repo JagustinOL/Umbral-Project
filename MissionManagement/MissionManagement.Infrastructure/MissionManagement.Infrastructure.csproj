@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MissionManagement.Application\MissionManagement.Application.csproj" />
     <ProjectReference Include="..\MissionManagement.Domain\MissionManagement.Domain.csproj" />
+    <ProjectReference Include="..\..\Umbral.Shared\Umbral.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

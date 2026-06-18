@@ -166,7 +166,7 @@ export interface HintDto {
   penaltyPoints: number;
 }
 
-/** POST …/hints (multipart/form-data) — AddHintCommand (HU-17) */
+/** POST …/hints (application/json) — AddHintCommand (HU-17) */
 export interface AddHintResponse {
   id: string;
 }
@@ -180,11 +180,11 @@ export interface CreateOperatorRequest {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
 }
 
 export interface CreateOperatorResponse {
   id: string;
+  setupCode: string;
 }
 
 export interface OperatorDto {

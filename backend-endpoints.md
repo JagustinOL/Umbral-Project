@@ -1,3 +1,63 @@
+# Catálogo de Endpoints UMBRAL
+
+Documentación alineada con los controladores WebApi tras el refactor **Route + Body + Mapping**. Las URLs HTTP, verbos y cuerpos JSON públicos se mantienen salvo **Crear Pista (HU-17)**, que usa `application/json` (sin adjuntos).
+
+## URLs base
+
+| Servicio | Docker (`dotnet`/compose) | Variable Postman |
+|----------|---------------------------|------------------|
+| MissionManagement | `http://localhost:5260` | `{{missionManagementUrl}}` |
+| SessionManagement | `http://localhost:5278` | `{{sessionManagementUrl}}` |
+| ScoringAudit | `http://localhost:5290` | `{{scoringAuditUrl}}` |
+
+Prefijo común: `/api/v1`.
+
+## Autenticación
+
+La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** (`Authorization: Bearer {accessToken}`) emitido por Keycloak vía `POST /api/v1/auth/token`.
+
+| Rol | Uso típico |
+|-----|------------|
+| `admin` | Crear operadores/jugadores/admins, misiones, nodos, pistas, asignaciones |
+| `operator` | Sesiones live del operador (`/operators/{operatorId}/…`); el `operatorId` de ruta debe coincidir con el JWT salvo rol `admin` |
+| `player` | Unirse a sesión, enviar respuestas, consultar etapa actual |
+
+Endpoints `[AllowAnonymous]` documentados en cada sección (p. ej. login, listado de misiones, validaciones de integración, GET pistas por nodo).
+
+## Convención WebApi → CQRS
+
+Los controladores son delgados: enlazan parámetros de ruta/query en un **`record struct`** (`WebApi/Contracts/Routes/`), el body en `WebApi/Contracts/`, y delegan el ensamblaje a extensiones en `WebApi/Mapping/`.
+
+```text
+HTTP → Route struct + Body contract → ToCommand() / ToQuery() → MediatR → Application Handler
+```
+
+### Tabla de mapeo por microservicio
+
+| Microservicio | Controlador | Route struct(s) | Mapper |
+|---------------|-------------|-----------------|--------|
+| MissionManagement | `AuthController` | — | `AuthMappings` |
+| MissionManagement | `AdminsController` | — | `AdminMappings` |
+| MissionManagement | `MissionsController` | `MissionRoute` (`Id`) | `MissionMappings` |
+| MissionManagement | `NodesController` | `MissionNodesRoute`, `MissionStageRoute`, `MissionNodeRoute` | `NodeMappings` |
+| MissionManagement | `TriviaController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TriviaMappings` |
+| MissionManagement | `TreasureHuntsController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TreasureHuntMappings` |
+| MissionManagement | `HintsController` | `HintParentRoute`, `HintRoute` | `HintMappings` |
+| MissionManagement | `MissionOperatorsController` | `MissionNodesRoute`, `MissionOperatorRoute` | `MissionOperatorMappings` |
+| MissionManagement | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
+| MissionManagement | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
+| SessionManagement | `OperatorSessionsController` | `OperatorRoute`, `OperatorMissionRoute`, `OperatorSessionRoute` | `OperatorSessionMappings` |
+| SessionManagement | `LiveSessionsController` | `LiveSessionTeamRoute` | `LiveSessionMappings` |
+| SessionManagement | `PlayerHintsController` | `LiveSessionTeamNodeRoute` | — (servicio `IPlayerHintPanelService`) |
+| SessionManagement | `TeamsController` | `TeamRoute`, `TeamActionRoute`, `TeamJoinRequestRoute`, `TeamMemberActionRoute` | `TeamMappings` |
+| SessionManagement | `MissionSessionValidationController` | `MissionRoute` | `MissionSessionValidationMappings` |
+| SessionManagement | `PlayerTeamMembershipController` | `PlayerRoute` | `PlayerTeamMembershipMappings` |
+| ScoringAudit | `RankingController` | `SessionRoute` | `RankingMappings` |
+
+En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR resultante del mapper.
+
+---
+
 ## MissionManagement · Autenticación (Keycloak OIDC)
 
 ### Autenticar Usuario (Login)
@@ -30,6 +90,30 @@
   - Los roles provienen de `realm_access.roles` del JWT emitido por Keycloak.
   - Usuarios admin deben tener el rol realm `admin`; operadores el rol `operator` (creados vía `POST /api/v1/operators`).
   - En desarrollo, el bootstrap crea `admin@umbral.com` / `Admin123!` si `Keycloak:DefaultAdminEmail` está configurado.
+
+### Activar cuenta de Operador (onboarding)
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `POST /api/v1/auth/operator/setup-password`
+- **Capa Application:** `SetupOperatorPasswordCommand`
+- **Autenticación:** `[AllowAnonymous]`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "email": "string",
+    "setupCode": "string (formato XXXX-XXXX)",
+    "password": "string"
+  }
+  ```
+- **Response (200 OK):** mismo shape que `POST /api/v1/auth/token` (JWT + roles).
+- **Errores esperados:**
+  - `404 NotFound` si el email no existe o no corresponde a un operador (mensaje genérico).
+  - `409 Conflict` si la cuenta ya está activa o fue desactivada por un administrador (tiene contraseña).
+  - `400 BadRequest` si el código es inválido o expiró, o la contraseña no cumple validación.
+  - `503 ServiceUnavailable` si Keycloak no está disponible.
+- **Notas:**
+  - Solo aplica a operadores creados sin contraseña (`Enabled: false` en Keycloak).
+  - Tras éxito: se fija la contraseña, se habilita la cuenta y se eliminan los atributos del código de activación.
+  - El operador puede iniciar sesión con `POST /api/v1/auth/token` a partir de entonces.
 
 ### Crear Administrador
 - **Microservicio:** MissionManagement
@@ -352,14 +436,25 @@
 ### Crear Pista (HU-17)
 - **Microservicio:** MissionManagement
 - **Método y Ruta:** `POST /api/v1/missions/{missionId}/nodes/{nodeId}/hints`
+- **WebApi:** `HintParentRoute` + `AddHintRequest` → `HintMappings.ToCommand()`
 - **Capa Application:** `AddHintCommand`
-- **Body / Payload (Request - `multipart/form-data`):**
+- **Auth:** `admin`, `operator`
+- **Content-Type:** `application/json`
+- **Body / Payload (Request):**
   ```json
   {
-    "content": "string",
-    "attachment": "IFormFile (jpg/png, opcional)"
+    "content": "string"
   }
   ```
+- **Response (201 Created):**
+  ```json
+  {
+    "id": "Guid"
+  }
+  ```
+- **Notas:**
+  - La pista es solo texto; no se admiten archivos adjuntos.
+  - `nodeId` debe ser un nodo de juego (`Trivia` o `TreasureHunt`), no una `Stage`.
 
 ### Consultar Pistas por Nodo (HU-18)
 - **Microservicio:** MissionManagement
@@ -401,21 +496,23 @@
   {
     "firstName": "string",
     "lastName": "string",
-    "email": "string",
-    "password": "string"
+    "email": "string"
   }
   ```
 - **Response (201 Created):**
   ```json
   {
-    "id": "Guid"
+    "id": "Guid",
+    "setupCode": "string (XXXX-XXXX, mostrado una sola vez)"
   }
   ```
 - **Errores esperados:**
   - `409 Conflict` cuando el correo ya existe en Keycloak.
-  - `400 BadRequest` para payload inválido o contraseña menor a 8 caracteres.
+  - `400 BadRequest` para payload inválido.
 - **Notas:**
-  - Tras crear el usuario en Keycloak se asigna el rol de operador y se establece la contraseña vía Admin API (`reset-password`).
+  - Crea el usuario en Keycloak con `Enabled: false`, rol `operator`, **sin contraseña**.
+  - El código de activación se almacena hasheado en atributos de Keycloak; TTL por defecto 7 días (`Keycloak:OperatorSetupCodeTtlDays`).
+  - El administrador debe entregar `setupCode` al operador de forma segura; el operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
 
 ### Consultar Operadores (HU-23)
 - **Microservicio:** MissionManagement
@@ -856,3 +953,71 @@
   ```
 - **Notas:**
   - Desbloquea equipos y limpia su referencia a la sesión.
+
+### Validar si el operador tiene sesiones activas
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/session-validation/has-active`
+- **WebApi:** `OperatorRoute` → `OperatorSessionMappings.ToHasActiveSessionsQuery()`
+- **Capa Application:** `OperatorHasActiveSessionsQuery`
+- **Auth:** `admin`, `operator` (+ `EnsureOperatorMatchesRoute`)
+- **Response (200 OK):**
+  ```json
+  {
+    "hasActiveSessions": true
+  }
+  ```
+
+### Validar si el operador supervisa una misión
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/operators/{operatorId}/missions/{missionId}/session-validation/is-supervising`
+- **WebApi:** `OperatorMissionRoute` → `OperatorSessionMappings.ToIsSupervisingMissionQuery()`
+- **Capa Application:** `OperatorIsSupervisingMissionQuery`
+- **Auth:** `admin`, `operator` (+ `EnsureOperatorMatchesRoute`)
+- **Response (200 OK):**
+  ```json
+  {
+    "isSupervising": true
+  }
+  ```
+
+### Consultar pistas liberadas al equipo (jugador)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/live-sessions/{sessionId}/teams/{teamId}/nodes/{nodeId}/hints`
+- **WebApi:** `LiveSessionTeamNodeRoute` → `IPlayerHintPanelService.GetReleasedHintsForTeamAsync`
+- **Auth:** `player`, `operator`, `admin`
+- **Body / Payload (Request):** ninguno.
+- **Response (200 OK):** lista de pistas ya liberadas al equipo (proxy `PlayerReleasedHintsProxy`).
+
+## MissionManagement · Integración y validación
+
+### Validaciones de nodos de misión (integración)
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `GET /api/v1/missions/{id}/node-validations`
+- **WebApi:** `MissionRoute` → `MissionMappings.ToNodeValidationsQuery()`
+- **Capa Application:** `GetMissionNodeValidationsQuery`
+- **Auth:** `[AllowAnonymous]`
+- **Body / Payload (Request):** ninguno.
+
+### Validar sesiones abiertas por misión (MissionManagement)
+- **Microservicio:** MissionManagement
+- **Método y Ruta:** `GET /api/v1/missions/{id}/session-validation/has-open`
+- **WebApi:** `MissionRoute` → `ISessionValidationService.HasOpenSessionsForMissionAsync`
+- **Auth:** `[AllowAnonymous]`
+- **Response (200 OK):**
+  ```json
+  {
+    "hasOpenSessions": true
+  }
+  ```
+
+## ScoringAudit · Ranking
+
+### Consultar ranking de sesión
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/ranking`
+- **WebApi:** `SessionRoute` → `RankingMappings.ToQuery()`
+- **Capa Application:** `GetSessionRankingQuery`
+- **Auth:** `admin`, `operator`
+- **Body / Payload (Request):** ninguno.
+- **Notas:**
+  - Requiere que la sesión haya generado entradas en `TeamLedger` (equipos registrados y evidencias procesadas).

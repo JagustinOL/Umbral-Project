@@ -73,8 +73,8 @@ services:
   # ==========================================
   mission-management-service:
     build:
-      context: ./MissionManagement
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: MissionManagement/Dockerfile
     container_name: umbral-mission-management-service
     depends_on:
       db:
@@ -107,8 +107,8 @@ services:
 
   session-management-service:
     build:
-      context: ./SessionManagement
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: SessionManagement/Dockerfile
     container_name: umbral-session-management-service
     depends_on:
       db:
@@ -121,12 +121,15 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
+      Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__Realm: umbral-realm
+      Keycloak__WebClientId: umbral-web
       MissionManagement__BaseUrl: http://mission-management-service:8080
 
   scoring-audit-service:
     build:
-      context: ./ScoringAudit
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ScoringAudit/Dockerfile
     container_name: umbral-scoring-audit-service
     depends_on:
       db:
@@ -139,13 +142,16 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=umbral_db;Username=postgres;Password=postgres
       RabbitMQ__Host: mq
+      Keycloak__BaseUrl: http://keycloak:8080
+      Keycloak__Realm: umbral-realm
+      Keycloak__WebClientId: umbral-web
 
   # ==========================================
-  # --- 4. FRONTEND (Next.js) — perfil "frontend" ---
-  # Por defecto solo infra + backend. Con UI: docker compose --profile frontend up -d --build
+  # --- 4. FRONTEND (Next.js + Player web) — perfiles "frontend" | "player" | "full" ---
+  # Por defecto solo infra + backend. Todo el stack: docker compose --profile full up -d --build
   # ==========================================
   admin-view-web:
-    profiles: ["frontend"]
+    profiles: ["frontend", "full"]
     build:
       context: ./AdminView-WEB
       dockerfile: Dockerfile
@@ -164,7 +170,7 @@ services:
       - keycloak
 
   operador-view-web:
-    profiles: ["frontend"]
+    profiles: ["frontend", "full"]
     build:
       context: ./OperadorView-WEB
       dockerfile: Dockerfile
@@ -185,7 +191,7 @@ services:
       - keycloak
 
   login-view-web:
-    profiles: ["frontend"]
+    profiles: ["frontend", "full"]
     build:
       context: ./LoginView-WEB
       dockerfile: Dockerfile
@@ -201,8 +207,37 @@ services:
       - mission-management-service
       - keycloak
 
+  player-mobile-web:
+    profiles: ["player", "full"]
+    build:
+      context: ./PlayerMobile
+      dockerfile: Dockerfile.dev
+    container_name: umbral-player-mobile-web
+    ports:
+      - "19000:19000"
+    environment:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_KEYCLOAK_URL: http://localhost:8081
+      EXPO_PUBLIC_KEYCLOAK_REALM: umbral-realm
+      EXPO_PUBLIC_KEYCLOAK_CLIENT_ID: umbral-player-mobile
+      EXPO_PUBLIC_MISSION_API_URL: http://localhost:5260
+      EXPO_PUBLIC_SESSION_API_URL: http://localhost:5278
+    volumes:
+      - ./PlayerMobile:/app
+      - player-mobile-node-modules:/app/node_modules
+    depends_on:
+      mission-management-service:
+        condition: service_started
+      session-management-service:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
 volumes:
   db-data:
     driver: local
   keycloak-data:
+    driver: local
+  player-mobile-node-modules:
     driver: local

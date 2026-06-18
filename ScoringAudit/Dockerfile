@@ -1,15 +1,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY ScoringAudit.WebApi/*.csproj ./ScoringAudit.WebApi/
-COPY ScoringAudit.Application/*.csproj ./ScoringAudit.Application/
-COPY ScoringAudit.Domain/*.csproj ./ScoringAudit.Domain/
-COPY ScoringAudit.Infrastructure/*.csproj ./ScoringAudit.Infrastructure/
+COPY Umbral.Shared/*.csproj ./Umbral.Shared/
+COPY ScoringAudit/ScoringAudit.WebApi/*.csproj ./ScoringAudit/ScoringAudit.WebApi/
+COPY ScoringAudit/ScoringAudit.Application/*.csproj ./ScoringAudit/ScoringAudit.Application/
+COPY ScoringAudit/ScoringAudit.Domain/*.csproj ./ScoringAudit/ScoringAudit.Domain/
+COPY ScoringAudit/ScoringAudit.Infrastructure/*.csproj ./ScoringAudit/ScoringAudit.Infrastructure/
 
-RUN cd ScoringAudit.WebApi && dotnet restore
+RUN cd ScoringAudit/ScoringAudit.WebApi && dotnet restore
 
-COPY . .
-WORKDIR "/src/ScoringAudit.WebApi"
+COPY Umbral.Shared ./Umbral.Shared
+COPY ScoringAudit ./ScoringAudit
+WORKDIR /src/ScoringAudit/ScoringAudit.WebApi
 RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

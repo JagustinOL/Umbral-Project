@@ -751,16 +751,19 @@ Operador inicia sesión
 ### Flujo 3 — Motor de Puntos (el más crítico)
 
 ```
-Equipo envía evidencia
+Equipo envía evidencia (Trivia / TreasureHunt)
+  → SessionOperationFacade                    Facade
+  → EvidenceSubmissionProcessor.Process()     Template Method
+  → EvidenceValidatorService                  Chain of Responsibility
   → LiveSession.AcceptEvidence()              RB-03, RB-05
-  → EvidenceValidatorService valida          Chain of Responsibility
   → LiveSession.MarkEvidenceAsValid()
   → EvidenceValidatedEvent ──RabbitMQ──►
+      → ProcessEvidenceValidatedHandler       [ScoringAudit.Application]
       → ScoreCalculatorService.Calculate()   Strategy Pattern
-      → TeamLedger.AddEvidenceScore()        RB-07
+      → TeamLedger.AddEvidenceScore()        RB-07 (ScoreOrigin.FinalScore)
       → TeamScoreUpdatedEvent
       → RankingManagerService.BuildRanking() RB-08
-      → SignalR Hub → Frontend               RF-12
+      → SignalR Hub → Frontend               RF-12 (pendiente)
 ```
 
 ### Flujo 4 — Penalización Manual
@@ -814,11 +817,13 @@ Operador finaliza sesión
 | **RB-07** | Puntaje con trazabilidad de origen | `TeamLedger` | `TotalScore` es propiedad calculada sin setter. `ScoreEntry` es inmutable |
 | **RB-08** | Ranking por puntaje, tiempo como desempate | `RankingManagerService` | `OrderByDescending(score).ThenBy(elapsed)` |
 | **RB-09** | Transiciones de estado válidas | `LiveSession` | `TransitionTo()` con switch de tuplas exhaustivo |
-| **RB-10** | Operador solo administra sus sesiones | Application Service + `LiveSession.OperatorRef` | Verificado en handler antes de invocar el agregado |
+| **RB-10** | Operador solo administra sus sesiones | `EnsureOperatorMatchesRoute` + `LiveSession.OperatorRef` | JWT valida identidad; filtro de ruta en `OperatorSessionsController`; handler verifica asignación RN-16 |
 
 ---
 
 ## 8. Patrones de Diseño Aplicados
+
+> Mapa completo de componentes y capas: ver [`architecture-map.md`](../architecture-map.md) en la raíz del repositorio.
 
 ### Composite — `MissionNode`
 ```
@@ -835,7 +840,23 @@ Mission
 Matriz de transiciones válidas implementada con switch de tuplas. Rechaza cualquier transición no explícitamente permitida (RB-09).
 
 ### Strategy — `IScoreCalculationStrategy`
-Tres componentes: interfaz (`IScoreCalculationStrategy`), implementaciones concretas (`TriviaScoreStrategy`, `TreasureHuntScoreStrategy`) y contexto (`ScoreCalculatorService`). Extensible sin modificar código existente.
+Tres componentes: interfaz (`IScoreCalculationStrategy`), implementaciones concretas (`TriviaScoreStrategy`, `TreasureHuntScoreStrategy`) y contexto (`ScoreCalculatorService`). El flujo end-to-end se completa con `ProcessEvidenceValidatedHandler` en ScoringAudit.Application, que consume el evento vía RabbitMQ. `ScoreOrigin.FinalScore` persiste el resultado de la estrategia (incluye bonificación Trivia).
+
+### Facade — `SessionOperationFacade`
+Coordinador en SessionManagement.Application que unifica operaciones de sesión (crear, iniciar, finalizar, cancelar, enviar evidencias), persistencia en repositorios y publicación de eventos de dominio tras `SaveAsync`. Los handlers CQRS delegan en `ISessionOperationFacade`.
+
+### Proxy — acceso a pistas
+- `MissionHintService` + `DraftOnlyHintProxy` (MissionManagement): sujeto real + proxy que restringe consulta según rol y estado de la misión.
+- `PlayerReleasedHintsProxy` (SessionManagement): expone al jugador solo pistas ya liberadas (`ReleasedHint`) para su equipo.
+
+### Template Method — `EvidenceSubmissionProcessor`
+Clase abstracta con flujo fijo `Process()`: validar (cadena) → `AcceptEvidence` → marcar válida/inválida → `SubmissionResult`. Subclases: `TriviaEvidenceSubmissionProcessor`, `TreasureHuntEvidenceSubmissionProcessor`.
+
+### Chain of Responsibility — `EvidenceValidatorService`
+Cadena de handlers: `SessionActiveValidationHandler` → `TeamRegisteredValidationHandler` → `NodeAllowedValidationHandler` → `SequentialProgressValidationHandler` → `AnswerCorrectnessValidationHandler`. Se ejecuta antes de mutar el agregado en el Template Method.
+
+### Cross-cutting — `Umbral.Shared`
+Librería compartida: JWT Keycloak (`AddUmbralAuthentication`), `ICurrentUser`, `ExceptionHandlingMiddleware` (ProblemDetails), Serilog, `ValidationBehavior` (FluentValidation + MediatR), `RabbitMqPublisher` y contratos de integración.
 
 ### Outbox Pattern (simplificado) — `AggregateRoot`
 Los eventos se acumulan en `_domainEvents` durante la ejecución del método de dominio. El Application Service los publica en RabbitMQ **después** de confirmar la persistencia. Garantiza consistencia eventual.

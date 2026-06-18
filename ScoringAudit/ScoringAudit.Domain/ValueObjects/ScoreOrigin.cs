@@ -13,15 +13,24 @@ public sealed record ScoreOrigin(
     string NodeType,
     int BaseScore,
     decimal DifficultyMultiplier,
-    double ElapsedSeconds
+    double ElapsedSeconds,
+    int? FinalScore = null
 )
 {
     /// <summary>
-    /// Puntaje final calculado que este entry aporta al TeamLedger.
-    /// Se almacena para que la trazabilidad sea directamente legible
-    /// sin tener que recalcular.
+    /// Puntaje final calculado por la Strategy y persistido en el ledger.
+    /// Si no se provee FinalScore, se usa el cálculo base (sin bonificación).
     /// </summary>
-    public int ComputedScore => (int)Math.Round(BaseScore * DifficultyMultiplier);
+    public int ComputedScore => FinalScore ?? (int)Math.Round(BaseScore * DifficultyMultiplier);
+
+    public static ScoreOrigin FromStrategyResult(
+        Guid missionNodeId,
+        string nodeType,
+        int baseScore,
+        decimal difficultyMultiplier,
+        double elapsedSeconds,
+        int strategyScore) =>
+        new(missionNodeId, nodeType, baseScore, difficultyMultiplier, elapsedSeconds, strategyScore);
 
     public override string ToString() =>
         $"Nodo {NodeType} ({MissionNodeId}) | " +

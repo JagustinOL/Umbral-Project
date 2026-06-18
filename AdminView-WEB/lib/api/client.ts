@@ -24,11 +24,6 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-interface FormRequestOptions {
-  method?: Extract<HttpMethod, "POST" | "PUT">;
-  signal?: AbortSignal;
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -92,19 +87,4 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 
   return parsedBody as T;
-}
-
-/** Multipart requests (e.g. AddHint HU-17). Do not set Content-Type; the browser sets the boundary. */
-export async function apiFormRequest<T>(
-  endpoint: string,
-  formData: FormData,
-  { method = "POST", signal }: FormRequestOptions = {},
-): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method,
-    body: formData,
-    signal,
-  });
-
-  return parseResponse<T>(response);
 }

@@ -1,15 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Nodes.Commands.AddTreasureHuntNode;
-using MissionManagement.Application.Nodes.Commands.UpdateTreasureHuntNode;
-using MissionManagement.Application.Nodes.Queries.GetTreasureHuntNodeById;
-using MissionManagement.Domain.ValueObjects;
+using MissionManagement.WebApi.Contracts.Routes;
 using MissionManagement.WebApi.Contracts.TreasureHunts;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/missions/{missionId:guid}/nodes")]
+[Authorize(Roles = "admin,operator")]
 public sealed class TreasureHuntsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -21,47 +21,31 @@ public sealed class TreasureHuntsController : ControllerBase
 
     [HttpPost("{parentNodeId:guid}/treasure-hunts")]
     public async Task<IActionResult> AddTreasureHunt(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid parentNodeId,
-        [FromBody] AddTreasureHuntNodeRequest request,
+        [FromRoute] MissionParentNodeRoute route,
+        [FromBody] AddTreasureHuntNodeRequest body,
         CancellationToken cancellationToken)
     {
-        var treasureHuntNodeId = await _mediator.Send(new AddTreasureHuntNodeCommand(
-            MissionId: missionId,
-            ParentNodeId: parentNodeId,
-            Instructions: request.Instructions,
-            SecretCode: request.SecretCode,
-            Destination: new GpsCoordinate(request.Destination.Latitude, request.Destination.Longitude),
-            ExecutionOrder: request.ExecutionOrder), cancellationToken);
-
-        return CreatedAtAction(nameof(GetTreasureHuntById), new { missionId, nodeId = treasureHuntNodeId }, new { id = treasureHuntNodeId });
+        var treasureHuntNodeId = await _mediator.Send(body.ToCommand(route), cancellationToken);
+        return CreatedAtAction(
+            nameof(GetTreasureHuntById),
+            new { missionId = route.MissionId, nodeId = treasureHuntNodeId },
+            new { id = treasureHuntNodeId });
     }
 
     [HttpGet("{nodeId:guid}/treasure-hunts")]
-    public async Task<IActionResult> GetTreasureHuntById(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTreasureHuntById(MissionNodeRoute route, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetTreasureHuntNodeByIdQuery(missionId, nodeId), cancellationToken);
+        var result = await _mediator.Send(route.ToTreasureHuntByIdQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpPut("{nodeId:guid}/treasure-hunts")]
     public async Task<IActionResult> UpdateTreasureHunt(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
-        [FromBody] UpdateTreasureHuntNodeRequest request,
+        [FromRoute] MissionNodeRoute route,
+        [FromBody] UpdateTreasureHuntNodeRequest body,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new UpdateTreasureHuntNodeCommand(
-            MissionId: missionId,
-            NodeId: nodeId,
-            Instructions: request.Instructions,
-            SecretCode: request.SecretCode,
-            Destination: new GpsCoordinate(request.Destination.Latitude, request.Destination.Longitude)), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 }
-

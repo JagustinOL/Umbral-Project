@@ -1,16 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Players.Commands.CreatePlayer;
-using MissionManagement.Application.Players.Commands.DeactivatePlayer;
-using MissionManagement.Application.Players.Commands.UpdatePlayer;
-using MissionManagement.Application.Players.Queries.GetPlayerById;
 using MissionManagement.Application.Players.Queries.GetPlayers;
 using MissionManagement.WebApi.Contracts.Players;
+using MissionManagement.WebApi.Contracts.Routes;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/players")]
+[Authorize(Roles = "admin,operator,player")]
 public sealed class PlayersController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -21,14 +21,11 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreatePlayerRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(
+        [FromBody] CreatePlayerRequest body,
+        CancellationToken cancellationToken)
     {
-        var playerId = await _mediator.Send(new CreatePlayerCommand(
-            FirstName: request.FirstName,
-            LastName: request.LastName,
-            Email: request.Email,
-            Password: request.Password), cancellationToken);
-
+        var playerId = await _mediator.Send(body.ToCommand(), cancellationToken);
         return CreatedAtAction(nameof(GetById), new { playerId }, new { id = playerId });
     }
 
@@ -40,31 +37,26 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpGet("{playerId:guid}")]
-    public async Task<IActionResult> GetById([FromRoute] Guid playerId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(PlayerRoute route, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetPlayerByIdQuery(playerId), cancellationToken);
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpPut("{playerId:guid}")]
     public async Task<IActionResult> Update(
-        [FromRoute] Guid playerId,
-        [FromBody] UpdatePlayerRequest request,
+        [FromRoute] PlayerRoute route,
+        [FromBody] UpdatePlayerRequest body,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new UpdatePlayerCommand(
-            PlayerId: playerId,
-            FirstName: request.FirstName,
-            LastName: request.LastName,
-            Email: request.Email), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 
     [HttpPut("{playerId:guid}/deactivate")]
-    public async Task<IActionResult> Deactivate([FromRoute] Guid playerId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Deactivate(PlayerRoute route, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeactivatePlayerCommand(playerId), cancellationToken);
+        await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();
     }
 }

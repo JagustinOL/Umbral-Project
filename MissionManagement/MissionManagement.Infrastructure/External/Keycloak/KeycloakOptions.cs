@@ -47,4 +47,8 @@ public sealed class KeycloakOptions
     public string DefaultAdminFirstName { get; init; } = "UMBRAL";
 
     public string DefaultAdminLastName { get; init; } = "Administrator";
+
+    public string OperatorSetupCodeSalt { get; init; } = "umbral-operator-setup-salt";
+
+    public int OperatorSetupCodeTtlDays { get; init; } = 7;
 }

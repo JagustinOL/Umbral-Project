@@ -16,6 +16,7 @@
     <ProjectReference Include="..\SessionManagement.Application\SessionManagement.Application.csproj" />
     <ProjectReference Include="..\SessionManagement.Infrastructure\SessionManagement.Infrastructure.csproj" />
     <ProjectReference Include="..\SessionManagement.Domain\SessionManagement.Domain.csproj" />
+    <ProjectReference Include="..\..\Umbral.Shared\Umbral.Shared.csproj" />
   </ItemGroup>
 
 </Project>

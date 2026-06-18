@@ -32,6 +32,30 @@ export async function loginWithCredentials(
     signal,
   })
 
+  return parseAuthResponse(response)
+}
+
+export interface SetupOperatorPasswordPayload {
+  email: string
+  setupCode: string
+  password: string
+}
+
+export async function setupOperatorPassword(
+  payload: SetupOperatorPasswordPayload,
+  signal?: AbortSignal,
+): Promise<AuthTokenResponse> {
+  const response = await fetch(`${missionApiBaseUrl}/api/v1/auth/operator/setup-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+
+  return parseAuthResponse(response)
+}
+
+async function parseAuthResponse(response: Response): Promise<AuthTokenResponse> {
   const raw = await response.text()
   let body: unknown
   if (raw) {

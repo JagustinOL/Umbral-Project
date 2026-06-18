@@ -62,12 +62,25 @@ public sealed class ScoreCalculatorService
 
         int computed = strategy.Calculate(baseScore, difficultyMultiplier, elapsedSeconds);
 
-        return new ScoreOrigin(
-            MissionNodeId: missionNodeId,
-            NodeType: nodeType,
-            BaseScore: baseScore,
-            DifficultyMultiplier: difficultyMultiplier,
-            ElapsedSeconds: elapsedSeconds
-        );
+        return ScoreOrigin.FromStrategyResult(
+            missionNodeId,
+            nodeType,
+            baseScore,
+            difficultyMultiplier,
+            elapsedSeconds,
+            computed);
+    }
+
+    public int Calculate(
+        string nodeType,
+        int baseScore,
+        decimal difficultyMultiplier,
+        double elapsedSeconds)
+    {
+        if (!_strategies.TryGetValue(nodeType, out var strategy))
+            throw new ScoringDomainException(
+                $"No existe una estrategia de cálculo para el tipo de nodo '{nodeType}'.");
+
+        return strategy.Calculate(baseScore, difficultyMultiplier, elapsedSeconds);
     }
 }

@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Application.Hints.Commands.AddHint;
 using MissionManagement.Domain.Aggregates;
@@ -27,8 +26,7 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: missionId,
             NodeId: Guid.NewGuid(),
-            Content: "Pista",
-            Attachment: BuildFileMock(contentType: "image/jpeg", length: 1024));
+            Content: "Pista");
 
         var action = () => handler.Handle(command, CancellationToken.None);
 
@@ -49,57 +47,12 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: mission.Id,
             NodeId: stage.Id,
-            Content: "Pista",
-            Attachment: null);
+            Content: "Pista");
 
         var action = () => handler.Handle(command, CancellationToken.None);
 
         await action.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Trivia*");
-    }
-
-    [Fact]
-    public async Task Handle_WhenInvalidFileFormat_ThrowsConflictException()
-    {
-        var mission = BuildDraftMissionWithTriviaGame(out var gameNode);
-
-        _repositoryMock
-            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mission);
-
-        var handler = new AddHintHandler(_repositoryMock.Object);
-        var command = new AddHintCommand(
-            MissionId: mission.Id,
-            NodeId: gameNode.Id,
-            Content: "Pista",
-            Attachment: BuildFileMock(contentType: "application/pdf", length: 1024));
-
-        var action = () => handler.Handle(command, CancellationToken.None);
-
-        await action.Should().ThrowAsync<ConflictException>()
-            .WithMessage("*Formato de archivo no válido*");
-    }
-
-    [Fact]
-    public async Task Handle_WhenAttachmentIsLargerThan5Mb_ThrowsConflictException()
-    {
-        var mission = BuildDraftMissionWithTriviaGame(out var gameNode);
-
-        _repositoryMock
-            .Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mission);
-
-        var handler = new AddHintHandler(_repositoryMock.Object);
-        var command = new AddHintCommand(
-            MissionId: mission.Id,
-            NodeId: gameNode.Id,
-            Content: "Pista",
-            Attachment: BuildFileMock(contentType: "image/png", length: (5 * 1024 * 1024) + 1));
-
-        var action = () => handler.Handle(command, CancellationToken.None);
-
-        await action.Should().ThrowAsync<ConflictException>()
-            .WithMessage("*supera el tamaño máximo permitido*");
     }
 
     [Fact]
@@ -115,8 +68,7 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: mission.Id,
             NodeId: gameNode.Id,
-            Content: "Pista válida",
-            Attachment: BuildFileMock(contentType: "image/jpeg", length: 1024));
+            Content: "Pista válida");
 
         var hintId = await handler.Handle(command, CancellationToken.None);
 
@@ -148,13 +100,5 @@ public sealed class AddHintHandlerTests
 
         gameNode = mission.FindNodeById(triviaId)!;
         return mission;
-    }
-
-    private static IFormFile BuildFileMock(string contentType, long length)
-    {
-        var mock = new Mock<IFormFile>();
-        mock.SetupGet(x => x.ContentType).Returns(contentType);
-        mock.SetupGet(x => x.Length).Returns(length);
-        return mock.Object;
     }
 }

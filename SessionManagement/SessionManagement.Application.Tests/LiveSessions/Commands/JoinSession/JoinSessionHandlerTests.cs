@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Application.LiveSessions.Commands.JoinSession;
 using SessionManagement.Domain.Aggregates;
@@ -35,7 +36,8 @@ public sealed class JoinSessionHandlerTests
             .Setup(r => r.GetByIdAsync(team.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
-        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object);
+        var eventPublisher = new Mock<IDomainEventPublisher>();
+        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object, eventPublisher.Object);
 
         var act = () => handler.Handle(
             new JoinSessionCommand(session.JoinCode, team.Id),
@@ -63,7 +65,8 @@ public sealed class JoinSessionHandlerTests
         teamRepository.Setup(r => r.GetByIdAsync(team.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
-        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object);
+        var eventPublisher = new Mock<IDomainEventPublisher>();
+        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object, eventPublisher.Object);
         var result = await handler.Handle(new JoinSessionCommand(session.JoinCode, team.Id), CancellationToken.None);
 
         result.Should().Be(session.Id);
@@ -78,7 +81,7 @@ public sealed class JoinSessionHandlerTests
         var sessionRepository = new Mock<ILiveSessionRepository>();
         sessionRepository.Setup(r => r.GetByJoinCodeAsync("BAD", It.IsAny<CancellationToken>()))
             .ReturnsAsync((LiveSession?)null);
-        var handler = new JoinSessionHandler(sessionRepository.Object, new Mock<ITeamRepository>().Object);
+        var handler = new JoinSessionHandler(sessionRepository.Object, new Mock<ITeamRepository>().Object, new Mock<IDomainEventPublisher>().Object);
 
         var act = () => handler.Handle(new JoinSessionCommand("BAD", Guid.NewGuid()), CancellationToken.None);
 
@@ -101,7 +104,8 @@ public sealed class JoinSessionHandlerTests
         teamRepository.Setup(r => r.GetByIdAsync(team.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(team);
 
-        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object);
+        var eventPublisher = new Mock<IDomainEventPublisher>();
+        var handler = new JoinSessionHandler(sessionRepository.Object, teamRepository.Object, eventPublisher.Object);
         var result = await handler.Handle(new JoinSessionCommand(session.JoinCode, team.Id), CancellationToken.None);
 
         result.Should().Be(session.Id);

@@ -46,7 +46,17 @@ cd Umbral-Project
 
 ## 2. Ejecutar con Docker (recomendado)
 
-Por defecto Compose levanta **infraestructura** (PostgreSQL, RabbitMQ, Keycloak, pgAdmin) y **tres microservicios backend** (.NET). Las apps Next.js (Admin, Operador, Login) usan el perfil `frontend`.
+Por defecto Compose levanta **infraestructura** (PostgreSQL, RabbitMQ, Keycloak, pgAdmin) y **tres microservicios backend** (.NET). Las apps Next.js (Admin, Operador, Login) y PlayerMobile web usan perfiles Compose.
+
+### Arranque completo (recomendado)
+
+Un solo comando levanta infra, backends, las tres UIs Next.js y PlayerMobile en modo web:
+
+```bash
+docker compose --profile full up -d --build
+```
+
+Puertos: Admin `3000`, Operador `3001`, Login `3002`, Player web `19000`.
 
 ### ¿Qué tarda en `build` vs `up`?
 
@@ -54,6 +64,7 @@ Por defecto Compose levanta **infraestructura** (PostgreSQL, RabbitMQ, Keycloak,
 |---|---|---|---|
 | `docker compose build` | **No** (imagen prepublicada) | 3 imágenes .NET (`dotnet restore` + `publish`) | ~2–8 min según caché |
 | `docker compose build --profile frontend` | No | Lo anterior + 3 Next.js (`npm install` + `build`) | +5–15 min |
+| `docker compose build --profile full` | No | Lo anterior + PlayerMobile (`npm ci` + Expo web) | +2–5 min |
 | `docker compose up -d` | **Sí** (pull + arranque) | Keycloak `start-dev` + healthcheck | **2–3 min** primer arranque; ~30–90 s con volumen `keycloak-data` ya caliente |
 | `mission-management-service` | Tras Keycloak `healthy` | Bootstrap OIDC + usuario `admin@umbral.com` | Segundos tras arrancar el servicio |
 
@@ -92,6 +103,28 @@ docker compose --profile frontend up -d
 ```
 
 Puertos: Admin `3000`, Operador `3001`, Login `3002`.
+
+### Player en navegador (perfil `player` o `full`)
+
+Solo PlayerMobile web en Docker (sin Node local):
+
+```bash
+docker compose --profile player up -d --build
+```
+
+Incluido automáticamente en `--profile full` (ver arriba). URL: http://localhost:19000
+
+### Expo Go en teléfono físico o emulador nativo
+
+Metro debe correr en el host (no dentro de Docker). Desde la raíz del repo:
+
+```powershell
+.\scripts\dev-expo-go.ps1
+```
+
+En Linux/macOS: `chmod +x scripts/dev-expo-go.sh && ./scripts/dev-expo-go.sh`
+
+Ajusta `PlayerMobile/.env` con la IP de tu PC o `10.0.2.2` (emulador Android). Ver [`PlayerMobile/COMO_PROBAR.md`](PlayerMobile/COMO_PROBAR.md).
 
 ### Ver logs
 
@@ -133,6 +166,8 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `miss
 |---|---|---|
 | *(ninguno)* | `docker compose up -d` | Infra + 3 backends |
 | `frontend` | `docker compose --profile frontend up -d` | Añade AdminView, OperadorView y LoginView |
+| `player` | `docker compose --profile player up -d` | Añade PlayerMobile web (`:19000`) |
+| `full` | `docker compose --profile full up -d --build` | **Todo** el stack de desarrollo (recomendado) |
 
 ---
 
@@ -152,9 +187,10 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `miss
 | Keycloak (consola `master`) | http://localhost:8081 (`admin` / `admin`) |
 | Mission Management API | http://localhost:5260 |
 | Scoring Audit API | http://localhost:5290 |
-| AdminView *(perfil frontend)* | http://localhost:3000 |
-| OperadorView *(perfil frontend)* | http://localhost:3001 |
-| LoginView *(perfil frontend)* | http://localhost:3002 |
+| AdminView *(perfil frontend/full)* | http://localhost:3000 |
+| OperadorView *(perfil frontend/full)* | http://localhost:3001 |
+| LoginView *(perfil frontend/full)* | http://localhost:3002 |
+| PlayerMobile web *(perfil player/full)* | http://localhost:19000 |
 
 > **Keycloak:** el realm `umbral-realm` se importa desde `infra/keycloak/umbral-realm.json`. Modo `start-dev` en desarrollo: primer arranque ~2–3 min (Quarkus augment). Keycloak ya no espera a PostgreSQL (no usa `db` en dev). `mission-management-service` arranca cuando Keycloak está `healthy`.
 >

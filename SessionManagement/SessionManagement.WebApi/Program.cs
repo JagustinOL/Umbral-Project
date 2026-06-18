@@ -1,19 +1,31 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
 using SessionManagement.Application.Common.Interfaces;
+using SessionManagement.Application.Evidence.Processing;
+using SessionManagement.Application.Evidence.Validation;
+using SessionManagement.Application.Evidence.Validation.Handlers;
+using SessionManagement.Application.Facades;
+using SessionManagement.Application.Hints;
+using SessionManagement.Application.LiveSessions.Queries.GetActiveSessions;
 using SessionManagement.Domain.Repositories;
 using SessionManagement.Infrastructure.Integrations;
+using SessionManagement.Infrastructure.Messaging;
 using SessionManagement.Infrastructure.Persistence;
 using SessionManagement.Infrastructure.Repositories;
-using SessionManagement.WebApi.Middleware;
+using Umbral.Shared;
+using Umbral.Shared.Auth;
+using Umbral.Shared.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddUmbralSerilog("SessionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddUmbralControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
@@ -43,10 +55,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(SessionManagement.Application.LiveSessions.Queries.GetActiveSessions.GetActiveSessionsQuery).Assembly));
+builder.Services.AddUmbralAuthentication(builder.Configuration);
+builder.Services.AddUmbralCrossCutting(typeof(GetActiveSessionsQuery));
 
-builder.Services.AddScoped<ExceptionHandlingMiddleware>();
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(GetActiveSessionsQuery).Assembly));
 
 builder.Services.AddDbContext<SessionManagementDbContext>(options =>
 {
@@ -57,8 +70,27 @@ builder.Services.AddDbContext<SessionManagementDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+builder.Services.AddOptions<RabbitMqOptions>()
+    .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
+
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
+
+builder.Services.AddScoped<SessionActiveValidationHandler>();
+builder.Services.AddScoped<TeamRegisteredValidationHandler>();
+builder.Services.AddScoped<NodeAllowedValidationHandler>();
+builder.Services.AddScoped<SequentialProgressValidationHandler>();
+builder.Services.AddScoped<AnswerCorrectnessValidationHandler>();
+builder.Services.AddScoped<EvidenceValidatorService>();
+builder.Services.AddScoped<TriviaEvidenceSubmissionProcessor>();
+builder.Services.AddScoped<TreasureHuntEvidenceSubmissionProcessor>();
+builder.Services.AddScoped<ISessionOperationFacade, SessionOperationFacade>();
+builder.Services.AddScoped<IPlayerHintPanelService, PlayerReleasedHintsProxy>();
 
 var missionManagementBaseUrl = builder.Configuration["MissionManagement:BaseUrl"];
 if (string.IsNullOrWhiteSpace(missionManagementBaseUrl))
@@ -80,21 +112,17 @@ using (var scope = app.Services.CreateScope())
     }
     catch (PostgresException ex) when (ex.SqlState == "42P01")
     {
-        // Shared database: create SessionManagement tables only when missing.
         var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
         databaseCreator.CreateTables();
     }
 }
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseUmbralCrossCutting();
 app.MapControllers();
 
 app.Run();
-

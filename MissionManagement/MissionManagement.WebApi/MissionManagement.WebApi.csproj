@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MissionManagement.Application\MissionManagement.Application.csproj" />
     <ProjectReference Include="..\MissionManagement.Infrastructure\MissionManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Umbral.Shared\Umbral.Shared.csproj" />
   </ItemGroup>
 
 </Project>
