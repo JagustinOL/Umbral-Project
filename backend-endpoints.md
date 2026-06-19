@@ -22,7 +22,7 @@ La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** 
 | `operator` | Sesiones live del operador (`/operators/{operatorId}/…`); el `operatorId` de ruta debe coincidir con el JWT salvo rol `admin` |
 | `player` | Unirse a sesión, enviar respuestas, consultar etapa actual |
 
-Endpoints `[AllowAnonymous]` documentados en cada sección (p. ej. login, listado de misiones, validaciones de integración, GET pistas por nodo).
+Endpoints `[AllowAnonymous]` documentados en cada sección (p. ej. login, registro de jugador, listado de misiones, validaciones de integración entre servicios, GET pistas por nodo).
 
 ## Convención WebApi → CQRS
 
@@ -47,6 +47,7 @@ HTTP → Route struct + Body contract → ToCommand() / ToQuery() → MediatR �
 | MissionManagement | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
 | MissionManagement | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
 | SessionManagement | `OperatorSessionsController` | `OperatorRoute`, `OperatorMissionRoute`, `OperatorSessionRoute` | `OperatorSessionMappings` |
+| SessionManagement | `OperatorSessionValidationController` | `OperatorRoute`, `OperatorMissionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `LiveSessionsController` | `LiveSessionTeamRoute` | `LiveSessionMappings` |
 | SessionManagement | `PlayerHintsController` | `LiveSessionTeamNodeRoute` | — (servicio `IPlayerHintPanelService`) |
 | SessionManagement | `TeamsController` | `TeamRoute`, `TeamActionRoute`, `TeamJoinRequestRoute`, `TeamMemberActionRoute` | `TeamMappings` |
@@ -577,6 +578,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Microservicio:** MissionManagement
 - **Método y Ruta:** `POST /api/v1/players`
 - **Capa Application:** `CreatePlayerCommand`
+- **Autenticación:** `[AllowAnonymous]`
 - **Body / Payload (Request):**
   ```json
   {
@@ -957,9 +959,9 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 ### Validar si el operador tiene sesiones activas
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `GET /api/v1/operators/{operatorId}/session-validation/has-active`
-- **WebApi:** `OperatorRoute` → `OperatorSessionMappings.ToHasActiveSessionsQuery()`
+- **WebApi:** `OperatorSessionValidationController` — `OperatorRoute` → `OperatorSessionMappings.ToHasActiveSessionsQuery()`
 - **Capa Application:** `OperatorHasActiveSessionsQuery`
-- **Auth:** `admin`, `operator` (+ `EnsureOperatorMatchesRoute`)
+- **Auth:** `[AllowAnonymous]` *(integración desde MissionManagement)*
 - **Response (200 OK):**
   ```json
   {
@@ -970,9 +972,9 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 ### Validar si el operador supervisa una misión
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `GET /api/v1/operators/{operatorId}/missions/{missionId}/session-validation/is-supervising`
-- **WebApi:** `OperatorMissionRoute` → `OperatorSessionMappings.ToIsSupervisingMissionQuery()`
+- **WebApi:** `OperatorSessionValidationController` — `OperatorMissionRoute` → `OperatorSessionMappings.ToIsSupervisingMissionQuery()`
 - **Capa Application:** `OperatorIsSupervisingMissionQuery`
-- **Auth:** `admin`, `operator` (+ `EnsureOperatorMatchesRoute`)
+- **Auth:** `[AllowAnonymous]` *(integración desde MissionManagement)*
 - **Response (200 OK):**
   ```json
   {

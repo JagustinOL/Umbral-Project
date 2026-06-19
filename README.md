@@ -13,11 +13,14 @@ Plataforma para la operación en tiempo real de experiencias de investigación i
 
 | Componente | Tecnología | Carpeta |
 |---|---|---|
-| Admin API | C# / ASP.NET Core 10 | `AdminService/` |
-| Identity API | C# / ASP.NET Core 10 | `IdentityService/` |
-| Teams API | C# / ASP.NET Core 10 | `TeamService/` |
-| Sessions API | C# / ASP.NET Core 10 | `SessionsManagement/` |
-| Web | Next.js + Tailwind | `umbral-web/` |
+| Mission Management API | C# / ASP.NET Core 10 | `MissionManagement/` |
+| Session Management API | C# / ASP.NET Core 10 | `SessionManagement/` |
+| Scoring Audit API | C# / ASP.NET Core 10 | `ScoringAudit/` |
+| Librería compartida | C# | `Umbral.Shared/` |
+| Admin (Next.js) | Next.js + Tailwind | `AdminView-WEB/` |
+| Operador (Next.js) | Next.js + Tailwind | `OperadorView-WEB/` |
+| Login (Next.js) | Next.js + Tailwind | `LoginView-WEB/` |
+| Jugador (Expo web) | React Native / Expo | `PlayerMobile/` |
 
 ---
 
@@ -175,18 +178,15 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `miss
 
 | Servicio | URL |
 |---|---|
-| Admin API | http://localhost:5149 |
-| Identity API | http://localhost:5049 |
-| Team API | http://localhost:5180 |
-| Sessions API | http://localhost:5278 |
+| Mission Management API | http://localhost:5260 |
+| Session Management API | http://localhost:5278 |
+| Scoring Audit API | http://localhost:5290 |
 | OpenAPI (dev) | `http://localhost:<puerto>/openapi/v1.json` |
 | PostgreSQL | `localhost:5432` (user: `postgres`, pass: `postgres`, db: `umbral_db`) |
 | pgAdmin | http://localhost:5050 (`admin@umbral.com` / `admin`) |
 | RabbitMQ (AMQP) | `localhost:5672` |
 | RabbitMQ (panel) | http://localhost:15672 (`guest` / `guest`) |
 | Keycloak (consola `master`) | http://localhost:8081 (`admin` / `admin`) |
-| Mission Management API | http://localhost:5260 |
-| Scoring Audit API | http://localhost:5290 |
 | AdminView *(perfil frontend/full)* | http://localhost:3000 |
 | OperadorView *(perfil frontend/full)* | http://localhost:3001 |
 | LoginView *(perfil frontend/full)* | http://localhost:3002 |
@@ -211,48 +211,51 @@ docker compose up -d db mq keycloak pgadmin
 Luego, en cada carpeta de servicio:
 
 ```bash
-# AdminService
-cd AdminService/AdminService.WebApi
+# MissionManagement (misiones, operadores, jugadores, auth)
+cd MissionManagement/MissionManagement.WebApi
 dotnet run
 
-# IdentityService
-cd IdentityService/IdentityService.WebApi
+# SessionManagement (equipos, sesiones live, evidencias)
+cd SessionManagement/SessionManagement.WebApi
 dotnet run
 
-# TeamService
-cd TeamService/TeamService.WebApi
-dotnet run
-
-# SessionsManagement
-cd SessionsManagement/SessionManagement.WebApi
+# ScoringAudit (ranking por sesión)
+cd ScoringAudit/ScoringAudit.WebApi
 dotnet run
 ```
 
-Los puertos locales coinciden con los definidos en cada `launchSettings.json` (5149, 5049, 5180 y 5278).
+En Docker los backends escuchan en **5260**, **5278** y **5290**. Con `dotnet run`, los puertos vienen de cada `launchSettings.json` (p. ej. MissionManagement `:5117`, SessionManagement `:5240`); apunta los frontends a esos puertos o alinea `applicationUrl` con los de Compose.
 
 ---
 
-## 5. Ejecutar el frontend (`umbral-web`)
+## 5. Ejecutar frontends sin Docker
 
-Con la carpeta `umbral-web/` ya creada en la raíz del monorepo:
+Con los backends accesibles (Docker o `dotnet run`), levanta cada app Next.js en su carpeta:
 
 ```bash
-cd umbral-web
-npm install
-npm run dev
+# Admin (puerto 3000)
+cd AdminView-WEB && npm install && npm run dev
+
+# Operador (puerto 3001 — usar npm run dev -- -p 3001)
+cd OperadorView-WEB && npm install && npm run dev -- -p 3001
+
+# Login (puerto 3002 — usar npm run dev -- -p 3002)
+cd LoginView-WEB && npm install && npm run dev -- -p 3002
 ```
 
-La app quedará disponible en http://localhost:3000.
-
-Variables de entorno esperadas (puedes definirlas en `.env.local`):
+Variables de entorno esperadas (`.env.local` en cada app; mismos nombres que en `docker-compose.yml`):
 
 ```env
-NEXT_PUBLIC_ADMIN_API_URL=http://localhost:5149
-NEXT_PUBLIC_IDENTITY_API_URL=http://localhost:5049
-NEXT_PUBLIC_TEAM_API_URL=http://localhost:5180
-NEXT_PUBLIC_SESSIONS_API_URL=http://localhost:5278
+NEXT_PUBLIC_MISSION_API_URL=http://localhost:5260
+NEXT_PUBLIC_SESSION_API_URL=http://localhost:5278
+NEXT_PUBLIC_SCORING_API_URL=http://localhost:5290
 NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8081
+NEXT_PUBLIC_LOGIN_URL=http://localhost:3002
 ```
+
+LoginView además usa `NEXT_PUBLIC_ADMIN_URL` y `NEXT_PUBLIC_OPERATOR_URL`. OperadorView puede usar `NEXT_PUBLIC_OPERATOR_ID` como fallback si no entras por LoginView.
+
+PlayerMobile en web local: ver [`PlayerMobile/COMO_PROBAR.md`](PlayerMobile/COMO_PROBAR.md) (`EXPO_PUBLIC_MISSION_API_URL`, `EXPO_PUBLIC_SESSION_API_URL`, etc.).
 
 ---
 
@@ -317,3 +320,5 @@ Captura o PDF de `coverage-report/index.html` y la salida de `check-coverage-thr
 ## Documentación adicional
 
 - Reglas de negocio: [`docs/reglas_negocio.md`](docs/reglas_negocio.md)
+- Catálogo de endpoints REST: [`backend-endpoints.md`](backend-endpoints.md)
+- Mapa de arquitectura backend: [`architecture-map.md`](architecture-map.md)

@@ -111,13 +111,14 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 - `MissionConfiguration`, `MissionNodeConfiguration`, `HintConfiguration`: Mapeos EF Core (Patrón: Fluent Configuration).
 - `RabbitMqDomainEventPublisher`: Publica `MissionActivatedEvent` y otros eventos al bus RabbitMQ.
 - `KeycloakAuthService`, `KeycloakIdentityService`, `KeycloakPlayerIdentityService`: Integración IAM (Patrón: ACL).
+- `KeycloakBootstrapHostedService`, `KeycloakWebClientInitializer`, `KeycloakOperatorProfileInitializer`: Bootstrap al arrancar — cliente OIDC `umbral-web`, usuario admin por defecto y atributos de perfil para códigos de activación de operadores.
 - `HttpSessionValidationService`: Cliente HTTP hacia SessionManagement para validación de sesiones abiertas.
 - `FakeIdentityService`, `FakeSessionValidationService`: Adaptadores simulados para pruebas locales (Patrón: Fake Adapter).
 
 ### Capa: WebApi
 - `MissionsController`, `NodesController`, `TriviaController`, `TreasureHuntsController`, `HintsController`, `MissionOperatorsController`, `OperatorsController`, `AdminsController`, `PlayersController`, `AuthController`: Controladores REST delgados con mapeo en `WebApi/Mapping/` (Patrón: API Controller + Role Security).
 - `Program`: Composition root — Umbral.Shared (auth, Serilog, middleware, FluentValidation), MediatR, EF Core, RabbitMQ, Keycloak.
-- Endpoints `[AllowAnonymous]`: `POST /auth/token`, `POST /auth/operator/setup-password`, lecturas de integración (`node-validations`, `session-validation/has-open`, GET misión/hints para SessionManagement).
+- Endpoints `[AllowAnonymous]`: `POST /auth/token`, `POST /auth/operator/setup-password`, `POST /players` (registro), lecturas de integración (`node-validations`, `session-validation/has-open`, GET misión/hints para SessionManagement).
 - `SignalR Hubs`: Pendiente.
 
 ---
@@ -178,7 +179,9 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 - `FakeMissionIntegrationService`: Adaptador simulado para pruebas.
 
 ### Capa: WebApi
-- `LiveSessionsController`, `OperatorSessionsController`, `TeamsController`, `PlayerHintsController`, `MissionSessionValidationController`, `PlayerTeamMembershipController`: Controladores delgados con `Contracts/Routes/` + `Mapping/`.
+- `LiveSessionsController`, `OperatorSessionsController`, `OperatorSessionValidationController`, `TeamsController`, `PlayerHintsController`, `MissionSessionValidationController`, `PlayerTeamMembershipController`: Controladores delgados con `Contracts/Routes/` + `Mapping/`.
+- `OperatorSessionsController`: flujos de operador autenticados (`admin`/`operator` + `EnsureOperatorMatchesRoute`).
+- `OperatorSessionValidationController`: validaciones de integración para MissionManagement (`has-active`, `is-supervising`) — `[AllowAnonymous]`.
 - `Program`: Composition root — Umbral.Shared, Facade, cadena de validación, processors, RabbitMQ.
 - `SignalR Hubs`: Pendiente.
 
@@ -218,11 +221,11 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 
 ## Infraestructura Docker (docker-compose)
 
-| Servicio | Puerto | Dependencias |
-|----------|--------|--------------|
-| `mission-management-service` | 5260 | PostgreSQL, RabbitMQ, Keycloak |
-| `session-management-service` | 5278 | PostgreSQL, RabbitMQ, Keycloak, MissionManagement |
-| `scoring-audit-service` | 5290 | PostgreSQL, RabbitMQ, Keycloak |
+| Servicio | Puerto | Dependencias (Compose) |
+|----------|--------|------------------------|
+| `mission-management-service` | 5260 | PostgreSQL, RabbitMQ, Keycloak (`healthy`) |
+| `session-management-service` | 5278 | PostgreSQL, RabbitMQ, MissionManagement *(JWT vía Keycloak en runtime; no en `depends_on`)* |
+| `scoring-audit-service` | 5290 | PostgreSQL, RabbitMQ *(JWT vía Keycloak en runtime; no en `depends_on`)* |
 | `keycloak` | 8081 | — |
 | `mq` (RabbitMQ) | 5672 / 15672 | — |
 | `db` (PostgreSQL) | 5432 | — |
