@@ -10,7 +10,7 @@ namespace SessionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/live-sessions")]
-[Authorize(Roles = "player,operator,admin")]
+[Authorize(Roles = "player")]
 public sealed class LiveSessionsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SessionManagement.WebApi.Contracts.Routes;
 using SessionManagement.WebApi.Mapping;
@@ -7,6 +8,7 @@ namespace SessionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/players")]
+[Authorize(Roles = "player")]
 public sealed class PlayerTeamMembershipController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -39,7 +39,8 @@ On **Android emulator**, replace `localhost` with `10.0.2.2`.
 
 1. **Register:** `POST /api/v1/players` → Keycloak user + role `player` → login via Keycloak token endpoint.
 2. **Login:** Keycloak `grant_type=password` → JWT stored in SecureStore → profile from `GET /api/v1/players/{id}` (`sub` claim).
-3. **API calls:** `Authorization: Bearer <access_token>` on SessionManagement endpoints.
+3. **Role gate:** Only JWTs with realm role `player` are accepted. Operator/admin accounts are rejected at login.
+4. **API calls:** `Authorization: Bearer <access_token>` on SessionManagement endpoints (player role required).
 
 ## Team membership
 

@@ -31,6 +31,7 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "admin,operator")]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(new GetPlayersQuery(), cancellationToken);
@@ -38,6 +39,7 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpGet("{playerId:guid}")]
+    [Authorize(Roles = "player")]
     public async Task<IActionResult> GetById(
         [FromRoute] PlayerRoute route,
         CancellationToken cancellationToken)
@@ -47,6 +49,7 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpPut("{playerId:guid}")]
+    [Authorize(Roles = "player")]
     public async Task<IActionResult> Update(
         [FromRoute] PlayerRoute route,
         [FromBody] UpdatePlayerRequest body,
@@ -57,6 +60,7 @@ public sealed class PlayersController : ControllerBase
     }
 
     [HttpPut("{playerId:guid}/deactivate")]
+    [Authorize(Roles = "player")]
     public async Task<IActionResult> Deactivate(
         [FromRoute] PlayerRoute route,
         CancellationToken cancellationToken)

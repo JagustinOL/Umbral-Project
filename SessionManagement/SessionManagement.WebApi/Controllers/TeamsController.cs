@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SessionManagement.Application.Teams.Commands.DisbandTeam;
 using SessionManagement.Application.Teams.Commands.RemoveMember;
@@ -11,6 +12,7 @@ namespace SessionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/teams")]
+[Authorize(Roles = "player")]
 public sealed class TeamsController : ControllerBase
 {
     private readonly IMediator _mediator;

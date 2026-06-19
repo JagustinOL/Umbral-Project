@@ -7,6 +7,7 @@ import {
   saveSessionJson,
 } from '../storage/secureTokenStorage';
 import { decodeJwtPayload } from '../utils/jwt';
+import { assertPlayerRole } from '../utils/roles';
 import { isPasswordMinLength, isValidEmail } from '../utils/validation';
 import * as keycloakAuth from './keycloakAuthService';
 import * as playerApi from './playerApi';
@@ -82,6 +83,7 @@ async function ensureValidAccessToken(
       : session.expiresAt,
   };
 
+  assertPlayerRole(refreshed.accessToken);
   await persistSession(refreshed);
   return refreshed;
 }
@@ -99,6 +101,8 @@ export async function login(
   }
 
   const tokenResponse = await keycloakAuth.loginWithPassword(email, password);
+  assertPlayerRole(tokenResponse.access_token);
+
   // Guardar token antes de llamadas API (team-membership, getPlayerById usan Bearer).
   await saveAccessToken(tokenResponse.access_token);
 
@@ -155,6 +159,7 @@ export async function loadStoredSession(): Promise<AuthSession | null> {
 
   try {
     let session = JSON.parse(raw) as AuthSession;
+    assertPlayerRole(session.accessToken);
     session = await ensureValidAccessToken(session);
 
     try {

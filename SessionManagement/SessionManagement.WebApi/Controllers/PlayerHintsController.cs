@@ -7,7 +7,7 @@ namespace SessionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/live-sessions/{sessionId:guid}/teams/{teamId:guid}/nodes/{nodeId:guid}/hints")]
-[Authorize(Roles = "player,operator,admin")]
+[Authorize(Roles = "player")]
 public sealed class PlayerHintsController : ControllerBase
 {
     private readonly IPlayerHintPanelService _hintPanelService;
