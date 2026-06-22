@@ -1,10 +1,10 @@
 export const API_CONFIG = {
   userServiceBaseUrl:
-    process.env.EXPO_PUBLIC_USER_API_URL ?? 'http://localhost:5284',
+    process.env.EXPO_PUBLIC_USER_API_URL ?? 'http://localhost:5200',
   missionManagementBaseUrl:
-    process.env.EXPO_PUBLIC_MISSION_API_URL ?? 'http://localhost:5260',
+    process.env.EXPO_PUBLIC_MISSION_API_URL ?? 'http://localhost:5200',
   sessionManagementBaseUrl:
-    process.env.EXPO_PUBLIC_SESSION_API_URL ?? 'http://localhost:5278',
+    process.env.EXPO_PUBLIC_SESSION_API_URL ?? 'http://localhost:5200',
 } as const;
 
 export const API_PATHS = {

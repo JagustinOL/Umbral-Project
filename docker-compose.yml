@@ -133,6 +133,29 @@ services:
       RabbitMQ__Host: mq
       UserService__BaseUrl: http://user-service:8080
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
+    container_name: umbral-api-gateway
+    depends_on:
+      mission-management-service:
+        condition: service_started
+      session-management-service:
+        condition: service_started
+      scoring-audit-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    ports:
+      - "5200:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ReverseProxy__Clusters__mission-management-cluster__Destinations__mission-management__Address: http://mission-management-service:8080/
+      ReverseProxy__Clusters__session-management-cluster__Destinations__session-management__Address: http://session-management-service:8080/
+      ReverseProxy__Clusters__scoring-audit-cluster__Destinations__scoring-audit__Address: http://scoring-audit-service:8080/
+      ReverseProxy__Clusters__user-service-cluster__Destinations__user-service__Address: http://user-service:8080/
+
   user-service:
     build:
       context: .
@@ -181,16 +204,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
-      NEXT_PUBLIC_USER_API_URL: http://localhost:5284
-      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
-      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5200
+      NEXT_PUBLIC_USER_API_URL: http://localhost:5200
+      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5200
+      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5200
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
       NEXT_PUBLIC_LOGIN_URL: http://localhost:3002
     depends_on:
-      - mission-management-service
-      - session-management-service
-      - scoring-audit-service
+      - api-gateway
       - keycloak
       - user-service
 
@@ -203,18 +224,16 @@ services:
     ports:
       - "3001:3000"
     environment:
-      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
-      NEXT_PUBLIC_USER_API_URL: http://localhost:5284
-      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5278
-      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5290
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5200
+      NEXT_PUBLIC_USER_API_URL: http://localhost:5200
+      NEXT_PUBLIC_SESSION_API_URL: http://localhost:5200
+      NEXT_PUBLIC_SCORING_API_URL: http://localhost:5200
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
       NEXT_PUBLIC_LOGIN_URL: http://localhost:3002
       # Fallback when not signing in via LoginView-WEB
       NEXT_PUBLIC_OPERATOR_ID: ${NEXT_PUBLIC_OPERATOR_ID:-}
     depends_on:
-      - mission-management-service
-      - session-management-service
-      - scoring-audit-service
+      - api-gateway
       - keycloak
       - user-service
 
@@ -227,13 +246,13 @@ services:
     ports:
       - "3002:3000"
     environment:
-      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5260
-      NEXT_PUBLIC_USER_API_URL: http://localhost:5284
+      NEXT_PUBLIC_MISSION_API_URL: http://localhost:5200
+      NEXT_PUBLIC_USER_API_URL: http://localhost:5200
       NEXT_PUBLIC_ADMIN_URL: http://localhost:3000
       NEXT_PUBLIC_OPERATOR_URL: http://localhost:3001
       NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8081
     depends_on:
-      - mission-management-service
+      - api-gateway
       - keycloak
       - user-service
 
@@ -251,16 +270,14 @@ services:
       EXPO_PUBLIC_KEYCLOAK_URL: http://localhost:8081
       EXPO_PUBLIC_KEYCLOAK_REALM: umbral-realm
       EXPO_PUBLIC_KEYCLOAK_CLIENT_ID: umbral-player-mobile
-      EXPO_PUBLIC_MISSION_API_URL: http://localhost:5260
-      EXPO_PUBLIC_USER_API_URL: http://localhost:5284
-      EXPO_PUBLIC_SESSION_API_URL: http://localhost:5278
+      EXPO_PUBLIC_MISSION_API_URL: http://localhost:5200
+      EXPO_PUBLIC_USER_API_URL: http://localhost:5200
+      EXPO_PUBLIC_SESSION_API_URL: http://localhost:5200
     volumes:
       - ./PlayerMobile:/app
       - player-mobile-node-modules:/app/node_modules
     depends_on:
-      mission-management-service:
-        condition: service_started
-      session-management-service:
+      api-gateway:
         condition: service_started
       keycloak:
         condition: service_healthy

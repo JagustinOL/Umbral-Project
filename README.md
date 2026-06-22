@@ -13,6 +13,7 @@ Plataforma para la operación en tiempo real de experiencias de investigación i
 
 | Componente | Tecnología | Carpeta |
 |---|---|---|
+| API Gateway (YARP) | C# / ASP.NET Core 10 | `ApiGateway/` — reverse proxy para clientes |
 | Mission Management API | C# / ASP.NET Core 10 | `MissionManagement/` |
 | Session Management API | C# / ASP.NET Core 10 | `SessionManagement/` |
 | Scoring Audit API | C# / ASP.NET Core 10 | `ScoringAudit/` |
@@ -96,7 +97,7 @@ docker compose up -d
 docker compose up -d db mq keycloak
 docker compose ps   # esperar keycloak (healthy)
 docker compose up -d user-service
-docker compose up -d mission-management-service session-management-service scoring-audit-service
+docker compose up -d user-service mission-management-service session-management-service scoring-audit-service api-gateway
 ```
 
 ### Con frontends (perfil `frontend`)
@@ -179,10 +180,11 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `user
 
 | Servicio | URL |
 |---|---|
-| User Service API | http://localhost:5284 |
-| Mission Management API | http://localhost:5260 |
-| Session Management API | http://localhost:5278 |
-| Scoring Audit API | http://localhost:5290 |
+| **API Gateway** *(clientes web/jugador)* | http://localhost:5200 |
+| User Service API *(directo, depuración)* | http://localhost:5284 |
+| Mission Management API *(directo, depuración)* | http://localhost:5260 |
+| Session Management API *(directo, depuración)* | http://localhost:5278 |
+| Scoring Audit API *(directo, depuración)* | http://localhost:5290 |
 | OpenAPI (dev) | `http://localhost:<puerto>/openapi/v1.json` |
 | PostgreSQL | `localhost:5432` (user: `postgres`, pass: `postgres`, db: `umbral_db`) |
 | pgAdmin | http://localhost:5050 (`admin@umbral.com` / `admin`) |
@@ -194,6 +196,8 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `user
 | LoginView *(perfil frontend/full)* | http://localhost:3002 |
 | PlayerMobile web *(perfil player/full)* | http://localhost:19000 |
 
+> **API Gateway (YARP):** AdminView, OperadorView, LoginView y PlayerMobile deben apuntar todas sus variables `*_API_URL` a `http://localhost:5200`. El gateway enruta por path hacia UserService, MissionManagement, SessionManagement y ScoringAudit. Los microservicios se comunican entre sí por red interna de Docker (sin pasar por el gateway).
+>
 > **Keycloak:** el realm `umbral-realm` se importa desde `infra/keycloak/umbral-realm.json`. Modo `start-dev` en desarrollo: primer arranque ~2–3 min (Quarkus augment). Keycloak ya no espera a PostgreSQL (no usa `db` en dev). Los microservicios backend arrancan cuando Keycloak está `healthy`.
 >
 > **Admin de la app (realm `umbral-realm`):** al arrancar, `user-service` crea o actualiza `admin@umbral.com` / `Admin123!` con rol `admin` en Keycloak (`KeycloakBootstrapHostedService`) y lo registra en la tabla `users` de PostgreSQL (`DefaultAdminDirectoryBootstrapHostedService`). Variables `Keycloak__DefaultAdmin*` en `docker-compose.yml`. No confundir con el usuario `admin` de la consola Keycloak (`master`).
@@ -224,9 +228,17 @@ dotnet run
 # ScoringAudit (ranking por sesión)
 cd ScoringAudit/ScoringAudit.WebApi
 dotnet run
+
+# UserService (IAM, auth)
+cd UserService/UserService.WebApi
+dotnet run
+
+# API Gateway (YARP — requiere los cuatro servicios anteriores accesibles)
+cd ApiGateway/Umbral.ApiGateway
+dotnet run
 ```
 
-En Docker los backends escuchan en **5260**, **5278** y **5290**. Con `dotnet run`, los puertos vienen de cada `launchSettings.json` (p. ej. MissionManagement `:5117`, SessionManagement `:5240`); apunta los frontends a esos puertos o alinea `applicationUrl` con los de Compose.
+Los clientes web/jugador usan el **gateway en `:5200`**. Los puertos **5260**, **5278**, **5290** y **5284** quedan para depuración directa de cada microservicio. Con `dotnet run`, los puertos vienen de cada `launchSettings.json`; alinea `ReverseProxy` en `ApiGateway/Umbral.ApiGateway/appsettings.json` si usas puertos distintos.
 
 ---
 
@@ -248,10 +260,10 @@ cd LoginView-WEB && npm install && npm run dev -- -p 3002
 Variables de entorno esperadas (`.env.local` en cada app; mismos nombres que en `docker-compose.yml`):
 
 ```env
-NEXT_PUBLIC_USER_API_URL=http://localhost:5284
-NEXT_PUBLIC_MISSION_API_URL=http://localhost:5260
-NEXT_PUBLIC_SESSION_API_URL=http://localhost:5278
-NEXT_PUBLIC_SCORING_API_URL=http://localhost:5290
+NEXT_PUBLIC_USER_API_URL=http://localhost:5200
+NEXT_PUBLIC_MISSION_API_URL=http://localhost:5200
+NEXT_PUBLIC_SESSION_API_URL=http://localhost:5200
+NEXT_PUBLIC_SCORING_API_URL=http://localhost:5200
 NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8081
 NEXT_PUBLIC_LOGIN_URL=http://localhost:3002
 ```

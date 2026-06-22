@@ -5,11 +5,11 @@ import {
 } from "@/lib/auth/session";
 
 const missionApiBaseUrl = (
-  process.env.NEXT_PUBLIC_MISSION_API_URL ?? "http://localhost:5260"
+  process.env.NEXT_PUBLIC_MISSION_API_URL ?? "http://localhost:5200"
 ).replace(/\/+$/, "");
 
 const userApiBaseUrl = (
-  process.env.NEXT_PUBLIC_USER_API_URL ?? "http://localhost:5284"
+  process.env.NEXT_PUBLIC_USER_API_URL ?? "http://localhost:5200"
 ).replace(/\/+$/, "");
 
 const API_BASE_URL = `${missionApiBaseUrl}/api/v1`;

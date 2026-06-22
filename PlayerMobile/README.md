@@ -13,7 +13,7 @@ React Native (Expo) app for players (HU-27 to HU-35). **Authentication is via Ke
 
 **Guía completa en español:** [COMO_PROBAR.md](COMO_PROBAR.md)
 
-1. Levantar Docker (raíz del repo): `docker compose up -d db mq keycloak mission-management-service session-management-service`
+1. Levantar Docker (raíz del repo): `docker compose up -d db mq keycloak user-service mission-management-service session-management-service api-gateway`
 2. El archivo **`.env`** ya está listo en esta carpeta (no hace falta copiarlo para PC + Expo Web).
 3. Install and run:
 
@@ -30,8 +30,9 @@ npm start
 | `EXPO_PUBLIC_KEYCLOAK_REALM` | Realm (default `umbral-realm`) |
 | `EXPO_PUBLIC_KEYCLOAK_CLIENT_ID` | Public client (default `umbral-player-mobile`) |
 | `EXPO_PUBLIC_KEYCLOAK_CLIENT_SECRET` | Optional, for confidential clients |
-| `EXPO_PUBLIC_MISSION_API_URL` | MissionManagement (default `http://localhost:5260`) |
-| `EXPO_PUBLIC_SESSION_API_URL` | SessionManagement (default `http://localhost:5278`) |
+| `EXPO_PUBLIC_USER_API_URL` | API Gateway → UserService (default `http://localhost:5200`) |
+| `EXPO_PUBLIC_MISSION_API_URL` | API Gateway → MissionManagement (default `http://localhost:5200`) |
+| `EXPO_PUBLIC_SESSION_API_URL` | API Gateway → SessionManagement (default `http://localhost:5200`) |
 
 On **Android emulator**, replace `localhost` with `10.0.2.2`.
 

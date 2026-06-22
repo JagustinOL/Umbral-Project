@@ -4,12 +4,13 @@ Documentación alineada con los controladores WebApi tras el refactor **Route + 
 
 ## URLs base
 
-| Servicio | Docker (`dotnet`/compose) | Variable Postman |
-|----------|---------------------------|------------------|
-| UserService | `http://localhost:5284` | `{{userServiceUrl}}` |
-| MissionManagement | `http://localhost:5260` | `{{missionManagementUrl}}` |
-| SessionManagement | `http://localhost:5278` | `{{sessionManagementUrl}}` |
-| ScoringAudit | `http://localhost:5290` | `{{scoringAuditUrl}}` |
+| Servicio | Docker (clientes vía gateway) | Docker (directo / depuración) | Variable Postman |
+|----------|-------------------------------|-------------------------------|------------------|
+| API Gateway | `http://localhost:5200` | — | `{{apiGatewayUrl}}` |
+| UserService | vía gateway `:5200` | `http://localhost:5284` | `{{userServiceUrl}}` |
+| MissionManagement | vía gateway `:5200` | `http://localhost:5260` | `{{missionManagementUrl}}` |
+| SessionManagement | vía gateway `:5200` | `http://localhost:5278` | `{{sessionManagementUrl}}` |
+| ScoringAudit | vía gateway `:5200` | `http://localhost:5290` | `{{scoringAuditUrl}}` |
 
 Prefijo común: `/api/v1`.
 
