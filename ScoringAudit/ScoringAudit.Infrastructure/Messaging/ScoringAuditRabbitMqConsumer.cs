@@ -4,8 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ScoringAudit.Application.Events;
-using Umbral.Shared.Messaging;
-using Umbral.Shared.Messaging.IntegrationEvents;
+using ScoringAudit.Application.Messaging;
+using ScoringAudit.Infrastructure.Messaging;
 
 namespace ScoringAudit.Infrastructure.Messaging;
 

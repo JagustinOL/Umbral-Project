@@ -1,6 +1,6 @@
 using MissionManagement.Application.Missions.Commands.AssignOperatorToMission;
 using MissionManagement.Application.Missions.Commands.RevokeOperatorFromMission;
-using MissionManagement.WebApi.Contracts.Operators;
+using MissionManagement.WebApi.Contracts.MissionOperators;
 using MissionManagement.WebApi.Contracts.Routes;
 
 namespace MissionManagement.WebApi.Mapping;

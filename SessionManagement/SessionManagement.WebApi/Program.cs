@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -16,16 +16,15 @@ using SessionManagement.Infrastructure.Integrations;
 using SessionManagement.Infrastructure.Messaging;
 using SessionManagement.Infrastructure.Persistence;
 using SessionManagement.Infrastructure.Repositories;
-using Umbral.Shared;
-using Umbral.Shared.Auth;
-using Umbral.Shared.Messaging;
+using SessionManagement.WebApi;
+using SessionManagement.WebApi.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddUmbralSerilog("SessionManagement");
+builder.AddServiceSerilog("SessionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddUmbralControllers();
+builder.Services.AddServiceControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
@@ -55,8 +54,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddUmbralAuthentication(builder.Configuration);
-builder.Services.AddUmbralCrossCutting(typeof(GetActiveSessionsQuery));
+builder.Services.AddUserServiceAuthentication(builder.Configuration);
+builder.Services.AddServiceCrossCutting(typeof(GetActiveSessionsQuery));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetActiveSessionsQuery).Assembly));
@@ -66,7 +65,7 @@ builder.Services.AddDbContext<SessionManagementDbContext>(options =>
     var connectionString = builder.Configuration.GetConnectionString("SessionManagement")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException(
-            "No se encontró cadena de conexión. Configure ConnectionStrings:SessionManagement o ConnectionStrings:DefaultConnection.");
+            "No se encontrÃ³ cadena de conexiÃ³n. Configure ConnectionStrings:SessionManagement o ConnectionStrings:DefaultConnection.");
     options.UseNpgsql(connectionString);
 });
 
@@ -94,7 +93,7 @@ builder.Services.AddScoped<IPlayerHintPanelService, PlayerReleasedHintsProxy>();
 
 var missionManagementBaseUrl = builder.Configuration["MissionManagement:BaseUrl"];
 if (string.IsNullOrWhiteSpace(missionManagementBaseUrl))
-    throw new InvalidOperationException("No se encontró MissionManagement:BaseUrl para configurar la integración.");
+    throw new InvalidOperationException("No se encontrÃ³ MissionManagement:BaseUrl para configurar la integraciÃ³n.");
 
 builder.Services.AddHttpClient<IMissionIntegrationService, HttpMissionIntegrationService>(client =>
 {
@@ -122,7 +121,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseUmbralCrossCutting();
+app.UseServiceCrossCutting();
 app.MapControllers();
 
 app.Run();
+

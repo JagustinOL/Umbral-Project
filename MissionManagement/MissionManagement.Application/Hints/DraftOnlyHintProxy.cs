@@ -2,7 +2,7 @@ using MissionManagement.Application.Dtos;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Domain.Aggregates;
 using MissionManagement.Domain.Repositories;
-using Umbral.Shared.Auth;
+using MissionManagement.Application.Common.Interfaces;
 
 namespace MissionManagement.Application.Hints;
 

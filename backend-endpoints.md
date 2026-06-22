@@ -6,6 +6,7 @@ Documentación alineada con los controladores WebApi tras el refactor **Route + 
 
 | Servicio | Docker (`dotnet`/compose) | Variable Postman |
 |----------|---------------------------|------------------|
+| UserService | `http://localhost:5284` | `{{userServiceUrl}}` |
 | MissionManagement | `http://localhost:5260` | `{{missionManagementUrl}}` |
 | SessionManagement | `http://localhost:5278` | `{{sessionManagementUrl}}` |
 | ScoringAudit | `http://localhost:5290` | `{{scoringAuditUrl}}` |
@@ -14,7 +15,7 @@ Prefijo común: `/api/v1`.
 
 ## Autenticación
 
-La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** (`Authorization: Bearer {accessToken}`) emitido por Keycloak vía `POST /api/v1/auth/token`.
+La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** (`Authorization: Bearer {accessToken}`) obtenido vía `POST /api/v1/auth/token` en **UserService**. Los demás microservicios validan el token contra `POST /api/v1/auth/validate` (UserService) mediante `AddUmbralUserServiceAuthentication`.
 
 | Rol | Uso típico |
 |-----|------------|
@@ -36,16 +37,17 @@ HTTP → Route struct + Body contract → ToCommand() / ToQuery() → MediatR �
 
 | Microservicio | Controlador | Route struct(s) | Mapper |
 |---------------|-------------|-----------------|--------|
-| MissionManagement | `AuthController` | — | `AuthMappings` |
-| MissionManagement | `AdminsController` | — | `AdminMappings` |
+| UserService | `AuthController` | — | `AuthMappings` |
+| UserService | `AdminsController` | — | `AdminMappings` |
+| UserService | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
+| UserService | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
+| UserService | `UserValidationController` | `OperatorRoute` | — |
 | MissionManagement | `MissionsController` | `MissionRoute` (`Id`) | `MissionMappings` |
 | MissionManagement | `NodesController` | `MissionNodesRoute`, `MissionStageRoute`, `MissionNodeRoute` | `NodeMappings` |
 | MissionManagement | `TriviaController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TriviaMappings` |
 | MissionManagement | `TreasureHuntsController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TreasureHuntMappings` |
 | MissionManagement | `HintsController` | `HintParentRoute`, `HintRoute` | `HintMappings` |
 | MissionManagement | `MissionOperatorsController` | `MissionNodesRoute`, `MissionOperatorRoute` | `MissionOperatorMappings` |
-| MissionManagement | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
-| MissionManagement | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
 | SessionManagement | `OperatorSessionsController` | `OperatorRoute`, `OperatorMissionRoute`, `OperatorSessionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `OperatorSessionValidationController` | `OperatorRoute`, `OperatorMissionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `LiveSessionsController` | `LiveSessionTeamRoute` | `LiveSessionMappings` |
@@ -59,10 +61,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 
 ---
 
-## MissionManagement · Autenticación (Keycloak OIDC)
+## UserService · Autenticación y validación
 
 ### Autenticar Usuario (Login)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/auth/token`
 - **Capa Application:** `AuthenticateUserCommand`
 - **Body / Payload (Request):**
@@ -92,8 +94,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Usuarios admin deben tener el rol realm `admin`; operadores el rol `operator` (creados vía `POST /api/v1/operators`).
   - En desarrollo, el bootstrap crea `admin@umbral.com` / `Admin123!` si `Keycloak:DefaultAdminEmail` está configurado.
 
-### Activar cuenta de Operador (onboarding)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/auth/operator/setup-password`
 - **Capa Application:** `SetupOperatorPasswordCommand`
 - **Autenticación:** `[AllowAnonymous]`
@@ -116,8 +117,29 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Tras éxito: se fija la contraseña, se habilita la cuenta y se eliminan los atributos del código de activación.
   - El operador puede iniciar sesión con `POST /api/v1/auth/token` a partir de entonces.
 
+### Validar token JWT (integración entre microservicios)
+- **Microservicio:** UserService
+- **Método y Ruta:** `POST /api/v1/auth/validate`
+- **Capa Application:** `ValidateTokenQuery`
+- **Autenticación:** `[AllowAnonymous]` (requiere header `Authorization: Bearer {token}`)
+- **Response (200 OK):**
+  ```json
+  {
+    "userId": "Guid",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "role": "string",
+    "status": "string",
+    "roles": ["admin|operator|player"]
+  }
+  ```
+- **Notas:**
+  - Usado por `AddUmbralUserServiceAuthentication` en MissionManagement, SessionManagement y ScoringAudit.
+  - Los roles autoritativos provienen de la base de datos de UserService.
+
 ### Crear Administrador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/admins`
 - **Capa Application:** `CreateAdminCommand`
 - **Body / Payload (Request):**
@@ -486,10 +508,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   { }
   ```
 
-## MissionManagement · Épica 3 (Gestión y Asignación de Operadores)
+## UserService · Gestión de Operadores
 
 ### Crear cuenta de Operador (HU-22)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/operators`
 - **Capa Application:** `CreateOperatorCommand`
 - **Body / Payload (Request):**
@@ -516,7 +538,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - El administrador debe entregar `setupCode` al operador de forma segura; el operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
 
 ### Consultar Operadores (HU-23)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/operators`
 - **Capa Application:** `GetOperatorsQuery`
 - **Body / Payload (Request):**
@@ -540,13 +562,15 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - El listado se obtiene desde Keycloak (usuarios con rol `operator`).
 
 ### Desactivar Operador (HU-26)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/deactivate`
 - **Capa Application:** `DeactivateOperatorCommand`
 - **Body / Payload (Request):**
   ```json
   { }
   ```
+
+## MissionManagement · Asignación de Operadores a Misiones
 
 ### Asignar Operador a Misión (HU-24)
 - **Microservicio:** MissionManagement
@@ -572,10 +596,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   { }
   ```
 
-## MissionManagement · Gestión de Jugadores (TeamMember / Keycloak)
+## UserService · Gestión de Jugadores
 
 ### Crear Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/players`
 - **Capa Application:** `CreatePlayerCommand`
 - **Autenticación:** `[AllowAnonymous]`
@@ -601,7 +625,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Tras crear el usuario en Keycloak se asigna el rol de jugador y se establece la contraseña vía Admin API (`reset-password`).
 
 ### Consultar Jugadores
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/players`
 - **Capa Application:** `GetPlayersQuery`
 - **Body / Payload (Request):**
@@ -622,7 +646,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```
 
 ### Consultar Jugador por Id
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/players/{playerId}`
 - **Capa Application:** `GetPlayerByIdQuery`
 - **Body / Payload (Request):**
@@ -643,7 +667,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - `404 NotFound` si el jugador no existe.
 
 ### Modificar Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/players/{playerId}`
 - **Capa Application:** `UpdatePlayerCommand`
 - **Body / Payload (Request):**
@@ -660,7 +684,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - `409 Conflict` cuando el correo ya existe en Keycloak.
 
 ### Desactivar Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/players/{playerId}/deactivate`
 - **Capa Application:** `DeactivatePlayerCommand`
 - **Body / Payload (Request):**

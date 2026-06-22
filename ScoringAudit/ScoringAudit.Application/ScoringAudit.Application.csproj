@@ -3,7 +3,6 @@
   <ItemGroup>
     <PackageReference Include="MediatR" Version="14.1.0" />
     <ProjectReference Include="..\ScoringAudit.Domain\ScoringAudit.Domain.csproj" />
-    <ProjectReference Include="..\..\Umbral.Shared\Umbral.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

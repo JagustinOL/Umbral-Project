@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.WebApi.Contracts.Operators;
+using MissionManagement.WebApi.Contracts.MissionOperators;
 using MissionManagement.WebApi.Contracts.Routes;
 using MissionManagement.WebApi.Mapping;
 

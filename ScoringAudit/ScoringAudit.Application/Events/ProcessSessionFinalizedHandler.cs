@@ -1,6 +1,6 @@
 using MediatR;
 using ScoringAudit.Domain.Repositories;
-using Umbral.Shared.Messaging.IntegrationEvents;
+using ScoringAudit.Application.Messaging;
 
 namespace ScoringAudit.Application.Events;
 

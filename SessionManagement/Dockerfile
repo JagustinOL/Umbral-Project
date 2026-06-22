@@ -1,7 +1,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY Umbral.Shared/*.csproj ./Umbral.Shared/
 COPY SessionManagement/SessionManagement.WebApi/*.csproj ./SessionManagement/SessionManagement.WebApi/
 COPY SessionManagement/SessionManagement.Infrastructure/*.csproj ./SessionManagement/SessionManagement.Infrastructure/
 COPY SessionManagement/SessionManagement.Application/*.csproj ./SessionManagement/SessionManagement.Application/
@@ -9,7 +8,6 @@ COPY SessionManagement/SessionManagement.Domain/*.csproj ./SessionManagement/Ses
 
 RUN cd SessionManagement/SessionManagement.WebApi && dotnet restore
 
-COPY Umbral.Shared ./Umbral.Shared
 COPY SessionManagement ./SessionManagement
 WORKDIR /src/SessionManagement/SessionManagement.WebApi
 RUN dotnet publish -c Release -o /app/publish

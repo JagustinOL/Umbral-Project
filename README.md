@@ -16,7 +16,7 @@ Plataforma para la operación en tiempo real de experiencias de investigación i
 | Mission Management API | C# / ASP.NET Core 10 | `MissionManagement/` |
 | Session Management API | C# / ASP.NET Core 10 | `SessionManagement/` |
 | Scoring Audit API | C# / ASP.NET Core 10 | `ScoringAudit/` |
-| Librería compartida | C# | `Umbral.Shared/` |
+| UserService | C# | `UserService/` — IAM, auth y usuarios |
 | Admin (Next.js) | Next.js + Tailwind | `AdminView-WEB/` |
 | Operador (Next.js) | Next.js + Tailwind | `OperadorView-WEB/` |
 | Login (Next.js) | Next.js + Tailwind | `LoginView-WEB/` |
@@ -65,11 +65,11 @@ Puertos: Admin `3000`, Operador `3001`, Login `3002`, Player web `19000`.
 
 | Fase | ¿Incluye Keycloak? | Qué construye / arranca | Tiempo típico (referencia) |
 |---|---|---|---|
-| `docker compose build` | **No** (imagen prepublicada) | 3 imágenes .NET (`dotnet restore` + `publish`) | ~2–8 min según caché |
+| `docker compose build` | **No** (imagen prepublicada) | 4 imágenes .NET (`dotnet restore` + `publish`) | ~2–8 min según caché |
 | `docker compose build --profile frontend` | No | Lo anterior + 3 Next.js (`npm install` + `build`) | +5–15 min |
 | `docker compose build --profile full` | No | Lo anterior + PlayerMobile (`npm ci` + Expo web) | +2–5 min |
 | `docker compose up -d` | **Sí** (pull + arranque) | Keycloak `start-dev` + healthcheck | **2–3 min** primer arranque; ~30–90 s con volumen `keycloak-data` ya caliente |
-| `mission-management-service` | Tras Keycloak `healthy` | Bootstrap OIDC + usuario `admin@umbral.com` | Segundos tras arrancar el servicio |
+| `user-service` | Tras Keycloak `healthy` | Bootstrap OIDC + usuario `admin@umbral.com` en Keycloak y sincronización en tabla `users` | Segundos tras arrancar el servicio |
 
 Keycloak **no tiene Dockerfile** en este repo: la lentitud que parece de “build” suele ser la suma de compilar frontends/backends y, acto seguido, el warmup de Keycloak en el `up`.
 
@@ -95,6 +95,7 @@ docker compose up -d
 ```bash
 docker compose up -d db mq keycloak
 docker compose ps   # esperar keycloak (healthy)
+docker compose up -d user-service
 docker compose up -d mission-management-service session-management-service scoring-audit-service
 ```
 
@@ -133,12 +134,12 @@ Ajusta `PlayerMobile/.env` con la IP de tu PC o `10.0.2.2` (emulador Android). V
 
 ```bash
 docker compose logs -f
-docker compose logs mission-management-service | Select-String -Pattern "default admin|Keycloak OIDC"
+docker compose logs user-service | Select-String -Pattern "default admin|Keycloak"
 ```
 
 ### Verificar login del admin de la app
 
-Usuario en realm `umbral-realm` (creado por `mission-management-service`, no el `admin` de la consola):
+Usuario en realm `umbral-realm` (creado por `user-service`, no el `admin` de la consola):
 
 ```powershell
 # En PowerShell usar curl.exe (curl es alias de Invoke-WebRequest)
@@ -161,13 +162,13 @@ docker compose down
 docker compose down -v
 ```
 
-Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `mission-management-service` o espera ~1 min al bootstrap periódico.
+Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `user-service` o espera ~1 min al bootstrap periódico.
 
 ### Perfiles Compose
 
 | Perfil | Comando | Descripción |
 |---|---|---|
-| *(ninguno)* | `docker compose up -d` | Infra + 3 backends |
+| *(ninguno)* | `docker compose up -d` | Infra + 4 backends |
 | `frontend` | `docker compose --profile frontend up -d` | Añade AdminView, OperadorView y LoginView |
 | `player` | `docker compose --profile player up -d` | Añade PlayerMobile web (`:19000`) |
 | `full` | `docker compose --profile full up -d --build` | **Todo** el stack de desarrollo (recomendado) |
@@ -178,6 +179,7 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `miss
 
 | Servicio | URL |
 |---|---|
+| User Service API | http://localhost:5284 |
 | Mission Management API | http://localhost:5260 |
 | Session Management API | http://localhost:5278 |
 | Scoring Audit API | http://localhost:5290 |
@@ -192,9 +194,9 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `miss
 | LoginView *(perfil frontend/full)* | http://localhost:3002 |
 | PlayerMobile web *(perfil player/full)* | http://localhost:19000 |
 
-> **Keycloak:** el realm `umbral-realm` se importa desde `infra/keycloak/umbral-realm.json`. Modo `start-dev` en desarrollo: primer arranque ~2–3 min (Quarkus augment). Keycloak ya no espera a PostgreSQL (no usa `db` en dev). `mission-management-service` arranca cuando Keycloak está `healthy`.
+> **Keycloak:** el realm `umbral-realm` se importa desde `infra/keycloak/umbral-realm.json`. Modo `start-dev` en desarrollo: primer arranque ~2–3 min (Quarkus augment). Keycloak ya no espera a PostgreSQL (no usa `db` en dev). Los microservicios backend arrancan cuando Keycloak está `healthy`.
 >
-> **Admin de la app (realm `umbral-realm`):** al arrancar, `mission-management-service` crea o actualiza `admin@umbral.com` / `Admin123!` con rol `admin` vía `KeycloakBootstrapHostedService` (variables `Keycloak__DefaultAdmin*` en `docker-compose.yml`). No confundir con el usuario `admin` de la consola Keycloak (`master`).
+> **Admin de la app (realm `umbral-realm`):** al arrancar, `user-service` crea o actualiza `admin@umbral.com` / `Admin123!` con rol `admin` en Keycloak (`KeycloakBootstrapHostedService`) y lo registra en la tabla `users` de PostgreSQL (`DefaultAdminDirectoryBootstrapHostedService`). Variables `Keycloak__DefaultAdmin*` en `docker-compose.yml`. No confundir con el usuario `admin` de la consola Keycloak (`master`).
 >
 > **Keycloak más rápido (opcional, producción):** para arranques repetidos más cortos se puede usar imagen custom con `kc.sh build` + `start --optimized` y BD externa; no está en el compose actual para mantener el setup dev simple.
 
@@ -246,6 +248,7 @@ cd LoginView-WEB && npm install && npm run dev -- -p 3002
 Variables de entorno esperadas (`.env.local` en cada app; mismos nombres que en `docker-compose.yml`):
 
 ```env
+NEXT_PUBLIC_USER_API_URL=http://localhost:5284
 NEXT_PUBLIC_MISSION_API_URL=http://localhost:5260
 NEXT_PUBLIC_SESSION_API_URL=http://localhost:5278
 NEXT_PUBLIC_SCORING_API_URL=http://localhost:5290

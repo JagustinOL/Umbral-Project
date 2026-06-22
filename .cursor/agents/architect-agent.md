@@ -15,6 +15,6 @@ Arquitecto de Software Senior especializado en sistemas distribuidos, Domain-Dri
 - Configuración de pipelines de despliegue.
 
 ## Siempre
-- Respeta a Keycloak como única fuente de verdad para Identidad (IAM).
+- Respeta a Keycloak como proveedor de autenticación (emisión de JWT); **UserService** es la fuente de verdad para usuarios y roles en el dominio UMBRAL.
 - Fomenta la comunicación eventual (choreography) sobre llamadas síncronas entre microservicios.
 - Exige que los Agregados Raíz controlen sus invariantes de negocio.

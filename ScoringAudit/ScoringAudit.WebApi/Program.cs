@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,17 +8,16 @@ using ScoringAudit.Domain.Services;
 using ScoringAudit.Infrastructure.Messaging;
 using ScoringAudit.Infrastructure.Persistence;
 using ScoringAudit.Infrastructure.Repositories;
-using Umbral.Shared;
-using Umbral.Shared.Auth;
-using Umbral.Shared.Messaging;
+using ScoringAudit.WebApi;
+using ScoringAudit.WebApi.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddUmbralSerilog("ScoringAudit");
+builder.AddServiceSerilog("ScoringAudit");
 
 builder.Services.AddOpenApi();
-builder.Services.AddUmbralControllers();
-builder.Services.AddUmbralAuthentication(builder.Configuration);
-builder.Services.AddUmbralCrossCutting(typeof(ProcessEvidenceValidatedHandler));
+builder.Services.AddServiceControllers();
+builder.Services.AddUserServiceAuthentication(builder.Configuration);
+builder.Services.AddServiceCrossCutting(typeof(ProcessEvidenceValidatedHandler));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(ProcessEvidenceValidatedHandler).Assembly));
@@ -55,8 +54,9 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-app.UseUmbralCrossCutting();
+app.UseServiceCrossCutting();
 app.MapControllers();
 app.MapGet("/health", [AllowAnonymous] () => Results.Ok("ScoringAudit Service is running"));
 
 app.Run();
+

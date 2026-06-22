@@ -8,7 +8,12 @@ const missionApiBaseUrl = (
   process.env.NEXT_PUBLIC_MISSION_API_URL ?? "http://localhost:5260"
 ).replace(/\/+$/, "");
 
+const userApiBaseUrl = (
+  process.env.NEXT_PUBLIC_USER_API_URL ?? "http://localhost:5284"
+).replace(/\/+$/, "");
+
 const API_BASE_URL = `${missionApiBaseUrl}/api/v1`;
+const USER_API_BASE_URL = `${userApiBaseUrl}/api/v1`;
 
 export class ApiError extends Error {
   status: number;
@@ -83,7 +88,22 @@ const getErrorMessage = (status: number, payload: unknown): string => {
   return `Request failed with status ${status}.`;
 };
 
+export async function userApiRequest<T>(
+  endpoint: string,
+  { method = "GET", body, signal }: RequestOptions = {},
+): Promise<T> {
+  return requestWithBaseUrl<T>(USER_API_BASE_URL, endpoint, { method, body, signal });
+}
+
 export async function apiRequest<T>(
+  endpoint: string,
+  { method = "GET", body, signal }: RequestOptions = {},
+): Promise<T> {
+  return requestWithBaseUrl<T>(API_BASE_URL, endpoint, { method, body, signal });
+}
+
+async function requestWithBaseUrl<T>(
+  baseUrl: string,
   endpoint: string,
   { method = "GET", body, signal }: RequestOptions = {},
 ): Promise<T> {
@@ -97,7 +117,7 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${session.accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
