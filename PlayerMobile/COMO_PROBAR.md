@@ -13,8 +13,9 @@ Expo lee variables que empiezan por `EXPO_PUBLIC_` desde **`PlayerMobile/.env`**
 | `EXPO_PUBLIC_KEYCLOAK_URL` | Login/registro (token JWT) |
 | `EXPO_PUBLIC_KEYCLOAK_REALM` | Realm (`umbral-realm`) |
 | `EXPO_PUBLIC_KEYCLOAK_CLIENT_ID` | Cliente móvil (`umbral-player-mobile`) |
-| `EXPO_PUBLIC_MISSION_API_URL` | Crear jugador (`POST /api/v1/players`) |
-| `EXPO_PUBLIC_SESSION_API_URL` | Equipos, solicitudes, etc. |
+| `EXPO_PUBLIC_USER_API_URL` | Auth IAM y jugadores (`/api/v1/players`, etc.) |
+| `EXPO_PUBLIC_MISSION_API_URL` | Rutas de misión vía gateway (mismo host que abajo) |
+| `EXPO_PUBLIC_SESSION_API_URL` | Equipos, solicitudes, sesiones live |
 
 **No hace falta copiar nada a mano** si usas PC + navegador o simulador: los valores apuntan a `localhost` y coinciden con los puertos de Docker.
 
@@ -24,8 +25,9 @@ El móvil no ve `localhost` de tu PC. En `.env` sustituye `localhost` por la **I
 
 ```env
 EXPO_PUBLIC_KEYCLOAK_URL=http://192.168.1.50:8081
-EXPO_PUBLIC_MISSION_API_URL=http://192.168.1.50:5260
-EXPO_PUBLIC_SESSION_API_URL=http://192.168.1.50:5278
+EXPO_PUBLIC_USER_API_URL=http://192.168.1.50:5200
+EXPO_PUBLIC_MISSION_API_URL=http://192.168.1.50:5200
+EXPO_PUBLIC_SESSION_API_URL=http://192.168.1.50:5200
 ```
 
 Reinicia Expo después de cambiar `.env` (`r` en la terminal o cierra y `npm start`).
@@ -67,7 +69,7 @@ El script levanta Docker (backends) y luego `npm start` en `PlayerMobile/`. Requ
 ### Opción C — Manual (solo backends en Docker)
 
 ```powershell
-docker compose up -d db mq keycloak mission-management-service session-management-service
+docker compose up -d db mq keycloak user-service mission-management-service session-management-service api-gateway
 ```
 
 La primera vez compila las imágenes .NET (puede tardar varios minutos).
@@ -83,8 +85,9 @@ URLs útiles:
 | Servicio | URL |
 |----------|-----|
 | Keycloak | http://localhost:8081 |
-| MissionManagement | http://localhost:5260 |
-| SessionManagement | http://localhost:5278 |
+| API Gateway (clientes) | http://localhost:5200 |
+| MissionManagement *(directo)* | http://localhost:5260 |
+| SessionManagement *(directo)* | http://localhost:5278 |
 
 Keycloak importa solo el realm **`umbral-realm`** y el cliente **`umbral-player-mobile`** desde `infra/keycloak/umbral-realm.json` (ya no hace falta crearlos a mano en la consola).
 
@@ -185,7 +188,7 @@ Con el operador y una sesión live activa, `IsLocked` vendrá del backend. Mient
 | CORS / registro solo falla en **navegador (web)** | El bundler web suele usar `:8082` (Keycloak ocupa `:8081`). En Development las APIs permiten cualquier `http://localhost:*`. Tras cambiar CORS en el backend: `docker compose build mission-management-service session-management-service` y `docker compose up -d` esos servicios. En Expo Go o emulador nativo no aplica CORS. |
 | Error al crear equipo | `session-management-service`; logs: `docker compose logs session-management-service` |
 | Expo no ve el `.env` | Reinicia `npm start` desde `PlayerMobile/` |
-| Teléfono no conecta | IP de la PC en `.env`, mismo WiFi, firewall permite 5260, 5278, 8081 |
+| Teléfono no conecta | IP de la PC en `.env`, mismo WiFi, firewall permite 5200, 8081 |
 
 Ver logs:
 
@@ -212,7 +215,7 @@ docker compose --profile full up -d --build
 
 ```powershell
 # Solo backends + app manual
-docker compose up -d db mq keycloak mission-management-service session-management-service
+docker compose up -d db mq keycloak user-service mission-management-service session-management-service api-gateway
 cd PlayerMobile
 npm install
 npm start

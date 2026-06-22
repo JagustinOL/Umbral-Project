@@ -17,7 +17,7 @@ export class AuthApiError extends Error {
 }
 
 const userApiBaseUrl = (
-  process.env.NEXT_PUBLIC_USER_API_URL ?? 'http://localhost:5284'
+  process.env.NEXT_PUBLIC_USER_API_URL ?? 'http://localhost:5200'
 ).replace(/\/+$/, '')
 
 export async function loginWithCredentials(
