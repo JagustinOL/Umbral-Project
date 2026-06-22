@@ -4,12 +4,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.6" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MissionManagement.Application\MissionManagement.Application.csproj" />
     <ProjectReference Include="..\MissionManagement.Domain\MissionManagement.Domain.csproj" />
-    <ProjectReference Include="..\..\Umbral.Shared\Umbral.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

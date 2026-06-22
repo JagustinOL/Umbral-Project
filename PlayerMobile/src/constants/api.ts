@@ -1,4 +1,6 @@
 export const API_CONFIG = {
+  userServiceBaseUrl:
+    process.env.EXPO_PUBLIC_USER_API_URL ?? 'http://localhost:5284',
   missionManagementBaseUrl:
     process.env.EXPO_PUBLIC_MISSION_API_URL ?? 'http://localhost:5260',
   sessionManagementBaseUrl:

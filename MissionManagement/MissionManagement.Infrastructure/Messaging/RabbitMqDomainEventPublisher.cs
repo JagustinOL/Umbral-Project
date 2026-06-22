@@ -2,8 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Domain.Common;
-using Umbral.Shared.Messaging;
-using Umbral.Shared.Messaging.IntegrationEvents;
+using MissionManagement.Infrastructure.Messaging;
 
 namespace MissionManagement.Infrastructure.Messaging;
 

@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -7,23 +7,21 @@ using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Hints;
 using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Domain.Repositories;
-using MissionManagement.Infrastructure.External.Keycloak;
 using MissionManagement.Infrastructure.External.SessionManagement;
+using MissionManagement.Infrastructure.External.UserService;
 using MissionManagement.Infrastructure.Messaging;
 using MissionManagement.Infrastructure.Persistence;
 using MissionManagement.Infrastructure.Repositories;
-using MissionManagement.WebApi.Hosting;
+using MissionManagement.WebApi;
+using MissionManagement.WebApi.Auth;
 using Npgsql;
-using Umbral.Shared;
-using Umbral.Shared.Auth;
-using Umbral.Shared.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddUmbralSerilog("MissionManagement");
+builder.AddServiceSerilog("MissionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddUmbralControllers();
+builder.Services.AddServiceControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
@@ -53,8 +51,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddUmbralAuthentication(builder.Configuration);
-builder.Services.AddUmbralCrossCutting(typeof(CreateMissionCommand));
+builder.Services.AddUserServiceAuthentication(builder.Configuration);
+builder.Services.AddServiceCrossCutting(typeof(CreateMissionCommand));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateMissionCommand).Assembly));
@@ -89,16 +87,14 @@ builder.Services.AddHttpClient<ISessionValidationService, HttpSessionValidationS
     client.BaseAddress = new Uri(sessionManagementBaseUrl, UriKind.Absolute);
 });
 
-builder.Services.AddOptions<KeycloakOptions>()
-    .Bind(builder.Configuration.GetSection(KeycloakOptions.SectionName))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+var userServiceBaseUrl = builder.Configuration["UserService:BaseUrl"];
+if (string.IsNullOrWhiteSpace(userServiceBaseUrl))
+    throw new InvalidOperationException("No se encontró UserService:BaseUrl para validar operadores.");
 
-builder.Services.AddHttpClient<IIdentityService, KeycloakIdentityService>();
-builder.Services.AddHttpClient<IPlayerIdentityService, KeycloakPlayerIdentityService>();
-builder.Services.AddHttpClient<IAuthService, KeycloakAuthService>();
-builder.Services.AddHttpClient(nameof(KeycloakWebClientInitializer));
-builder.Services.AddHostedService<KeycloakBootstrapHostedService>();
+builder.Services.AddHttpClient<IOperatorValidationService, HttpOperatorValidationService>(client =>
+{
+    client.BaseAddress = new Uri(userServiceBaseUrl, UriKind.Absolute);
+});
 
 var app = builder.Build();
 
@@ -121,7 +117,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseUmbralCrossCutting();
+app.UseServiceCrossCutting();
 app.MapControllers();
+app.MapGet("/health", [AllowAnonymous] () => Results.Ok("MissionManagement Service is running"));
 
 app.Run();

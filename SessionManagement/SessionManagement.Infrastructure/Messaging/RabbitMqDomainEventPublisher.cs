@@ -3,8 +3,7 @@ using Microsoft.Extensions.Logging;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Events;
-using Umbral.Shared.Messaging;
-using Umbral.Shared.Messaging.IntegrationEvents;
+using SessionManagement.Infrastructure.Messaging;
 
 namespace SessionManagement.Infrastructure.Messaging;
 

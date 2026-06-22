@@ -2,7 +2,7 @@ using MediatR;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
 using ScoringAudit.Domain.ValueObjects;
-using Umbral.Shared.Messaging.IntegrationEvents;
+using ScoringAudit.Application.Messaging;
 
 namespace ScoringAudit.Application.Events;
 
