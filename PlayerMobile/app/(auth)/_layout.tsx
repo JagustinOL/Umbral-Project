@@ -6,7 +6,7 @@ export default function AuthLayout() {
 
   if (!isLoading && session) {
     if (session.teamId) {
-      return <Redirect href="/(main)/team-dashboard" />;
+      return <Redirect href="/(main)/(tabs)/team" />;
     }
     return <Redirect href="/(main)/no-team" />;
   }

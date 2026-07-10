@@ -31,7 +31,7 @@ export default function NoTeamScreen() {
 
   useEffect(() => {
     if (session?.teamId) {
-      router.replace('/(main)/team-dashboard');
+      router.replace('/(main)/(tabs)/team');
     }
   }, [session?.teamId]);
   const [teamName, setTeamName] = useState('');
@@ -143,9 +143,9 @@ export default function NoTeamScreen() {
         </View>
 
         <PrimaryButton
-          label="My profile"
+          label="Mi perfil"
           variant="ghost"
-          onPress={() => router.push('/(main)/profile')}
+          onPress={() => router.push('/(main)/(tabs)/profile')}
         />
         <PrimaryButton
           label="Sign out"

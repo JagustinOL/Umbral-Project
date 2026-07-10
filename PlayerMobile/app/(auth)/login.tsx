@@ -40,7 +40,7 @@ export default function LoginScreen() {
     try {
       const session = await login(email, password);
       if (session.teamId) {
-        router.replace('/(main)/team-dashboard');
+        router.replace('/(main)/(tabs)/team');
       } else {
         router.replace('/(main)/no-team');
       }

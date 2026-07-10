@@ -38,7 +38,7 @@ export function LiveSessionCard({
         <Text style={styles.blocked}>{blockReason}</Text>
       ) : null}
       <PrimaryButton
-        label={joinable ? 'Request session join' : 'Join not available'}
+        label={joinable ? 'Solicitar unirse' : 'Unión no disponible'}
         variant={joinable ? 'primary' : 'ghost'}
         locked={!joinable}
         loading={loading}

@@ -8,5 +8,11 @@ export default function MainLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="no-team" />
+      <Stack.Screen name="session/[sessionId]" />
+    </Stack>
+  );
 }
