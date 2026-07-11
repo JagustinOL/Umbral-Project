@@ -59,7 +59,7 @@ public sealed class GetTeamCurrentStageHandler : IRequestHandler<GetTeamCurrentS
                 NodeId: x.NodeId,
                 ExecutionOrder: x.ExecutionOrder,
                 ValidationType: ParseType(x.NodeType),
-                ExpectedValue: x.ExpectedValue))
+                ExpectedAnswers: x.ExpectedAnswers))
             .OrderBy(x => x.ExecutionOrder)
             .ToList();
     }

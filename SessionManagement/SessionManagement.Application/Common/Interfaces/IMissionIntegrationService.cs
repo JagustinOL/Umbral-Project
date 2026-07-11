@@ -22,5 +22,10 @@ public interface IMissionIntegrationService
         Guid missionId,
         Guid nodeId,
         CancellationToken cancellationToken = default);
+
+    Task<PlayerNodeContentData> GetNodePlayerContentAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default);
 }
 

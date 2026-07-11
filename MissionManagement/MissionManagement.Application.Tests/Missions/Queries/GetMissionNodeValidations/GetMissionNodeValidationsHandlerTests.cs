@@ -38,7 +38,7 @@ public sealed class GetMissionNodeValidationsHandlerTests
         var result = await handler.Handle(new GetMissionNodeValidationsQuery(mission.Id), CancellationToken.None);
 
         result.Should().HaveCount(2);
-        result[0].ExpectedValue.Should().Be("A");
-        result[1].ExpectedValue.Should().Be("CODE1");
+        result[0].ExpectedAnswers.Should().Equal("A");
+        result[1].ExpectedAnswers.Should().Equal("CODE1");
     }
 }

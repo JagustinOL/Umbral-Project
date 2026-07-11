@@ -3,6 +3,7 @@ import type {
   RankingEntry,
   SubmissionResult,
   SubmittedEvidence,
+  TeamCurrentNodeContent,
   TeamCurrentStage,
   TeamFinalSummary,
   TeamHint,
@@ -27,11 +28,25 @@ export async function getTeamCurrentStage(
   );
 }
 
+export async function getTeamCurrentNodeContent(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamCurrentNodeContent> {
+  return apiRequest<TeamCurrentNodeContent>(
+    API_PATHS.teamCurrentNodeContent(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
+    { baseUrl: sessionBase },
+  );
+}
+
 export async function submitTriviaAnswer(input: {
   sessionId: string;
   teamId: string;
   nodeId: string;
   answer: string;
+  questionIndex: number;
 }): Promise<SubmissionResult> {
   return apiRequest<SubmissionResult>(
     API_PATHS.submitTrivia(input.sessionId, input.teamId),
@@ -41,6 +56,7 @@ export async function submitTriviaAnswer(input: {
       body: {
         nodeId: normalizeGuid(input.nodeId),
         answer: input.answer.trim(),
+        questionIndex: input.questionIndex,
       },
     },
   );

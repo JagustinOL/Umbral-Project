@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { FormTextField } from '../FormTextField';
 import { PrimaryButton } from '../PrimaryButton';
+import { GameplayFeedbackBanner } from './GameplayFeedbackBanner';
+import { TriviaQuestionPanel } from './TriviaQuestionPanel';
 import { colors, typography } from '../../constants/theme';
-import type { TeamCurrentStage } from '../../types/gameplay';
+import type { TeamCurrentNodeContent, TeamCurrentStage } from '../../types/gameplay';
 import * as gameplayService from '../../services/gameplayService';
+import { showUserAlert } from '../../utils/confirm';
 
 type PlayPanelProps = {
   sessionId: string;
@@ -14,6 +17,12 @@ type PlayPanelProps = {
   onSubmitted: () => void;
 };
 
+type FeedbackState = {
+  tone: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+} | null;
+
 export function PlayPanel({
   sessionId,
   teamId,
@@ -21,37 +30,97 @@ export function PlayPanel({
   canSubmit,
   onSubmitted,
 }: PlayPanelProps) {
-  const [answer, setAnswer] = useState('');
+  const [nodeContent, setNodeContent] = useState<TeamCurrentNodeContent | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [code, setCode] = useState('');
-  const [evidence, setEvidence] = useState('');
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
 
   const nodeId = stage?.currentNodeId;
   const nodeType = stage?.currentNodeType?.toLowerCase() ?? '';
 
-  const handleTrivia = async () => {
-    if (!nodeId || !answer.trim()) {
+  const loadNodeContent = useCallback(async () => {
+    if (!nodeId || stage?.isCompleted) {
+      setNodeContent(null);
       return;
     }
+
+    setContentLoading(true);
+    try {
+      const content = await gameplayService.getTeamCurrentNodeContent(
+        sessionId,
+        teamId,
+      );
+      setNodeContent(content);
+      setSelectedOption(null);
+    } catch (error) {
+      setNodeContent(null);
+      showUserAlert(
+        'No se pudo cargar la etapa',
+        error instanceof Error ? error.message : 'Request failed.',
+      );
+    } finally {
+      setContentLoading(false);
+    }
+  }, [nodeId, sessionId, stage?.isCompleted, teamId]);
+
+  useEffect(() => {
+    void loadNodeContent();
+  }, [loadNodeContent]);
+
+  const currentQuestionIndex =
+    nodeContent?.currentQuestionIndex ?? 0;
+  const currentQuestion =
+    nodeContent?.questions?.[currentQuestionIndex] ?? null;
+
+  const handleTrivia = async () => {
+    if (!nodeId || !selectedOption) {
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await gameplayService.submitTriviaAnswer({
         sessionId,
         teamId,
         nodeId,
-        answer,
+        answer: selectedOption,
+        questionIndex: currentQuestionIndex,
       });
-      Alert.alert(
-        result.isCorrect ? '¡Correcto!' : 'Incorrecto',
-        result.isCorrect
-          ? `+${result.awardedPoints} pts. Etapa superada.`
-          : 'Inténtalo de nuevo.',
-      );
-      setAnswer('');
+
+      if (result.isCorrect && result.nodeCompleted) {
+        setFeedback({
+          tone: 'success',
+          title: '¡Trivia completada!',
+          message: `Etapa superada. +${result.awardedPoints} pts.`,
+        });
+        showUserAlert(
+          '¡Trivia completada!',
+          `Etapa superada. +${result.awardedPoints} pts.`,
+        );
+      } else if (result.isCorrect) {
+        setFeedback({
+          tone: 'success',
+          title: '¡Correcto!',
+          message: 'Continúa con la siguiente pregunta.',
+        });
+        showUserAlert('¡Correcto!', 'Continúa con la siguiente pregunta.');
+      } else {
+        setFeedback({
+          tone: 'error',
+          title: 'Incorrecto',
+          message: 'Inténtalo de nuevo.',
+        });
+        showUserAlert('Incorrecto', 'Inténtalo de nuevo.');
+      }
+
+      setSelectedOption(null);
       onSubmitted();
+      await loadNodeContent();
     } catch (error) {
-      Alert.alert(
-        'Submission failed',
+      showUserAlert(
+        'Error al enviar',
         error instanceof Error ? error.message : 'Request failed.',
       );
     } finally {
@@ -71,45 +140,35 @@ export function PlayPanel({
         nodeId,
         foundCode: code,
       });
-      Alert.alert(
-        result.isCorrect ? '¡Código válido!' : 'Código inválido',
-        result.isCorrect
-          ? `Tesoro encontrado. +${result.awardedPoints} pts.`
-          : 'Escanea o ingresa el código QR correcto.',
-      );
+
+      if (result.isCorrect) {
+        setFeedback({
+          tone: 'success',
+          title: '¡Tesoro encontrado!',
+          message: `Búsqueda completada. +${result.awardedPoints} pts.`,
+        });
+        showUserAlert(
+          '¡Tesoro encontrado!',
+          `Búsqueda completada. +${result.awardedPoints} pts.`,
+        );
+      } else {
+        setFeedback({
+          tone: 'error',
+          title: 'Código inválido',
+          message: 'Escanea o ingresa el código QR correcto.',
+        });
+        showUserAlert(
+          'Código inválido',
+          'Escanea o ingresa el código QR correcto.',
+        );
+      }
+
       setCode('');
       onSubmitted();
+      await loadNodeContent();
     } catch (error) {
-      Alert.alert(
-        'Code rejected',
-        error instanceof Error ? error.message : 'Request failed.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEvidence = async () => {
-    if (!nodeId || !evidence.trim()) {
-      return;
-    }
-    setLoading(true);
-    try {
-      const result = await gameplayService.submitEvidence({
-        sessionId,
-        teamId,
-        nodeId,
-        content: evidence,
-      });
-      Alert.alert(
-        'Evidencia enviada',
-        `Estado: ${result.status}. Esperando revisión del operador.`,
-      );
-      setEvidence('');
-      onSubmitted();
-    } catch (error) {
-      Alert.alert(
-        'Upload failed',
+      showUserAlert(
+        'Error al enviar código',
         error instanceof Error ? error.message : 'Request failed.',
       );
     } finally {
@@ -124,10 +183,11 @@ export function PlayPanel({
   if (stage.isCompleted) {
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>Todas las etapas completadas</Text>
-        <Text style={styles.muted}>
-          Espera a que el operador finalice la sesión o revisa el ranking.
-        </Text>
+        <GameplayFeedbackBanner
+          tone="success"
+          title="¡Misión completada!"
+          message="Todas las etapas fueron superadas. Espera a que el operador finalice la sesión o revisa el ranking."
+        />
       </View>
     );
   }
@@ -139,8 +199,16 @@ export function PlayPanel({
         Nodo #{stage.currentExecutionOrder ?? '—'}
       </Text>
       <Text style={styles.meta}>
-        Tipo: {stage.currentNodeType ?? 'Desconocido'} · ID {nodeId?.slice(0, 8)}…
+        Tipo: {stage.currentNodeType ?? 'Desconocido'}
       </Text>
+
+      {feedback ? (
+        <GameplayFeedbackBanner
+          tone={feedback.tone}
+          title={feedback.title}
+          message={feedback.message}
+        />
+      ) : null}
 
       {!canSubmit ? (
         <Text style={styles.blocked}>
@@ -148,27 +216,29 @@ export function PlayPanel({
         </Text>
       ) : null}
 
-      {nodeType.includes('trivia') ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Respuesta de trivia</Text>
-          <FormTextField
-            label="Tu respuesta"
-            value={answer}
-            onChangeText={setAnswer}
-            editable={canSubmit}
-          />
-          <PrimaryButton
-            label="Enviar respuesta"
-            loading={loading}
-            locked={!canSubmit}
-            onPress={handleTrivia}
-          />
-        </View>
+      {contentLoading ? (
+        <ActivityIndicator color={colors.primary} size="large" />
+      ) : null}
+
+      {nodeType.includes('trivia') && currentQuestion && nodeContent ? (
+        <TriviaQuestionPanel
+          question={currentQuestion}
+          questionIndex={currentQuestionIndex}
+          totalQuestions={nodeContent.totalQuestions}
+          selectedOption={selectedOption}
+          loading={loading}
+          canSubmit={canSubmit}
+          onSelectOption={setSelectedOption}
+          onSubmit={handleTrivia}
+        />
       ) : null}
 
       {nodeType.includes('treasure') ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Código de búsqueda del tesoro</Text>
+          <Text style={styles.sectionTitle}>Búsqueda del tesoro</Text>
+          {nodeContent?.instructions ? (
+            <Text style={styles.instructions}>{nodeContent.instructions}</Text>
+          ) : null}
           <FormTextField
             label="Código QR / tesoro"
             value={code}
@@ -184,24 +254,6 @@ export function PlayPanel({
           />
         </View>
       ) : null}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Evidencia manual</Text>
-        <FormTextField
-          label="Descripción o notas"
-          value={evidence}
-          onChangeText={setEvidence}
-          multiline
-          editable={canSubmit}
-        />
-        <PrimaryButton
-          label="Enviar evidencia para revisión"
-          variant="ghost"
-          loading={loading}
-          locked={!canSubmit}
-          onPress={handleEvidence}
-        />
-      </View>
     </View>
   );
 }
@@ -240,6 +292,12 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  instructions: {
+    color: colors.textMuted,
+    fontSize: typography.body,
+    lineHeight: 22,
+    marginBottom: 12,
   },
   muted: {
     color: colors.textMuted,

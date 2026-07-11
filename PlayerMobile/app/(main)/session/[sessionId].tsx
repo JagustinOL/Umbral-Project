@@ -37,7 +37,7 @@ export default function LiveSessionScreen() {
 
   useEffect(() => {
     if (!teamId) {
-      router.replace('/(main)/no-team');
+      router.replace('/(main)/(tabs)/team');
     }
   }, [teamId]);
 

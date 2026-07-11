@@ -22,7 +22,7 @@ public sealed class DtoCoverageTests
         _ = new TriviaQuestionDto("Q", ["A", "B"], 0);
         _ = new TriviaNodeDto(nodeId, missionId, nodeId, "Trivia", 1, 10, [new TriviaQuestionDto("Q", ["A", "B"], 0)]);
         _ = new TreasureHuntNodeDto(nodeId, missionId, nodeId, "TreasureHunt", 1, 10, "I", "C", new GpsCoordinateDto(1, 2));
-        _ = new MissionNodeValidationDto(nodeId, "Trivia", 1, 10, "A");
+        _ = new MissionNodeValidationDto(nodeId, "Trivia", 1, 10, ["A"]);
 
         var ex = new ExternalDependencyException("dep fail");
         ex.Message.Should().Contain("dep");

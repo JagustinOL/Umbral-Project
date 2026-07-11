@@ -13,6 +13,7 @@ import { LiveSessionCard } from '../../../src/components/LiveSessionCard';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { colors, typography } from '../../../src/constants/theme';
 import { useAuth } from '../../../src/hooks/useAuth';
+import { useTabBarInsets } from '../../../src/hooks/useTabBarInsets';
 import { useTeamWorkspace } from '../../../src/hooks/useTeamWorkspace';
 import * as liveSessionService from '../../../src/services/liveSessionService';
 import type { LiveSessionSummary } from '../../../src/types/liveSession';
@@ -23,9 +24,11 @@ import { normalizeGuid } from '../../../src/utils/uuid';
 export default function SessionsTabScreen() {
   const { session } = useAuth();
   const { team, loadTeam, isLoading: teamLoading } = useTeamWorkspace();
+  const { scrollBottomPadding } = useTabBarInsets();
   const [sessions, setSessions] = useState<LiveSessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
+  const [requestedSessionIds, setRequestedSessionIds] = useState<string[]>([]);
 
   const teamId = session?.teamId;
   const currentSessionRef = team?.currentSessionRef ?? null;
@@ -73,11 +76,25 @@ export default function SessionsTabScreen() {
 
   useEffect(() => {
     if (!teamId) {
-      router.replace('/(main)/no-team');
       return;
     }
     void loadSessions();
   }, [teamId, loadSessions]);
+
+  useEffect(() => {
+    if (!currentSessionRef) {
+      return;
+    }
+    setRequestedSessionIds((current) =>
+      current.some(
+        (id) =>
+          normalizeGuid(id).toLowerCase() ===
+          normalizeGuid(currentSessionRef).toLowerCase(),
+      )
+        ? current
+        : [...current, currentSessionRef],
+    );
+  }, [currentSessionRef]);
 
   const handleRefresh = async () => {
     await Promise.all([loadSessions(), loadTeam()]);
@@ -88,20 +105,37 @@ export default function SessionsTabScreen() {
       return;
     }
 
+    const normalizedTargetId = normalizeGuid(target.sessionId).toLowerCase();
+    if (
+      joiningSessionId ||
+      requestedSessionIds.some(
+        (id) => normalizeGuid(id).toLowerCase() === normalizedTargetId,
+      )
+    ) {
+      return;
+    }
+
     setJoiningSessionId(target.sessionId);
     try {
       await liveSessionService.requestSessionJoin({
         joinCode: target.joinCode,
         teamId,
       });
+      setRequestedSessionIds((current) =>
+        current.some(
+          (id) => normalizeGuid(id).toLowerCase() === normalizedTargetId,
+        )
+          ? current
+          : [...current, target.sessionId],
+      );
       await loadTeam();
       showUserAlert(
-        'Join requested',
-        'Your team leader can confirm once the operator accepts the team.',
+        'Solicitud enviada',
+        'Espera a que el operador apruebe la unión de tu equipo.',
       );
     } catch (error) {
       showUserAlert(
-        'Join failed',
+        'No se pudo unir',
         error instanceof Error ? error.message : 'Unable to join session.',
       );
     } finally {
@@ -117,13 +151,34 @@ export default function SessionsTabScreen() {
   };
 
   if (!teamId) {
-    return null;
+    return (
+      <InvestigationBackground>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: scrollBottomPadding },
+          ]}
+        >
+          <Text style={styles.screenTitle}>Sesiones</Text>
+          <Text style={styles.subtitle}>
+            Para unirte a misiones activas necesitas formar parte de un equipo.
+          </Text>
+          <Text style={styles.empty}>
+            Ve a la pestaña Equipo para crear uno nuevo o solicitar unirte con
+            un código de acceso.
+          </Text>
+        </ScrollView>
+      </InvestigationBackground>
+    );
   }
 
   return (
     <InvestigationBackground>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: scrollBottomPadding },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading || teamLoading}
@@ -182,6 +237,11 @@ export default function SessionsTabScreen() {
               teamIsLocked={isLocked}
               teamCurrentSessionRef={currentSessionRef}
               loading={joiningSessionId === entry.sessionId}
+              joinRequestSent={requestedSessionIds.some(
+                (id) =>
+                  normalizeGuid(id).toLowerCase() ===
+                  normalizeGuid(entry.sessionId).toLowerCase(),
+              )}
               onRequestJoin={() => handleRequestJoin(entry)}
             />
           ))
@@ -192,7 +252,7 @@ export default function SessionsTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 48 },
+  scroll: {},
   screenTitle: {
     color: colors.text,
     fontSize: typography.title,

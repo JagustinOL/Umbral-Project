@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { colors, typography } from '../../../src/constants/theme';
+import { useTabBarInsets } from '../../../src/hooks/useTabBarInsets';
 
 export default function TabsLayout() {
+  const { tabBarHeight, tabBarPaddingBottom } = useTabBarInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -9,8 +12,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 62,
-          paddingBottom: 8,
+          height: tabBarHeight,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.accent,

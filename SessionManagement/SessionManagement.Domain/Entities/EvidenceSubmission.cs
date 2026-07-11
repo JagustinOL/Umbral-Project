@@ -34,6 +34,11 @@ public sealed class EvidenceSubmission : Entity
     /// </summary>
     public string Payload { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// Índice de pregunta trivia respondida. Null para búsqueda del tesoro u otros tipos.
+    /// </summary>
+    public int? QuestionIndex { get; private set; }
+
     public DateTime SubmittedAtUtc { get; private set; }
 
     /// <summary>
@@ -57,7 +62,8 @@ public sealed class EvidenceSubmission : Entity
     internal static EvidenceSubmission Create(
         Guid teamId,
         Guid missionNodeId,
-        string payload)
+        string payload,
+        int? questionIndex = null)
     {
         if (teamId == Guid.Empty)
             throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
@@ -65,6 +71,8 @@ public sealed class EvidenceSubmission : Entity
             throw new ArgumentException("MissionNodeId no puede ser vacío.", nameof(missionNodeId));
         if (string.IsNullOrWhiteSpace(payload))
             throw new ArgumentException("El payload de la evidencia no puede estar vacío.", nameof(payload));
+        if (questionIndex is < 0)
+            throw new ArgumentOutOfRangeException(nameof(questionIndex), "QuestionIndex no puede ser negativo.");
 
         return new EvidenceSubmission
         {
@@ -72,6 +80,7 @@ public sealed class EvidenceSubmission : Entity
             TeamId = teamId,
             MissionNodeId = missionNodeId,
             Payload = payload.Trim(),
+            QuestionIndex = questionIndex,
             SubmittedAtUtc = DateTime.UtcNow,
             IsValid = null
         };

@@ -340,7 +340,8 @@ public sealed class LiveSession : AggregateRoot
     public EvidenceSubmission AcceptEvidence(
         Guid teamId,
         Guid missionNodeId,
-        string payload)
+        string payload,
+        int? questionIndex = null)
     {
         // RB-03
         if (Status != LiveSessionStatus.Active)
@@ -359,73 +360,24 @@ public sealed class LiveSession : AggregateRoot
             throw new SessionDomainException(
                 $"El equipo {teamId} no está registrado en la sesión {Id}.");
 
-        var evidence = EvidenceSubmission.Create(teamId, missionNodeId, payload);
+        var evidence = EvidenceSubmission.Create(teamId, missionNodeId, payload, questionIndex);
         _evidenceSubmissions.Add(evidence);
         return evidence;
     }
 
-    public Guid? GetCurrentNodeForTeam(
-        Guid teamId,
-        IReadOnlyList<NodeValidationRule> validationRules)
-    {
-        if (!_registeredTeamIds.Contains(teamId))
-            throw new SessionDomainException($"El equipo {teamId} no está registrado en la sesión {Id}.");
-        if (validationRules is null || validationRules.Count == 0)
-            throw new ArgumentException("Las reglas de validación no pueden estar vacías.", nameof(validationRules));
-
-        var completedNodeIds = _evidenceSubmissions
-            .Where(e => e.TeamId == teamId && e.IsValid == true)
-            .Select(e => e.MissionNodeId)
-            .Distinct()
-            .ToHashSet();
-
-        var currentRule = validationRules
-            .OrderBy(x => x.ExecutionOrder)
-            .FirstOrDefault(x => !completedNodeIds.Contains(x.NodeId));
-
-        return currentRule?.NodeId;
-    }
-
-    public SubmissionResult SubmitTriviaAnswer(
-        Guid teamId,
-        Guid nodeId,
-        string answer,
-        IReadOnlyList<NodeValidationRule> validationRules)
-    {
-        return SubmitByValidationType(
-            teamId: teamId,
-            nodeId: nodeId,
-            payload: answer,
-            expectedType: NodeValidationType.Trivia,
-            validationRules: validationRules);
-    }
-
-    public SubmissionResult SubmitTreasureHuntCode(
-        Guid teamId,
-        Guid nodeId,
-        string foundCode,
-        IReadOnlyList<NodeValidationRule> validationRules)
-    {
-        return SubmitByValidationType(
-            teamId: teamId,
-            nodeId: nodeId,
-            payload: foundCode,
-            expectedType: NodeValidationType.TreasureHunt,
-            validationRules: validationRules);
-    }
-
-    /// <summary>
-    /// Marca una evidencia previamente aceptada como válida y dispara
-    /// el evento EvidenceValidated hacia ScoringAudit.
-    ///
-    /// Llamado por el Application Service tras la validación exitosa
-    /// de EvidenceValidatorService.
-    /// </summary>
-    public void MarkEvidenceAsValid(Guid evidenceId)
+    public void MarkEvidenceAsValid(Guid evidenceId, bool publishScoreEvent = true)
     {
         var evidence = FindEvidence(evidenceId);
         evidence.MarkAsValid();
 
+        if (!publishScoreEvent)
+            return;
+
+        PublishEvidenceValidatedScore(evidence);
+    }
+
+    private void PublishEvidenceValidatedScore(EvidenceSubmission evidence)
+    {
         var node = _allowedNodes.First(n => n.NodeId == evidence.MissionNodeId);
         double elapsedSeconds = StartedAtUtc.HasValue
             ? (DateTime.UtcNow - StartedAtUtc.Value).TotalSeconds
@@ -442,6 +394,56 @@ public sealed class LiveSession : AggregateRoot
             DifficultyMultiplier = DifficultyMultiplier,
             ElapsedSeconds = elapsedSeconds
         });
+    }
+
+    public Guid? GetCurrentNodeForTeam(
+        Guid teamId,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException($"El equipo {teamId} no está registrado en la sesión {Id}.");
+        if (validationRules is null || validationRules.Count == 0)
+            throw new ArgumentException("Las reglas de validación no pueden estar vacías.", nameof(validationRules));
+
+        var orderedRules = validationRules.OrderBy(x => x.ExecutionOrder).ToList();
+        foreach (var rule in orderedRules)
+        {
+            if (!IsNodeCompletedForTeam(teamId, rule))
+                return rule.NodeId;
+        }
+
+        return null;
+    }
+
+    public SubmissionResult SubmitTriviaAnswer(
+        Guid teamId,
+        Guid nodeId,
+        string answer,
+        int questionIndex,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        return SubmitByValidationType(
+            teamId: teamId,
+            nodeId: nodeId,
+            payload: answer,
+            questionIndex: questionIndex,
+            expectedType: NodeValidationType.Trivia,
+            validationRules: validationRules);
+    }
+
+    public SubmissionResult SubmitTreasureHuntCode(
+        Guid teamId,
+        Guid nodeId,
+        string foundCode,
+        IReadOnlyList<NodeValidationRule> validationRules)
+    {
+        return SubmitByValidationType(
+            teamId: teamId,
+            nodeId: nodeId,
+            payload: foundCode,
+            questionIndex: null,
+            expectedType: NodeValidationType.TreasureHunt,
+            validationRules: validationRules);
     }
 
     /// <summary>
@@ -594,6 +596,7 @@ public sealed class LiveSession : AggregateRoot
         Guid teamId,
         Guid nodeId,
         string payload,
+        int? questionIndex,
         NodeValidationType expectedType,
         IReadOnlyList<NodeValidationRule> validationRules)
     {
@@ -609,16 +612,13 @@ public sealed class LiveSession : AggregateRoot
         if (currentRule is null)
             throw new SessionDomainException($"El equipo {teamId} ya completó todos los nodos.");
 
-        // RN-04
-        bool alreadyClosed = _evidenceSubmissions.Any(e =>
-            e.TeamId == teamId &&
-            e.MissionNodeId == nodeId &&
-            e.IsValid == true);
-
-        if (alreadyClosed)
+        if (IsNodeCompletedForTeam(teamId, currentRule))
             throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
 
-        // RN-11
+        var submittedRule = orderedRules.FirstOrDefault(r => r.NodeId == nodeId);
+        if (submittedRule is not null && IsNodeCompletedForTeam(teamId, submittedRule))
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+
         if (currentRule.NodeId != nodeId)
             throw new SessionDomainException(
                 $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId} (RN-11).");
@@ -626,18 +626,26 @@ public sealed class LiveSession : AggregateRoot
         if (currentRule.ValidationType != expectedType)
             throw new SessionDomainException("Tipo de validación no coincide con el nodo actual.");
 
-        var evidence = AcceptEvidence(teamId, nodeId, payload);
+        var resolvedQuestionIndex = ResolveQuestionIndex(teamId, currentRule, questionIndex);
+        var expectedAnswer = currentRule.ExpectedAnswers[resolvedQuestionIndex];
 
-        // RN-12
+        var evidence = AcceptEvidence(teamId, nodeId, payload, resolvedQuestionIndex);
+
         bool isCorrect = string.Equals(
             payload.Trim(),
-            currentRule.ExpectedValue.Trim(),
+            expectedAnswer.Trim(),
             StringComparison.OrdinalIgnoreCase);
 
+        var nodeCompleted = false;
         if (isCorrect)
-            MarkEvidenceAsValid(evidence.Id);
+        {
+            nodeCompleted = resolvedQuestionIndex >= currentRule.ExpectedAnswers.Count - 1;
+            MarkEvidenceAsValid(evidence.Id, publishScoreEvent: nodeCompleted);
+        }
         else
+        {
             MarkEvidenceAsInvalid(evidence.Id, "Respuesta/código incorrecto.");
+        }
 
         var nextRule = ResolveCurrentRule(teamId, orderedRules);
         var baseScore = _allowedNodes.FirstOrDefault(x => x.NodeId == nodeId)?.BaseScore ?? 0;
@@ -645,21 +653,71 @@ public sealed class LiveSession : AggregateRoot
         return new SubmissionResult(
             IsCorrect: isCorrect,
             CurrentNodeId: nodeId,
-            NextNodeId: nextRule?.NodeId,
-            AwardedPoints: isCorrect ? baseScore : 0);
+            NextNodeId: nodeCompleted ? nextRule?.NodeId : nodeId,
+            AwardedPoints: nodeCompleted ? baseScore : 0,
+            AnsweredQuestionIndex: resolvedQuestionIndex,
+            TotalQuestions: currentRule.ExpectedAnswers.Count,
+            NodeCompleted: nodeCompleted);
+    }
+
+    private int ResolveQuestionIndex(
+        Guid teamId,
+        NodeValidationRule rule,
+        int? requestedQuestionIndex)
+    {
+        if (rule.ValidationType == NodeValidationType.TreasureHunt)
+            return 0;
+
+        var nextQuestionIndex = GetNextQuestionIndex(teamId, rule.NodeId, rule.ExpectedAnswers.Count);
+        if (nextQuestionIndex >= rule.ExpectedAnswers.Count)
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+
+        if (requestedQuestionIndex.HasValue && requestedQuestionIndex.Value != nextQuestionIndex)
+            throw new SessionDomainException(
+                $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex} (RN-11).");
+
+        return nextQuestionIndex;
+    }
+
+    private int GetNextQuestionIndex(Guid teamId, Guid nodeId, int totalQuestions)
+    {
+        var answeredIndices = _evidenceSubmissions
+            .Where(e =>
+                e.TeamId == teamId &&
+                e.MissionNodeId == nodeId &&
+                e.IsValid == true &&
+                e.QuestionIndex.HasValue)
+            .Select(e => e.QuestionIndex!.Value)
+            .ToHashSet();
+
+        for (var index = 0; index < totalQuestions; index++)
+        {
+            if (!answeredIndices.Contains(index))
+                return index;
+        }
+
+        return totalQuestions;
+    }
+
+    private bool IsNodeCompletedForTeam(Guid teamId, NodeValidationRule rule)
+    {
+        if (rule.ValidationType == NodeValidationType.TreasureHunt)
+        {
+            return _evidenceSubmissions.Any(e =>
+                e.TeamId == teamId &&
+                e.MissionNodeId == rule.NodeId &&
+                e.IsValid == true);
+        }
+
+        return GetNextQuestionIndex(teamId, rule.NodeId, rule.ExpectedAnswers.Count)
+            >= rule.ExpectedAnswers.Count;
     }
 
     private NodeValidationRule? ResolveCurrentRule(
         Guid teamId,
         IReadOnlyList<NodeValidationRule> orderedRules)
     {
-        var completedNodeIds = _evidenceSubmissions
-            .Where(e => e.TeamId == teamId && e.IsValid == true)
-            .Select(e => e.MissionNodeId)
-            .Distinct()
-            .ToHashSet();
-
-        return orderedRules.FirstOrDefault(x => !completedNodeIds.Contains(x.NodeId));
+        return orderedRules.FirstOrDefault(rule => !IsNodeCompletedForTeam(teamId, rule));
     }
 
     private static string GenerateJoinCode()

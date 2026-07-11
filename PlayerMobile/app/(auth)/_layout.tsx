@@ -5,10 +5,7 @@ export default function AuthLayout() {
   const { session, isLoading } = useAuth();
 
   if (!isLoading && session) {
-    if (session.teamId) {
-      return <Redirect href="/(main)/(tabs)/team" />;
-    }
-    return <Redirect href="/(main)/no-team" />;
+    return <Redirect href="/(main)/(tabs)/team" />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

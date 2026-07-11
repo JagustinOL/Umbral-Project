@@ -7,6 +7,6 @@ public sealed record SubmitTriviaAnswerCommand(
     Guid SessionId,
     Guid TeamId,
     Guid NodeId,
-    string Answer
+    string Answer,
+    int QuestionIndex
 ) : IRequest<SubmissionResultDto>;
-

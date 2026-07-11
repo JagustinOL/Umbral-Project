@@ -53,8 +53,8 @@ public sealed class HttpMissionIntegrationServiceTests
 
         var validations = new object[]
         {
-            new { nodeId = nodeId1, nodeType = "Trivia", executionOrder = 1, baseScore = 100, expectedValue = "Bogota" },
-            new { nodeId = nodeId2, nodeType = "TreasureHunt", executionOrder = 2, baseScore = 150, expectedValue = "CODE-123" }
+            new { nodeId = nodeId1, nodeType = "Trivia", executionOrder = 1, baseScore = 100, expectedAnswers = new[] { "Bogota" } },
+            new { nodeId = nodeId2, nodeType = "TreasureHunt", executionOrder = 2, baseScore = 150, expectedAnswers = new[] { "CODE-123" } }
         };
 
         var json = JsonSerializer.Serialize(validations);
@@ -79,7 +79,7 @@ public sealed class HttpMissionIntegrationServiceTests
         result[0].NodeType.Should().Be("Trivia");
         result[0].ExecutionOrder.Should().Be(1);
         result[0].BaseScore.Should().Be(100);
-        result[0].ExpectedValue.Should().Be("Bogota");
+        result[0].ExpectedAnswers.Should().Equal("Bogota");
     }
 
     [Fact]

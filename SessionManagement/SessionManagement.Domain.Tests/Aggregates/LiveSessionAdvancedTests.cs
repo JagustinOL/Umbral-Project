@@ -82,7 +82,7 @@ public sealed class LiveSessionAdvancedTests
         session.RegisterTeam(TeamId);
         session.BeginPreparation();
         session.Start();
-        var rules = new[] { new NodeValidationRule(treasureId, 1, NodeValidationType.TreasureHunt, "CODE-123") };
+        var rules = new[] { new NodeValidationRule(treasureId, 1, NodeValidationType.TreasureHunt, ["CODE-123"]) };
 
         var result = session.SubmitTreasureHuntCode(TeamId, treasureId, "CODE-123", rules);
 

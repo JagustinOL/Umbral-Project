@@ -1,6 +1,7 @@
 using SessionManagement.Application.LiveSessions.Commands.JoinSession;
 using SessionManagement.Application.LiveSessions.Commands.SubmitTreasureHuntCode;
 using SessionManagement.Application.LiveSessions.Commands.SubmitTriviaAnswer;
+using SessionManagement.Application.LiveSessions.Queries.GetTeamCurrentNodeContent;
 using SessionManagement.Application.LiveSessions.Queries.GetTeamCurrentStage;
 using SessionManagement.WebApi.Contracts.LiveSessions;
 using SessionManagement.WebApi.Contracts.Routes;
@@ -13,6 +14,9 @@ public static class LiveSessionMappings
         new(JoinCode: body.JoinCode, TeamId: body.TeamId);
 
     public static GetTeamCurrentStageQuery ToQuery(this LiveSessionTeamRoute route) =>
+        new(SessionId: route.SessionId, TeamId: route.TeamId);
+
+    public static GetTeamCurrentNodeContentQuery ToNodeContentQuery(this LiveSessionTeamRoute route) =>
         new(SessionId: route.SessionId, TeamId: route.TeamId);
 
     public static SubmitTreasureHuntCodeCommand ToCommand(
@@ -31,5 +35,6 @@ public static class LiveSessionMappings
             SessionId: route.SessionId,
             TeamId: route.TeamId,
             NodeId: body.NodeId,
-            Answer: body.Answer);
+            Answer: body.Answer,
+            QuestionIndex: body.QuestionIndex);
 }

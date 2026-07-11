@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start --port 19000",
+    "start": "expo start --port 19000 --host lan",
     "start:go": "powershell -ExecutionPolicy Bypass -File ../scripts/start-expo-lan.ps1",
     "start:web": "expo start --web --port 19000",
     "android": "expo start --android --port 19000",

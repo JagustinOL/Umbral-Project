@@ -20,5 +20,6 @@ public sealed class SubmitTriviaAnswerHandler : IRequestHandler<SubmitTriviaAnsw
             request.TeamId,
             request.NodeId,
             request.Answer,
+            request.QuestionIndex,
             cancellationToken);
 }

@@ -11,12 +11,14 @@ import { InvestigationBackground } from '../../../src/components/InvestigationBa
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { colors, typography } from '../../../src/constants/theme';
 import { useAuth } from '../../../src/hooks/useAuth';
+import { useTabBarInsets } from '../../../src/hooks/useTabBarInsets';
 import * as playerApi from '../../../src/services/playerApi';
 import { confirmDestructive, showUserAlert } from '../../../src/utils/confirm';
 import { isNonEmpty, isValidEmail } from '../../../src/utils/validation';
 
 export default function ProfileTabScreen() {
   const { session, logout, updatePlayerProfile } = useAuth();
+  const { scrollBottomPadding } = useTabBarInsets();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -124,7 +126,12 @@ export default function ProfileTabScreen() {
 
   return (
     <InvestigationBackground>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: scrollBottomPadding },
+        ]}
+      >
         <Text style={styles.title}>Perfil</Text>
         <Text style={styles.subtitle}>
           Datos de tu cuenta de investigador en UMBRAL.
@@ -204,7 +211,7 @@ export default function ProfileTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 48 },
+  scroll: {},
   title: {
     color: colors.text,
     fontSize: typography.title,

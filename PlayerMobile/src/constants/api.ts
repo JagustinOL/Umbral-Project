@@ -24,6 +24,8 @@ export const API_PATHS = {
   liveSessionsJoin: '/api/v1/live-sessions/join',
   teamCurrentStage: (sessionId: string, teamId: string) =>
     `/api/v1/live-sessions/${sessionId}/teams/${teamId}/current-stage`,
+  teamCurrentNodeContent: (sessionId: string, teamId: string) =>
+    `/api/v1/live-sessions/${sessionId}/teams/${teamId}/current-node-content`,
   submitTrivia: (sessionId: string, teamId: string) =>
     `/api/v1/live-sessions/${sessionId}/teams/${teamId}/trivia-answer`,
   submitTreasure: (sessionId: string, teamId: string) =>

@@ -1,3 +1,4 @@
+using SessionManagement.Application.Evidence;
 using SessionManagement.Domain.Exceptions;
 
 namespace SessionManagement.Application.Evidence.Validation.Handlers;
@@ -10,24 +11,22 @@ public sealed class SequentialProgressValidationHandler : EvidenceValidationHand
     protected override void Validate(EvidenceValidationContext context)
     {
         var orderedRules = context.ValidationRules.OrderBy(x => x.ExecutionOrder).ToList();
-        var completedNodeIds = context.Session.EvidenceSubmissions
-            .Where(e => e.TeamId == context.TeamId && e.IsValid == true)
-            .Select(e => e.MissionNodeId)
-            .Distinct()
-            .ToHashSet();
+        var currentRule = orderedRules.FirstOrDefault(rule =>
+            !NodeProgressHelper.IsNodeCompleted(context.Session, context.TeamId, rule));
 
-        var currentRule = orderedRules.FirstOrDefault(x => !completedNodeIds.Contains(x.NodeId));
         if (currentRule is null)
             throw new SessionDomainException($"El equipo {context.TeamId} ya completó todos los nodos.");
 
         context.CurrentRule = currentRule;
 
-        var alreadyClosed = context.Session.EvidenceSubmissions.Any(e =>
-            e.TeamId == context.TeamId &&
-            e.MissionNodeId == context.NodeId &&
-            e.IsValid == true);
+        var submittedRule = orderedRules.FirstOrDefault(rule => rule.NodeId == context.NodeId);
+        if (submittedRule is not null &&
+            NodeProgressHelper.IsNodeCompleted(context.Session, context.TeamId, submittedRule))
+        {
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+        }
 
-        if (alreadyClosed)
+        if (NodeProgressHelper.IsNodeCompleted(context.Session, context.TeamId, currentRule))
             throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
 
         if (currentRule.NodeId != context.NodeId)
@@ -36,5 +35,27 @@ public sealed class SequentialProgressValidationHandler : EvidenceValidationHand
 
         if (currentRule.ValidationType != context.ExpectedType)
             throw new SessionDomainException("Tipo de validación no coincide con el nodo actual.");
+
+        if (currentRule.ValidationType == Domain.ValueObjects.NodeValidationType.Trivia)
+        {
+            var nextQuestionIndex = NodeProgressHelper.GetNextQuestionIndex(
+                context.Session,
+                context.TeamId,
+                context.NodeId,
+                currentRule.ExpectedAnswers.Count);
+
+            if (nextQuestionIndex >= currentRule.ExpectedAnswers.Count)
+                throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+
+            if (context.QuestionIndex.HasValue && context.QuestionIndex.Value != nextQuestionIndex)
+                throw new SessionDomainException(
+                    $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex} (RN-11).");
+
+            context.ResolvedQuestionIndex = nextQuestionIndex;
+        }
+        else
+        {
+            context.ResolvedQuestionIndex = 0;
+        }
     }
 }

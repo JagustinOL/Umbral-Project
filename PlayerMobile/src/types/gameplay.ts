@@ -12,6 +12,23 @@ export type SubmissionResult = {
   currentNodeId: string;
   nextNodeId: string | null;
   awardedPoints: number;
+  answeredQuestionIndex: number;
+  totalQuestions: number;
+  nodeCompleted: boolean;
+};
+
+export type PlayerTriviaQuestion = {
+  prompt: string;
+  options: string[];
+};
+
+export type TeamCurrentNodeContent = {
+  nodeId: string;
+  nodeType: string;
+  questions: PlayerTriviaQuestion[] | null;
+  instructions: string | null;
+  currentQuestionIndex: number;
+  totalQuestions: number;
 };
 
 export type TeamHint = {

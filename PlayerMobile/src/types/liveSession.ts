@@ -26,9 +26,10 @@ export function getSessionJoinBlockReason(input: {
   if (currentRef) {
     const sameSession =
       currentRef.toLowerCase() === input.targetSessionId.trim().toLowerCase();
-    if (!sameSession) {
-      return 'Your team is already registered in another session. Wait for it to finish before joining a different one.';
+    if (sameSession) {
+      return 'Tu equipo ya está registrado en esta sesión.';
     }
+    return 'Tu equipo ya está registrado en otra sesión. Espera a que finalice antes de unirte a otra distinta.';
   }
 
   if (!canRequestSessionJoin(input.sessionStatus)) {

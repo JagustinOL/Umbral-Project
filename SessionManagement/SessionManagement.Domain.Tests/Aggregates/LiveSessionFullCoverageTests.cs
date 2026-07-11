@@ -87,7 +87,7 @@ public sealed class LiveSessionFullCoverageTests
         session.RegisterTeam(TeamId);
         session.BeginPreparation();
         session.Start();
-        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "ok") };
+        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]) };
 
         var unregistered = () => session.GetCurrentNodeForTeam(Guid.NewGuid(), rules);
         unregistered.Should().Throw<SessionDomainException>();
@@ -106,18 +106,18 @@ public sealed class LiveSessionFullCoverageTests
         session.Start();
         var rules = new[]
         {
-            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "Answer"),
-            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, "CODE")
+            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["Answer"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, ["CODE"])
         };
 
         var wrongOrder = () => session.SubmitTreasureHuntCode(TeamId, NodeB, "CODE", rules);
         wrongOrder.Should().Throw<SessionDomainException>().WithMessage("*RN-11*");
 
-        var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", rules);
+        var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", 0, rules);
         wrongAnswer.IsCorrect.Should().BeFalse();
         wrongAnswer.AwardedPoints.Should().Be(0);
 
-        var correct = session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", rules);
+        var correct = session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", 0, rules);
         correct.IsCorrect.Should().BeTrue();
         correct.NextNodeId.Should().Be(NodeB);
     }
@@ -132,11 +132,11 @@ public sealed class LiveSessionFullCoverageTests
         session.Start();
         var rules = new[]
         {
-            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "ok"),
-            new NodeValidationRule(NodeB, 2, NodeValidationType.Trivia, "next")
+            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.Trivia, ["next"])
         };
-        session.SubmitTriviaAnswer(TeamId, NodeA, "ok", rules);
-        var act = () => session.SubmitTriviaAnswer(TeamId, NodeA, "ok", rules);
+        session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
+        var act = () => session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
         act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
     }
 

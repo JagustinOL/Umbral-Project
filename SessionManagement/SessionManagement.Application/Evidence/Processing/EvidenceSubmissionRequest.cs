@@ -7,4 +7,5 @@ public sealed record EvidenceSubmissionRequest(
     Guid TeamId,
     Guid NodeId,
     string Payload,
-    IReadOnlyList<NodeValidationRule> ValidationRules);
+    IReadOnlyList<NodeValidationRule> ValidationRules,
+    int? QuestionIndex = null);

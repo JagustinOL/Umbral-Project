@@ -5,8 +5,11 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
+Write-Host "Deteniendo PlayerMobile web en Docker (libera puerto 19000 para Metro)..." -ForegroundColor Cyan
+docker compose stop player-mobile-web 2>$null | Out-Null
+
 Write-Host "Levantando infraestructura y backends..." -ForegroundColor Cyan
-docker compose up -d db mq keycloak mission-management-service session-management-service scoring-audit-service
+docker compose up -d db mq keycloak user-service mission-management-service session-management-service scoring-audit-service api-gateway
 
 Write-Host "Esperando a que Keycloak este healthy (puede tardar 2-3 min la primera vez)..." -ForegroundColor Yellow
 $maxAttempts = 60

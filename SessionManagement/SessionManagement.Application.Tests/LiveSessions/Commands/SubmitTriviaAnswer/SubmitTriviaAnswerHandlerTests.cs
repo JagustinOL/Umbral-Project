@@ -16,15 +16,17 @@ public sealed class SubmitTriviaAnswerHandlerTests
         var teamId = Guid.NewGuid();
         var nodeId = Guid.NewGuid();
         var facade = new Mock<ISessionOperationFacade>();
-        facade.Setup(x => x.SubmitTriviaAsync(sessionId, teamId, nodeId, "Bogota", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SubmissionResultDto(true, nodeId, Guid.NewGuid(), 100));
+        facade.Setup(x => x.SubmitTriviaAsync(sessionId, teamId, nodeId, "Bogota", 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SubmissionResultDto(true, nodeId, Guid.NewGuid(), 100, 0, 1, true));
 
         var handler = new SubmitTriviaAnswerHandler(facade.Object);
         var result = await handler.Handle(
-            new SubmitTriviaAnswerCommand(sessionId, teamId, nodeId, "Bogota"),
+            new SubmitTriviaAnswerCommand(sessionId, teamId, nodeId, "Bogota", 0),
             CancellationToken.None);
 
         result.IsCorrect.Should().BeTrue();
-        facade.Verify(x => x.SubmitTriviaAsync(sessionId, teamId, nodeId, "Bogota", It.IsAny<CancellationToken>()), Times.Once);
+        facade.Verify(
+            x => x.SubmitTriviaAsync(sessionId, teamId, nodeId, "Bogota", 0, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

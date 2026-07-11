@@ -29,6 +29,7 @@ public interface ISessionOperationFacade
         Guid teamId,
         Guid nodeId,
         string answer,
+        int questionIndex,
         CancellationToken cancellationToken = default);
 
     Task<SubmissionResultDto> SubmitTreasureHuntAsync(
@@ -159,11 +160,14 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         Guid teamId,
         Guid nodeId,
         string answer,
+        int questionIndex,
         CancellationToken cancellationToken = default)
     {
         var session = await GetSessionAsync(sessionId, cancellationToken);
         var rules = await BuildRulesAsync(session.MissionRef, cancellationToken);
-        var result = _triviaProcessor.Process(session, new EvidenceSubmissionRequest(teamId, nodeId, answer, rules));
+        var result = _triviaProcessor.Process(
+            session,
+            new EvidenceSubmissionRequest(teamId, nodeId, answer, rules, questionIndex));
         await SaveAndPublishAsync(session, cancellationToken);
         return MapResult(result);
     }
@@ -234,7 +238,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
                 NodeId: x.NodeId,
                 ExecutionOrder: x.ExecutionOrder,
                 ValidationType: ParseType(x.NodeType),
-                ExpectedValue: x.ExpectedValue))
+                ExpectedAnswers: x.ExpectedAnswers))
             .OrderBy(x => x.ExecutionOrder)
             .ToList();
     }
@@ -251,5 +255,12 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
     }
 
     private static SubmissionResultDto MapResult(SubmissionResult result) =>
-        new(result.IsCorrect, result.CurrentNodeId, result.NextNodeId, result.AwardedPoints);
+        new(
+            result.IsCorrect,
+            result.CurrentNodeId,
+            result.NextNodeId,
+            result.AwardedPoints,
+            result.AnsweredQuestionIndex,
+            result.TotalQuestions,
+            result.NodeCompleted);
 }

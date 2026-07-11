@@ -114,6 +114,16 @@ using (var scope = app.Services.CreateScope())
         var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
         databaseCreator.CreateTables();
     }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw(
+            "ALTER TABLE evidence_submissions ADD COLUMN IF NOT EXISTS question_index integer NULL");
+    }
+    catch (PostgresException)
+    {
+        // La columna ya existe o la tabla aún no fue creada.
+    }
 }
 
 if (app.Environment.IsDevelopment())
