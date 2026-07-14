@@ -21,18 +21,20 @@ public sealed record PenaltyReason
     /// Ej: "ManualOperator", "HintUsage", "TimeExpired".
     /// </summary>
     public PenaltyCategory Category { get; }
+    public Guid? AppliedByOperatorId { get; }
 
-    private PenaltyReason(string description, PenaltyCategory category)
+    private PenaltyReason(string description, PenaltyCategory category, Guid? appliedByOperatorId = null)
     {
         Description = description;
         Category = category;
+        AppliedByOperatorId = appliedByOperatorId;
     }
 
     /// <summary>
     /// Crea un PenaltyReason para una penalización manual del Operador.
     /// RB-06: el motivo es obligatorio — lanza excepción si está vacío.
     /// </summary>
-    public static PenaltyReason ForManualPenalty(string description)
+    public static PenaltyReason ForManualPenalty(string description, Guid? appliedByOperatorId = null)
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ScoringDomainException(
@@ -44,7 +46,7 @@ public sealed record PenaltyReason
                 "El motivo de la penalización debe tener al menos 5 caracteres " +
                 "para garantizar una descripción significativa.");
 
-        return new PenaltyReason(description.Trim(), PenaltyCategory.ManualOperator);
+        return new PenaltyReason(description.Trim(), PenaltyCategory.ManualOperator, appliedByOperatorId);
     }
 
     /// <summary>Crea un PenaltyReason para el uso de una pista.</summary>

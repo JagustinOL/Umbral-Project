@@ -32,8 +32,8 @@ public sealed class LiveSessionsController : ControllerBase
         [FromBody] JoinSessionRequest body,
         CancellationToken cancellationToken)
     {
-        var sessionId = await _mediator.Send(body.ToCommand(), cancellationToken);
-        return Ok(new { sessionId });
+        var result = await _mediator.Send(body.ToCommand(), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{sessionId:guid}/teams/{teamId:guid}/current-stage")]

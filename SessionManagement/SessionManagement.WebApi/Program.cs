@@ -18,6 +18,8 @@ using SessionManagement.Infrastructure.Persistence;
 using SessionManagement.Infrastructure.Repositories;
 using SessionManagement.WebApi;
 using SessionManagement.WebApi.Auth;
+using SessionManagement.WebApi.Hubs;
+using SessionManagement.WebApi.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceSerilog("SessionManagement");
@@ -76,6 +78,8 @@ builder.Services.AddOptions<RabbitMqOptions>()
 
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
+builder.Services.AddScoped<ILiveSessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
@@ -124,6 +128,32 @@ using (var scope = app.Services.CreateScope())
     {
         // La columna ya existe o la tabla aún no fue creada.
     }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("""
+            CREATE TABLE IF NOT EXISTS session_join_requests (
+                "Id" uuid NOT NULL PRIMARY KEY,
+                "LiveSessionId" uuid NOT NULL REFERENCES live_sessions("Id") ON DELETE CASCADE,
+                team_id uuid NOT NULL,
+                status character varying(16) NOT NULL,
+                requested_at_utc timestamp with time zone NOT NULL,
+                resolved_at_utc timestamp with time zone NULL,
+                resolved_by_operator_id uuid NULL
+            );
+            CREATE TABLE IF NOT EXISTS team_participations (
+                "Id" uuid NOT NULL PRIMARY KEY,
+                "LiveSessionId" uuid NOT NULL REFERENCES live_sessions("Id") ON DELETE CASCADE,
+                team_id uuid NOT NULL,
+                status character varying(16) NOT NULL,
+                completed_at_utc timestamp with time zone NULL
+            );
+            """);
+    }
+    catch (PostgresException)
+    {
+        // Tablas ya existen o live_sessions aún no está disponible.
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -133,6 +163,7 @@ app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
 app.UseServiceCrossCutting();
 app.MapControllers();
+app.MapHub<LiveSessionHub>("/hubs/live-session");
 
 app.Run();
 

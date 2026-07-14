@@ -13,6 +13,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { SessionJoinRequestDto } from '@/lib/types/api';
 
 interface WaitingRoomViewProps {
   operatorId: string;
@@ -36,6 +37,9 @@ export function WaitingRoomView({
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [teamsError, setTeamsError] = useState<string | null>(null);
   const [sessionStarting, setSessionStarting] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<SessionJoinRequestDto[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [requestActionTeamId, setRequestActionTeamId] = useState<string | null>(null);
 
   const loadTeams = useCallback(
     async (signal?: AbortSignal) => {
@@ -59,19 +63,47 @@ export function WaitingRoomView({
     [operatorId, sessionId],
   );
 
+  const loadJoinRequests = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setJoinRequests(await operatorSessionService.getJoinRequests(sessionId, signal));
+      } catch (error) {
+        if (!signal?.aborted) toast.error(getOperatorSessionApiErrorMessage(error));
+      } finally {
+        if (!signal?.aborted) setIsLoadingRequests(false);
+      }
+    },
+    [sessionId],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     void loadTeams(controller.signal);
+    void loadJoinRequests(controller.signal);
 
     const interval = setInterval(() => {
       void loadTeams(controller.signal);
+      void loadJoinRequests(controller.signal);
     }, 5000);
 
     return () => {
       controller.abort();
       clearInterval(interval);
     };
-  }, [loadTeams]);
+  }, [loadJoinRequests, loadTeams]);
+
+  const handleDecision = async (teamId: string, decision: 'Approve' | 'Reject') => {
+    setRequestActionTeamId(teamId);
+    try {
+      await operatorSessionService.decideJoinRequest(sessionId, teamId, decision);
+      toast.success(decision === 'Approve' ? 'Equipo aprobado.' : 'Solicitud rechazada.');
+      await Promise.all([loadJoinRequests(), loadTeams()]);
+    } catch (error) {
+      toast.error(getOperatorSessionApiErrorMessage(error));
+    } finally {
+      setRequestActionTeamId(null);
+    }
+  };
 
   const handleCopyCode = () => {
     void navigator.clipboard.writeText(joinCode);
@@ -122,6 +154,54 @@ export function WaitingRoomView({
             )}
 
             <TeamsList teamIds={teamIds} isLoading={isLoadingTeams} />
+          </div>
+
+          <div>
+            <h2 className="text-sm font-medium text-foreground mb-3">
+              Solicitudes pendientes
+            </h2>
+            {isLoadingRequests ? (
+              <p className="text-sm text-muted-foreground">Cargando solicitudes…</p>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.filter((request) => request.status.toLowerCase() === 'pending').length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay solicitudes pendientes.</p>
+                ) : (
+                  joinRequests
+                    .filter((request) => request.status.toLowerCase() === 'pending')
+                    .map((request) => (
+                      <div
+                        key={request.requestId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{request.teamName ?? request.teamId}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Solicitada {new Date(request.requestedAtUtc).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={requestActionTeamId === request.teamId}
+                            onClick={() => void handleDecision(request.teamId, 'Approve')}
+                          >
+                            Aprobar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={requestActionTeamId === request.teamId}
+                            onClick={() => void handleDecision(request.teamId, 'Reject')}
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
           </div>
         </div>
 

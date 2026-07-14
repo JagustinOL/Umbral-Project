@@ -3,6 +3,7 @@ using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
 using ScoringAudit.Domain.ValueObjects;
 using ScoringAudit.Application.Messaging;
+using ScoringAudit.Domain.Entities;
 
 namespace ScoringAudit.Application.Events;
 
@@ -11,13 +12,16 @@ public sealed record ProcessEvidenceValidatedCommand(EvidenceValidatedIntegratio
 public sealed class ProcessEvidenceValidatedHandler : IRequestHandler<ProcessEvidenceValidatedCommand>
 {
     private readonly ITeamLedgerRepository _ledgerRepository;
+    private readonly IAuditLogRepository _auditLogRepository;
     private readonly ScoreCalculatorService _scoreCalculator;
 
     public ProcessEvidenceValidatedHandler(
         ITeamLedgerRepository ledgerRepository,
+        IAuditLogRepository auditLogRepository,
         ScoreCalculatorService scoreCalculator)
     {
         _ledgerRepository = ledgerRepository;
+        _auditLogRepository = auditLogRepository;
         _scoreCalculator = scoreCalculator;
     }
 
@@ -44,5 +48,16 @@ public sealed class ProcessEvidenceValidatedHandler : IRequestHandler<ProcessEvi
 
         ledger.AddEvidenceScore(origin, evt.EventId);
         await _ledgerRepository.SaveAsync(ledger, cancellationToken);
+
+        var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"No existe AuditLog para sesión {evt.SessionId}.");
+        auditLog.RecordEvent(
+            SessionEventType.EvidenceValidated,
+            evt.EventId,
+            "Evidencia validada y puntaje acreditado.",
+            evt.TeamId,
+            evt.MissionNodeId,
+            $"{{\"score\":{finalScore},\"elapsedSeconds\":{evt.ElapsedSeconds}}}");
+        await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
     }
 }

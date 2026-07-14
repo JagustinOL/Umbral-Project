@@ -17,6 +17,7 @@ import {
   connectLiveSessionHub,
   disconnectLiveSessionHub,
   type ManualPenaltyPayload,
+  type SupportMessagePayload,
 } from '../services/signalRService';
 
 type UseLiveSessionGameplayOptions = {
@@ -40,6 +41,7 @@ export function useLiveSessionGameplay({
   const [penalties, setPenalties] = useState<TeamPenalty[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastPenaltyAlert, setLastPenaltyAlert] = useState<string | null>(null);
+  const [supportMessage, setSupportMessage] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshStage = useCallback(async () => {
@@ -125,6 +127,14 @@ export function useLiveSessionGameplay({
     [teamId, refreshPenalties, refreshRanking],
   );
 
+  const handleSupportMessage = useCallback((payload: SupportMessagePayload) => {
+    if (payload.teamId.toLowerCase() !== teamId.toLowerCase()) {
+      return;
+    }
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setSupportMessage(payload.message);
+  }, [teamId]);
+
   useEffect(() => {
     if (!enabled || !sessionId || !teamId) {
       return;
@@ -143,12 +153,18 @@ export function useLiveSessionGameplay({
         setRanking(payload.ranking ?? []);
       },
       onManualPenalty: handlePenalty,
+      onHintReleased: (payload) => {
+        if (payload.teamId.toLowerCase() === teamId.toLowerCase()) {
+          void refreshHints();
+        }
+      },
+      onSupportMessage: handleSupportMessage,
       onReconnecting: () => setConnectionState('reconnecting'),
       onReconnected: () => {
         setConnectionState('connected');
         void refreshAll();
       },
-    })
+    }, teamId)
       .then(() => setConnectionState('connected'))
       .catch(() => setConnectionState('disconnected'));
 
@@ -171,6 +187,8 @@ export function useLiveSessionGameplay({
     refreshStage,
     syncSessionStatus,
     handlePenalty,
+    handleSupportMessage,
+    refreshHints,
   ]);
 
   return {
@@ -182,6 +200,7 @@ export function useLiveSessionGameplay({
     penalties,
     isLoading,
     lastPenaltyAlert,
+    supportMessage,
     isPlayable: isSessionPlayable(sessionStatus),
     isPaused: sessionStatus.toLowerCase() === 'paused',
     isTerminal: isSessionTerminal(sessionStatus),
@@ -191,5 +210,6 @@ export function useLiveSessionGameplay({
     refreshHints,
     refreshPenalties,
     clearPenaltyAlert: () => setLastPenaltyAlert(null),
+    clearSupportMessage: () => setSupportMessage(null),
   };
 }

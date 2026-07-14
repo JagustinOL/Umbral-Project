@@ -33,8 +33,8 @@ public sealed class GetSessionTeamsHandler : IRequestHandler<GetSessionTeamsQuer
         if (!assignedMissions.Any(x => x.MissionId == session.MissionRef))
             throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
 
-        if (session.Status != LiveSessionStatus.Pending)
-            throw new ConflictException("Solo se pueden consultar equipos en sesiones Pending.");
+        if (session.Status is LiveSessionStatus.Cancelled or LiveSessionStatus.Finalized)
+            throw new ConflictException("La sesión ya está cerrada.");
 
         var teamIds = session.RegisteredTeamIds.ToList();
         return new SessionTeamsDto(

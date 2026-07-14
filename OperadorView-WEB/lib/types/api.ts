@@ -37,3 +37,76 @@ export interface OperatorDto {
   email: string;
   isActive: boolean;
 }
+
+export interface SessionJoinRequestDto {
+  requestId: string;
+  teamId: string;
+  teamName: string | null;
+  status: string;
+  requestedAtUtc: string;
+  resolvedAtUtc: string | null;
+}
+
+export interface RankingEntryDto {
+  teamId: string;
+  teamName: string;
+  totalScore: number;
+  completedNodes: number;
+  lastElapsedSeconds: number;
+}
+
+export interface HistoricalSessionDto {
+  sessionId: string;
+  missionId: string;
+  operatorId: string;
+  startedAtUtc: string;
+  endedAtUtc: string | null;
+  status: string;
+}
+
+export interface HistoricalSessionsPageDto {
+  items: HistoricalSessionDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SessionAuditDetailDto {
+  sessionId: string;
+  missionId: string;
+  operatorId: string;
+  startedAtUtc: string;
+  endedAtUtc: string | null;
+  status: string;
+  timeline: SessionAuditEventDto[];
+  penalties: SessionAuditPenaltyDto[];
+  evidences: SessionAuditEvidenceDto[];
+  ranking: RankingEntryDto[];
+}
+
+export interface SessionAuditEventDto {
+  eventId: string;
+  eventType: string;
+  occurredAtUtc: string;
+  description: string;
+  teamId: string | null;
+  missionNodeId: string | null;
+  metadata: string | null;
+}
+
+export interface SessionAuditPenaltyDto {
+  teamId: string;
+  points: number;
+  category: string;
+  description: string;
+  appliedByOperatorId: string | null;
+  recordedAtUtc: string;
+}
+
+export interface SessionAuditEvidenceDto {
+  teamId: string;
+  missionNodeId: string;
+  points: number;
+  elapsedSeconds: number;
+  recordedAtUtc: string;
+}

@@ -38,6 +38,7 @@ builder.Services.AddDbContext<ScoringAuditDbContext>(options =>
 });
 
 builder.Services.AddScoped<ITeamLedgerRepository, TeamLedgerRepository>();
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddSingleton<RankingManagerService>();
 builder.Services.AddSingleton<ScoreCalculatorService>();
 builder.Services.AddSingleton<IScoreCalculationStrategy, TriviaScoreStrategy>();
@@ -49,6 +50,38 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ScoringAuditDbContext>();
     db.Database.EnsureCreated();
+    db.Database.ExecuteSqlRaw("""
+        ALTER TABLE team_ledgers
+            ADD COLUMN IF NOT EXISTS completion_elapsed_seconds double precision NULL;
+
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            "Id" uuid PRIMARY KEY,
+            session_ref uuid NOT NULL UNIQUE,
+            mission_ref uuid NOT NULL,
+            operator_ref uuid NOT NULL,
+            started_at_utc timestamp with time zone NOT NULL,
+            ended_at_utc timestamp with time zone NULL,
+            status character varying(20) NOT NULL,
+            is_closed boolean NOT NULL,
+            created_at_utc timestamp with time zone NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS session_events (
+            "Id" uuid PRIMARY KEY,
+            session_id uuid NOT NULL,
+            event_type text NOT NULL,
+            source_event_id uuid NOT NULL,
+            team_ref uuid NULL,
+            mission_node_ref uuid NULL,
+            description character varying(1000) NOT NULL,
+            metadata jsonb NULL,
+            occurred_at_utc timestamp with time zone NOT NULL,
+            audit_log_id uuid NULL REFERENCES audit_logs("Id") ON DELETE CASCADE
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_session_events_session_source
+            ON session_events (session_id, source_event_id);
+        """);
 }
 
 if (app.Environment.IsDevelopment())

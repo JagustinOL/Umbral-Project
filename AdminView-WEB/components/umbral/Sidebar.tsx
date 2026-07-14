@@ -7,6 +7,7 @@ import {
   UsersIcon,
   ShieldAlertIcon,
   LogOutIcon,
+  ClipboardListIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,7 @@ import {
   type AuthSession,
 } from "@/lib/auth/session";
 
-export type NavSection = "catalog" | "operators";
+export type NavSection = "catalog" | "operators" | "audit";
 
 interface SidebarProps {
   active: NavSection;
@@ -36,6 +37,12 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode; descrip
     label: "Operators",
     icon: <UsersIcon className="h-4 w-4" />,
     description: "Accounts & Assignments",
+  },
+  {
+    id: "audit",
+    label: "Auditoría",
+    icon: <ClipboardListIcon className="h-4 w-4" />,
+    description: "Historial de sesiones",
   },
 ];
 

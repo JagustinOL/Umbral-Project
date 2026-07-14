@@ -832,7 +832,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```
 - **Nota:** Devuelve sesiones en estado `Pending`, `Preparation`, `Active` o `Paused` (no finalizadas ni canceladas). El equipo solo puede registrarse con `POST .../join` cuando la sesión está en `Pending` o `Preparation`.
 
-### Unirse a Sesión por Código (HU-37)
+### Unirse a Sesión por Código (HU-37 / HU-49)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/live-sessions/join`
 - **Capa Application:** `JoinSessionCommand`
@@ -843,9 +843,103 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
     "teamId": "Guid"
   }
   ```
+- **Response (200 OK):**
+  ```json
+  {
+    "sessionId": "Guid",
+    "status": "Pending | Approved",
+    "requestId": "Guid?"
+  }
+  ```
+- **Notas:**
+  - Crea solicitud formal `Pending`. El equipo **no** queda registrado hasta que el operador apruebe (RN-15).
 - **Errores esperados:**
   - `409 Conflict` si el equipo está bloqueado en una sesión en curso (RN-13) o ya vinculado a otra sesión abierta.
   - `404 NotFound` si el código o el equipo no existen.
+
+## SessionManagement · Épica 6 (Operación Live)
+
+### Consultar Solicitudes de Unión a Sesión (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/join-requests`
+- **Capa Application:** `GetSessionJoinRequestsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Aprobar o Rechazar Solicitud de Unión (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/join-requests/{teamId}/decision`
+- **Capa Application:** `ProcessSessionJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "decision": "Approve | Reject"
+  }
+  ```
+
+### Liberar Pista Manual (HU-54)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/hints/release`
+- **Capa Application:** `ReleaseManualHintCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "hintId": "Guid"
+  }
+  ```
+
+### Aplicar Penalización Manual (HU-55)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/penalties`
+- **Capa Application:** `ApplyManualPenaltyCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "points": "int",
+    "reason": "string"
+  }
+  ```
+
+### Enviar Mensaje de Soporte (HU-56)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/messages`
+- **Capa Application:** `SendSupportMessageCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "message": "string"
+  }
+  ```
+
+### Pausar / Reanudar Sesión (HU-62)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/pause`
+- **Capa Application:** `ToggleSessionPauseCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "reason": "string?"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "Paused | Active"
+  }
+  ```
+
+### Hub SignalR Live Session
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `WS /hubs/live-session`
+- **Capa Application:** `LiveSessionHub` + `ILiveSessionRealtimeNotifier`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "methods": "JoinSession | LeaveSession | JoinOperatorSession | JoinTeamSession"
+  }
+  ```
 
 ### Consultar Etapa Actual del Equipo (HU-38/HU-39/HU-41)
 - **Microservicio:** SessionManagement
@@ -1048,3 +1142,33 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Body / Payload (Request):** ninguno.
 - **Notas:**
   - Requiere que la sesión haya generado entradas en `TeamLedger` (equipos registrados y evidencias procesadas).
+
+## ScoringAudit · Épica 7 (Auditoría)
+
+### Consultar Historial de Sesiones Finalizadas (HU-64)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/audit/sessions`
+- **Capa Application:** `GetHistoricalSessionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "startDate": "DateTime?",
+    "endDate": "DateTime?",
+    "page": "int",
+    "pageSize": "int"
+  }
+  ```
+- **Notas:**
+  - Admin: acceso global. Operator: solo sesiones con `OperatorRef` del JWT.
+  - Solo sesiones selladas (`Finished` / `Cancelled`).
+
+### Ver Detalle de Auditoría por Sesión (HU-65)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/audit/sessions/{sessionId}`
+- **Capa Application:** `GetSessionAuditDetailQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si la sesión no existe, no está cerrada o el operador no tiene acceso.

@@ -5,6 +5,8 @@ import { Toaster, toast } from "sonner";
 import { Sidebar } from "./Sidebar";
 import { MissionsView } from "./views/MissionsView";
 import { WaitingRoomView } from "./views/WaitingRoomView";
+import { LiveSessionView } from "./views/LiveSessionView";
+import { AuditHistoryView } from "./views/AuditHistoryView";
 import { getOperatorId } from "@/lib/config";
 import {
   getOperatorSessionApiErrorMessage,
@@ -18,7 +20,7 @@ import { OperatorAssignedMissionDto, OperatorOpenSessionDto } from "@/lib/types/
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangleIcon } from "lucide-react";
 
-export type ViewType = "missions" | "waiting-room";
+export type ViewType = "missions" | "waiting-room" | "live" | "audit";
 
 interface ActiveSession {
   sessionId: string;
@@ -153,7 +155,7 @@ export function OperatorDashboard() {
       missionTitle,
       joinCode: open.joinCode,
     });
-    setCurrentView("waiting-room");
+    setCurrentView(open.status.toLowerCase() === "pending" ? "waiting-room" : "live");
   };
 
   const handleCreateSession = async (missionId: string, missionTitle: string) => {
@@ -201,9 +203,7 @@ export function OperatorDashboard() {
 
     await operatorSessionService.startSession(operatorId, activeSession.sessionId);
     toast.success("Sesión iniciada correctamente.");
-    setActiveSession(null);
-    setCurrentView("missions");
-    await loadMissions();
+    setCurrentView("live");
   };
 
   const handleBackToMissions = () => {
@@ -255,6 +255,22 @@ export function OperatorDashboard() {
               onStartSession={handleStartSession}
             />
           )}
+
+          {currentView === "live" && activeSession && operatorId && (
+            <LiveSessionView
+              operatorId={operatorId}
+              sessionId={activeSession.sessionId}
+              missionTitle={activeSession.missionTitle}
+              onBack={handleBackToMissions}
+              onFinalized={() => {
+                setActiveSession(null);
+                setCurrentView("missions");
+                void loadMissions();
+              }}
+            />
+          )}
+
+          {currentView === "audit" && <AuditHistoryView />}
         </div>
       </main>
     </div>

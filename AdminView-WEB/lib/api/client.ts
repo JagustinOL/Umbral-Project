@@ -14,6 +14,7 @@ const userApiBaseUrl = (
 
 const API_BASE_URL = `${missionApiBaseUrl}/api/v1`;
 const USER_API_BASE_URL = `${userApiBaseUrl}/api/v1`;
+const SCORING_API_BASE_URL = `${missionApiBaseUrl}/api/v1`;
 
 export class ApiError extends Error {
   status: number;
@@ -100,6 +101,13 @@ export async function apiRequest<T>(
   { method = "GET", body, signal }: RequestOptions = {},
 ): Promise<T> {
   return requestWithBaseUrl<T>(API_BASE_URL, endpoint, { method, body, signal });
+}
+
+export async function scoringApiRequest<T>(
+  endpoint: string,
+  { method = "GET", body, signal }: RequestOptions = {},
+): Promise<T> {
+  return requestWithBaseUrl<T>(SCORING_API_BASE_URL, endpoint, { method, body, signal });
 }
 
 async function requestWithBaseUrl<T>(

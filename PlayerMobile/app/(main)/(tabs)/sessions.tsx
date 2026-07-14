@@ -16,6 +16,10 @@ import { useAuth } from '../../../src/hooks/useAuth';
 import { useTabBarInsets } from '../../../src/hooks/useTabBarInsets';
 import { useTeamWorkspace } from '../../../src/hooks/useTeamWorkspace';
 import * as liveSessionService from '../../../src/services/liveSessionService';
+import {
+  connectLiveSessionHub,
+  disconnectLiveSessionHub,
+} from '../../../src/services/signalRService';
 import type { LiveSessionSummary } from '../../../src/types/liveSession';
 import { isSessionTerminal } from '../../../src/types/gameplay';
 import { showUserAlert } from '../../../src/utils/confirm';
@@ -29,6 +33,7 @@ export default function SessionsTabScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [requestedSessionIds, setRequestedSessionIds] = useState<string[]>([]);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
   const teamId = session?.teamId;
   const currentSessionRef = team?.currentSessionRef ?? null;
@@ -96,6 +101,33 @@ export default function SessionsTabScreen() {
     );
   }, [currentSessionRef]);
 
+  useEffect(() => {
+    const awaitingSessionId = pendingSessionId ?? (currentSessionRef && !isLocked ? currentSessionRef : null);
+    if (!awaitingSessionId || !teamId) {
+      return;
+    }
+
+    void connectLiveSessionHub(awaitingSessionId, {
+      onJoinRequestResolved: (payload) => {
+        if (normalizeGuid(payload.teamId).toLowerCase() !== normalizeGuid(teamId).toLowerCase()) {
+          return;
+        }
+        setPendingSessionId(null);
+        void Promise.all([loadTeam(), loadSessions()]);
+        showUserAlert(
+          payload.decision.toLowerCase() === 'approve' ? 'Solicitud aprobada' : 'Solicitud rechazada',
+          payload.decision.toLowerCase() === 'approve'
+            ? 'Tu equipo ya puede entrar a la misión cuando la sesión esté activa.'
+            : 'El operador rechazó la solicitud de tu equipo.',
+        );
+      },
+    }, teamId);
+
+    return () => {
+      void disconnectLiveSessionHub();
+    };
+  }, [currentSessionRef, isLocked, loadSessions, loadTeam, pendingSessionId, teamId]);
+
   const handleRefresh = async () => {
     await Promise.all([loadSessions(), loadTeam()]);
   };
@@ -117,10 +149,13 @@ export default function SessionsTabScreen() {
 
     setJoiningSessionId(target.sessionId);
     try {
-      await liveSessionService.requestSessionJoin({
+      const result = await liveSessionService.requestSessionJoin({
         joinCode: target.joinCode,
         teamId,
       });
+      if (result.status.toLowerCase() === 'pending') {
+        setPendingSessionId(result.sessionId);
+      }
       setRequestedSessionIds((current) =>
         current.some(
           (id) => normalizeGuid(id).toLowerCase() === normalizedTargetId,
@@ -203,6 +238,16 @@ export default function SessionsTabScreen() {
               label="Entrar a la misión"
               onPress={handleEnterMission}
             />
+          </View>
+        ) : null}
+
+        {!canEnterMission && (pendingSessionId || (currentSessionRef && !isLocked)) ? (
+          <View style={styles.liveCard}>
+            <Text style={styles.liveEyebrow}>SOLICITUD PENDIENTE</Text>
+            <Text style={styles.liveTitle}>Esperando aprobación</Text>
+            <Text style={styles.liveMeta}>
+              El operador debe aprobar la unión de tu equipo antes de que puedan jugar.
+            </Text>
           </View>
         ) : null}
 

@@ -29,6 +29,8 @@ public sealed class LiveSession : AggregateRoot
     private readonly List<EvidenceSubmission> _evidenceSubmissions = [];
     private readonly List<ReleasedHint> _releasedHints = [];
     private readonly List<AllowedNode> _allowedNodes = [];
+    private readonly List<SessionJoinRequest> _joinRequests = [];
+    private readonly List<TeamParticipation> _teamParticipations = [];
 
     // ── Propiedades ────────────────────────────────────────────────────────────
 
@@ -63,6 +65,8 @@ public sealed class LiveSession : AggregateRoot
     public IReadOnlyList<EvidenceSubmission> EvidenceSubmissions => _evidenceSubmissions.AsReadOnly();
     public IReadOnlyList<ReleasedHint> ReleasedHints => _releasedHints.AsReadOnly();
     public IReadOnlyList<AllowedNode> AllowedNodes  => _allowedNodes.AsReadOnly();
+    public IReadOnlyList<SessionJoinRequest> JoinRequests => _joinRequests.AsReadOnly();
+    public IReadOnlyList<TeamParticipation> TeamParticipations => _teamParticipations.AsReadOnly();
 
     private LiveSession() { }
 
@@ -154,6 +158,9 @@ public sealed class LiveSession : AggregateRoot
 
         _registeredTeamIds.Add(teamId);
 
+        if (_teamParticipations.All(x => x.TeamId != teamId))
+            _teamParticipations.Add(TeamParticipation.Create(teamId));
+
         RaiseDomainEvent(new TeamRegisteredEvent
         {
             SessionId = Id,
@@ -178,7 +185,11 @@ public sealed class LiveSession : AggregateRoot
         });
     }
 
-    public void JoinTeam(Guid teamId, string providedJoinCode)
+    /// <summary>
+    /// Crea una solicitud formal Pending para unirse a la sesión (HU-49).
+    /// No registra el equipo hasta ApproveJoinRequest (RN-15).
+    /// </summary>
+    public SessionJoinRequest SubmitJoinRequest(Guid teamId, string providedJoinCode)
     {
         if (string.IsNullOrWhiteSpace(providedJoinCode))
             throw new ArgumentException("El código de unión no puede estar vacío.", nameof(providedJoinCode));
@@ -186,7 +197,164 @@ public sealed class LiveSession : AggregateRoot
         if (!string.Equals(JoinCode, providedJoinCode.Trim(), StringComparison.OrdinalIgnoreCase))
             throw new SessionDomainException("Código de sesión inválido.");
 
+        if (Status is not (LiveSessionStatus.Pending or LiveSessionStatus.Preparation))
+            throw new SessionDomainException(
+                $"No se aceptan solicitudes de unión en estado '{Status}'.");
+
+        if (teamId == Guid.Empty)
+            throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
+
+        if (_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException(
+                $"El equipo {teamId} ya está registrado en esta sesión.");
+
+        var existingPending = _joinRequests.FirstOrDefault(
+            x => x.TeamId == teamId && x.Status == JoinRequestStatus.Pending);
+        if (existingPending is not null)
+            return existingPending;
+
+        var rejected = _joinRequests.FirstOrDefault(
+            x => x.TeamId == teamId && x.Status == JoinRequestStatus.Rejected);
+        if (rejected is not null)
+        {
+            // Permite reintentar creando una nueva solicitud Pending.
+        }
+
+        var request = SessionJoinRequest.Create(teamId);
+        _joinRequests.Add(request);
+
+        RaiseDomainEvent(new SessionJoinRequestCreatedEvent
+        {
+            SessionId = Id,
+            TeamId = teamId,
+            RequestId = request.Id
+        });
+
+        return request;
+    }
+
+    /// <summary>Compatibilidad: crea solicitud Pending (ya no registra directo).</summary>
+    public void JoinTeam(Guid teamId, string providedJoinCode)
+    {
+        SubmitJoinRequest(teamId, providedJoinCode);
+    }
+
+    public void ApproveJoinRequest(Guid teamId, Guid operatorId)
+    {
+        EnsureOperatorOwnsSession(operatorId);
+
+        var request = FindPendingJoinRequest(teamId);
+        request.Approve(operatorId);
+
         RegisterTeam(teamId);
+
+        RaiseDomainEvent(new SessionJoinRequestResolvedEvent
+        {
+            SessionId = Id,
+            TeamId = teamId,
+            RequestId = request.Id,
+            Decision = JoinRequestStatus.Approved,
+            OperatorId = operatorId
+        });
+    }
+
+    public void RejectJoinRequest(Guid teamId, Guid operatorId)
+    {
+        EnsureOperatorOwnsSession(operatorId);
+
+        var request = FindPendingJoinRequest(teamId);
+        request.Reject(operatorId);
+
+        RaiseDomainEvent(new SessionJoinRequestResolvedEvent
+        {
+            SessionId = Id,
+            TeamId = teamId,
+            RequestId = request.Id,
+            Decision = JoinRequestStatus.Rejected,
+            OperatorId = operatorId
+        });
+    }
+
+    public void TogglePause(string? reason = null)
+    {
+        if (Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
+            throw new SessionDomainException(
+                "Una sesión finalizada o cancelada no puede pausarse ni reanudarse (RN-17).");
+
+        if (Status == LiveSessionStatus.Active)
+            Pause(reason);
+        else if (Status == LiveSessionStatus.Paused)
+            Resume(reason);
+        else
+            throw new SessionDomainException(
+                $"No se puede alternar pausa desde el estado '{Status}'.");
+    }
+
+    public void SendSupportMessage(Guid teamId, Guid operatorId, string message)
+    {
+        EnsureOperatorOwnsSession(operatorId);
+
+        if (Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
+            throw new SessionDomainException(
+                "No se pueden enviar mensajes en una sesión finalizada (RN-17).");
+
+        if (string.IsNullOrWhiteSpace(message))
+            throw new SessionDomainException("El mensaje de soporte no puede estar vacío.");
+
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException(
+                $"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        var participation = _teamParticipations.FirstOrDefault(x => x.TeamId == teamId)
+            ?? throw new SessionDomainException($"No hay participación registrada para el equipo {teamId}.");
+
+        if (!participation.CanReceiveSupportMessage)
+            throw new SessionDomainException(
+                "No se puede enviar un mensaje a un equipo expulsado o que ya finalizó la misión (RN-18).");
+
+        RaiseDomainEvent(new SupportMessageSentEvent
+        {
+            SessionId = Id,
+            TeamId = teamId,
+            OperatorId = operatorId,
+            Message = message.Trim()
+        });
+    }
+
+    /// <summary>
+    /// Marca al equipo como Completado al superar el último nodo (HU-61).
+    /// </summary>
+    public void MarkTeamCompleted(Guid teamId)
+    {
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException(
+                $"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        var participation = _teamParticipations.FirstOrDefault(x => x.TeamId == teamId)
+            ?? throw new SessionDomainException($"No hay participación registrada para el equipo {teamId}.");
+
+        if (participation.Status == TeamParticipationStatus.Completed)
+            return;
+
+        participation.MarkCompleted();
+
+        var elapsed = StartedAtUtc.HasValue
+            ? (DateTime.UtcNow - StartedAtUtc.Value).TotalSeconds
+            : 0;
+
+        RaiseDomainEvent(new TeamCompletedMissionEvent
+        {
+            SessionId = Id,
+            TeamId = teamId,
+            CompletedAtUtc = participation.CompletedAtUtc ?? DateTime.UtcNow,
+            ElapsedSeconds = elapsed
+        });
+    }
+
+    public TeamParticipationStatus GetTeamParticipationStatus(Guid teamId)
+    {
+        var participation = _teamParticipations.FirstOrDefault(x => x.TeamId == teamId);
+        return participation?.Status ?? TeamParticipationStatus.Active;
     }
 
     /// <summary>
@@ -283,8 +451,11 @@ public sealed class LiveSession : AggregateRoot
         RaiseDomainEvent(new SessionFinalizedEvent
         {
             SessionId = Id,
+            MissionRef = MissionRef,
+            OperatorRef = OperatorRef,
             FinalizedAtUtc = FinalizedAtUtc.Value,
-            ParticipatingTeamIds = [.. _registeredTeamIds]
+            ParticipatingTeamIds = [.. _registeredTeamIds],
+            Status = "Finalized"
         });
 
         RaiseDomainEvent(new SessionStateChangedEvent
@@ -308,8 +479,11 @@ public sealed class LiveSession : AggregateRoot
         RaiseDomainEvent(new SessionFinalizedEvent
         {
             SessionId = Id,
+            MissionRef = MissionRef,
+            OperatorRef = OperatorRef,
             FinalizedAtUtc = FinalizedAtUtc.Value,
-            ParticipatingTeamIds = [.. _registeredTeamIds]
+            ParticipatingTeamIds = [.. _registeredTeamIds],
+            Status = "Cancelled"
         });
 
         RaiseDomainEvent(new SessionStateChangedEvent
@@ -482,6 +656,8 @@ public sealed class LiveSession : AggregateRoot
             throw new SessionDomainException(
                 $"El equipo {teamId} no está registrado en la sesión {Id}.");
 
+        EnsureTeamCanPlay(teamId);
+
         // RB-04: misma pista al mismo equipo
         bool alreadyReleased = _releasedHints
             .Any(r => r.TeamId == teamId && r.HintId == hintId);
@@ -525,6 +701,8 @@ public sealed class LiveSession : AggregateRoot
         if (!_registeredTeamIds.Contains(teamId))
             throw new SessionDomainException(
                 $"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        EnsureTeamCanPlay(teamId);
 
         // RB-06
         if (string.IsNullOrWhiteSpace(reason))
@@ -587,6 +765,29 @@ public sealed class LiveSession : AggregateRoot
 
     // ── Helpers privados ───────────────────────────────────────────────────────
 
+    private void EnsureOperatorOwnsSession(Guid operatorId)
+    {
+        if (operatorId != OperatorRef)
+            throw new SessionDomainException(
+                "El operador no está autorizado para operar esta sesión (RN-16).");
+    }
+
+    private SessionJoinRequest FindPendingJoinRequest(Guid teamId)
+    {
+        return _joinRequests.FirstOrDefault(
+                   x => x.TeamId == teamId && x.Status == JoinRequestStatus.Pending)
+               ?? throw new SessionDomainException(
+                   $"No hay una solicitud pendiente del equipo {teamId} en la sesión {Id}.");
+    }
+
+    private void EnsureTeamCanPlay(Guid teamId)
+    {
+        var status = GetTeamParticipationStatus(teamId);
+        if (status is TeamParticipationStatus.Completed or TeamParticipationStatus.Expelled)
+            throw new SessionDomainException(
+                $"El equipo {teamId} no puede interactuar porque su estado es '{status}'.");
+    }
+
     private EvidenceSubmission FindEvidence(Guid evidenceId) =>
         _evidenceSubmissions.FirstOrDefault(e => e.Id == evidenceId)
         ?? throw new SessionDomainException(
@@ -606,6 +807,8 @@ public sealed class LiveSession : AggregateRoot
             throw new ArgumentException("Las reglas de validación no pueden estar vacías.", nameof(validationRules));
         if (!_registeredTeamIds.Contains(teamId))
             throw new SessionDomainException($"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        EnsureTeamCanPlay(teamId);
 
         var orderedRules = validationRules.OrderBy(x => x.ExecutionOrder).ToList();
         var currentRule = ResolveCurrentRule(teamId, orderedRules);
@@ -649,6 +852,9 @@ public sealed class LiveSession : AggregateRoot
 
         var nextRule = ResolveCurrentRule(teamId, orderedRules);
         var baseScore = _allowedNodes.FirstOrDefault(x => x.NodeId == nodeId)?.BaseScore ?? 0;
+
+        if (nodeCompleted && nextRule is null)
+            MarkTeamCompleted(teamId);
 
         return new SubmissionResult(
             IsCorrect: isCorrect,

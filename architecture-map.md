@@ -131,10 +131,12 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 - `Team`: Agregado raíz que modela miembros, código de acceso y reglas de bloqueo operativo (Patrón: Aggregate Root).
 - `EvidenceSubmission`: Entidad que registra cada envío de respuesta/evidencia y su validación única (Patrón: Entity).
 - `ReleasedHint`: Entidad que registra pistas liberadas por equipo con su penalización aplicada (Patrón: Entity).
+- `SessionJoinRequest`: Solicitud formal Pending/Approved/Rejected de un equipo a la sesión (HU-49 / RN-15).
+- `TeamParticipation`: Estado Active/Completed/Expelled por equipo en sesión (HU-61 / RN-18).
 - `TeamMember`: Entidad que representa integrantes de un equipo con referencia a identidad externa (Patrón: Entity).
 - `ILiveSessionRepository`, `ITeamRepository`: Puertos de persistencia (Patrón: Repository Port).
 - `AllowedNode`, `TeamCode`, `NodeValidationRule`, `SubmissionResult`: Value Objects.
-- Eventos de dominio: `TeamRegisteredEvent`, `SessionStartedEvent`, `SessionStateChangedEvent`, `SessionFinalizedEvent`, `EvidenceValidatedEvent`, `HintReleasedEvent`, `ManualPenaltyAppliedEvent`.
+- Eventos de dominio: `TeamRegisteredEvent`, `SessionStartedEvent`, `SessionStateChangedEvent`, `SessionFinalizedEvent`, `EvidenceValidatedEvent`, `HintReleasedEvent`, `ManualPenaltyAppliedEvent`, `SessionJoinRequestCreatedEvent`, `SessionJoinRequestResolvedEvent`, `SupportMessageSentEvent`, `TeamCompletedMissionEvent`.
 - `SessionDomainException`: Excepción de dominio (Patrón: Domain Exception).
 
 ### Capa: Application
@@ -159,9 +161,11 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 #### CQRS (handlers delegan al Facade)
 - `CreateLiveSessionHandler`, `StartLiveSessionHandler`, `FinalizeLiveSessionHandler`, `CancelLiveSessionHandler`: Delegan en `ISessionOperationFacade`.
 - `SubmitTriviaAnswerHandler`, `SubmitTreasureHuntCodeHandler`: Delegan en `ISessionOperationFacade`.
-- `JoinSessionHandler`: Registro de equipo + publicación de `TeamRegisteredEvent` vía `IDomainEventPublisher`.
+- `JoinSessionHandler`: Crea solicitud `Pending` (ya no registra directo); `ProcessSessionJoinRequestHandler` aprueba/rechaza y registra.
+- Controles operador: `ReleaseManualHintHandler`, `ApplyManualPenaltyHandler`, `SendSupportMessageHandler`, `ToggleSessionPauseHandler`.
 - `CreateLiveSessionCommandValidator`: FluentValidation de entrada.
-- Consultas: `GetActiveSessionsHandler`, `GetTeamCurrentStageHandler`, `GetOperatorAssignedMissionsHandler`, `GetSessionTeamsHandler`, etc.
+- Consultas: `GetActiveSessionsHandler`, `GetTeamCurrentStageHandler`, `GetOperatorAssignedMissionsHandler`, `GetSessionTeamsHandler`, `GetSessionJoinRequestsHandler`, etc.
+- `ILiveSessionRealtimeNotifier`: puerto de broadcast en tiempo real.
 
 #### Proxy (panel de pistas jugador)
 - `IPlayerHintPanelService`: Puerto de consulta de pistas para equipos en sesión.
@@ -175,15 +179,16 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 ### Capa: Infrastructure
 - `SessionManagementDbContext`, `LiveSessionRepository`, configuraciones EF Core.
 - `HttpMissionIntegrationService`: Cliente HTTP hacia MissionManagement.
-- `RabbitMqDomainEventPublisher`: Publica eventos de sesión a RabbitMQ (`session.evidence.validated`, `session.team.registered`, `session.finalized`).
+- `RabbitMqDomainEventPublisher`: Publica eventos tipados a RabbitMQ (`session.evidence.validated`, `session.team.registered`, `session.started`, `session.finalized`, `session.hint.released`, `session.penalty.applied`, `session.team.completed`) y notifica SignalR.
 - `FakeMissionIntegrationService`: Adaptador simulado para pruebas.
 
 ### Capa: WebApi
-- `LiveSessionsController`, `OperatorSessionsController`, `OperatorSessionValidationController`, `TeamsController`, `PlayerHintsController`, `MissionSessionValidationController`, `PlayerTeamMembershipController`: Controladores delgados con `Contracts/Routes/` + `Mapping/`.
+- `LiveSessionsController`, `OperatorSessionsController`, `OperatorSessionControlController`, `SessionJoinRequestsController`, `OperatorSessionValidationController`, `TeamsController`, `PlayerHintsController`, `MissionSessionValidationController`, `PlayerTeamMembershipController`: Controladores delgados con `Contracts/Routes/` + `Mapping/`.
+- `LiveSessionHub` (`/hubs/live-session`): Hub SignalR con grupos `Session_{id}`, `Operator_Session_{id}`, `Session_{id}_Team_{teamId}`.
+- `SignalRLiveSessionRealtimeNotifier`: Bridge domain events → clientes.
 - `OperatorSessionsController`: flujos de operador autenticados (`admin`/`operator` + `EnsureOperatorMatchesRoute`).
 - `OperatorSessionValidationController`: validaciones de integración para MissionManagement (`has-active`, `is-supervising`) — `[AllowAnonymous]`.
-- `Program`: Composition root — Umbral.Shared, Facade, cadena de validación, processors, RabbitMQ.
-- `SignalR Hubs`: Pendiente.
+- `Program`: Composition root — Umbral.Shared, Facade, cadena de validación, processors, RabbitMQ, SignalR.
 
 ---
 
@@ -191,29 +196,29 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 
 ### Capa: Domain
 - `TeamLedger`: Agregado raíz del libro mayor de puntos por equipo/sesión (Patrón: Aggregate Root).
+- `AuditLog`: Agregado append-only de timeline por sesión; se sella al finalizar (RN-17).
 - `ScoreEntry`: Entrada inmutable del historial de puntaje (Patrón: Entity).
 - `ScoreOrigin`: Origen trazable del puntaje; `ComputedScore` respeta `FinalScore` de la Strategy.
-- `PenaltyReason`, `RankingEntry`: Value Objects.
+- `PenaltyReason` (incluye `AppliedByOperatorId`), `RankingEntry`: Value Objects.
 - `IScoreCalculationStrategy`: Interfaz del patrón **Strategy** para cálculo de puntaje.
 - `TriviaScoreStrategy`: Bonificación por velocidad de respuesta.
 - `TreasureHuntScoreStrategy`: Puntaje base × dificultad sin bonificación temporal.
 - `ScoreCalculatorService`: Contexto Strategy — selecciona estrategia por `NodeType`.
-- `RankingManagerService`: Ordena equipos por puntaje y tiempo (RB-08).
-- `ITeamLedgerRepository`: Puerto de persistencia.
+- `RankingManagerService`: Ordena equipos por puntaje y tiempo (RB-08 / RN-09).
+- `ITeamLedgerRepository`, `IAuditLogRepository`: Puertos de persistencia.
 - `ScoringDomainException`: Excepción de dominio.
 
 ### Capa: Application
-- `ProcessEvidenceValidatedHandler`: Consume evento de evidencia validada, aplica Strategy y registra en `TeamLedger`.
-- `ProcessTeamRegisteredHandler`: Crea `TeamLedger` al registrar equipo.
-- `ProcessSessionFinalizedHandler`: Cierra ledgers al finalizar sesión.
-- `GetSessionRankingHandler`: Consulta ranking de una sesión (CQRS Query).
+- `ProcessEvidenceValidatedHandler`, `ProcessTeamRegisteredHandler`, `ProcessSessionStartedHandler`, `ProcessHintReleasedHandler`, `ProcessManualPenaltyHandler`, `ProcessTeamCompletedHandler`, `ProcessSessionFinalizedHandler`.
+- `GetSessionRankingHandler`, `GetHistoricalSessionsHandler`, `GetSessionAuditDetailHandler`.
 
 ### Capa: Infrastructure
-- `ScoringAuditDbContext`, `TeamLedgerRepository`, configuraciones EF Core (`team_ledgers`, `score_entries`).
+- `ScoringAuditDbContext`, `TeamLedgerRepository`, `AuditLogRepository`, configuraciones EF Core.
 - `ScoringAuditRabbitMqConsumer`: Consume eventos de SessionManagement y despacha handlers MediatR.
 
 ### Capa: WebApi
-- `RankingController`: `GET /api/v1/sessions/{sessionId}/ranking` con `SessionRoute` + `RankingMappings` (`[Authorize: admin,operator]`).
+- `RankingController`: `GET /api/v1/sessions/{sessionId}/ranking`.
+- `AuditController`: `GET /api/v1/audit/sessions` y `GET /api/v1/audit/sessions/{sessionId}` (HU-64/65).
 - `Program`: Composition root — Umbral.Shared, MediatR, EF Core, Strategy DI, consumidor RabbitMQ.
 - `GET /health`: Health check (`[AllowAnonymous]`).
 
@@ -234,7 +239,6 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 
 ## Pendientes conocidos
 
-- **SignalR**: Hubs de tiempo real no implementados en ningún microservicio.
 - **Modo de sesión como Strategy**: La variación de puntaje es por `NodeType` + multiplicador de dificultad, no por modo de sesión.
 - **State GoF estricto**: `LiveSession` usa matriz de transiciones (enum + switch), no clases de estado por objeto.
-- **Documentación de dominio**: Actualizar `docs/Resumen-Dominio-md` si se usa en informes académicos (referencia cruzada con este mapa).
+- **Documentación de dominio**: Actualizar `docs/Resumen-Dominio.md` si se usa en informes académicos (referencia cruzada con este mapa).

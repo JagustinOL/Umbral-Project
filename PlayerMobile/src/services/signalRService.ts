@@ -29,10 +29,34 @@ export type ManualPenaltyPayload = {
   reason: string;
 };
 
+export type HintReleasedPayload = {
+  sessionId: string;
+  teamId: string;
+  hintId: string;
+  missionNodeId: string;
+  penaltyPoints: number;
+};
+
+export type SupportMessagePayload = {
+  sessionId: string;
+  teamId: string;
+  message: string;
+};
+
+export type JoinRequestResolvedPayload = {
+  sessionId: string;
+  teamId: string;
+  requestId: string;
+  decision: string;
+};
+
 export type LiveSessionHubCallbacks = {
   onSessionStateChanged?: (payload: SessionStatePayload) => void;
   onScoreUpdate?: (payload: ScoreUpdatePayload) => void;
   onManualPenalty?: (payload: ManualPenaltyPayload) => void;
+  onHintReleased?: (payload: HintReleasedPayload) => void;
+  onSupportMessage?: (payload: SupportMessagePayload) => void;
+  onJoinRequestResolved?: (payload: JoinRequestResolvedPayload) => void;
   onReconnecting?: () => void;
   onReconnected?: () => void;
 };
@@ -43,6 +67,7 @@ let activeSessionId: string | null = null;
 export async function connectLiveSessionHub(
   sessionId: string,
   callbacks: LiveSessionHubCallbacks,
+  teamId?: string,
 ): Promise<void> {
   if (
     connection &&
@@ -81,6 +106,18 @@ export async function connectLiveSessionHub(
     callbacks.onManualPenalty?.(payload);
   });
 
+  connection.on('ReceiveHintReleased', (payload: HintReleasedPayload) => {
+    callbacks.onHintReleased?.(payload);
+  });
+
+  connection.on('ReceiveSupportMessage', (payload: SupportMessagePayload) => {
+    callbacks.onSupportMessage?.(payload);
+  });
+
+  connection.on('JoinRequestResolved', (payload: JoinRequestResolvedPayload) => {
+    callbacks.onJoinRequestResolved?.(payload);
+  });
+
   connection.onreconnecting(() => {
     callbacks.onReconnecting?.();
   });
@@ -91,6 +128,9 @@ export async function connectLiveSessionHub(
 
   await connection.start();
   await connection.invoke('JoinSession', sessionId);
+  if (teamId) {
+    await connection.invoke('JoinTeamSession', sessionId, teamId);
+  }
   activeSessionId = sessionId;
 }
 

@@ -22,6 +22,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
     }
 
@@ -35,6 +37,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.JoinCode == normalized, cancellationToken);
     }
 
@@ -51,6 +55,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.Id == sessionId && x.OperatorRef == operatorId, cancellationToken);
     }
 

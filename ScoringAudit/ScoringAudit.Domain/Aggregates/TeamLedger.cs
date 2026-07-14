@@ -33,6 +33,7 @@ public sealed class TeamLedger : AggregateRoot
 
     public bool IsClosed { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
+    public double? CompletionElapsedSeconds { get; private set; }
 
     public IReadOnlyList<ScoreEntry> Entries => _entries.AsReadOnly();
 
@@ -71,6 +72,9 @@ public sealed class TeamLedger : AggregateRoot
             .OrderByDescending(e => e.RecordedAtUtc)
             .FirstOrDefault()
             ?.Origin?.ElapsedSeconds ?? 0;
+
+    /// <summary>Tiempo definitivo reportado al completar la misión.</summary>
+    public double TotalElapsedSeconds => CompletionElapsedSeconds ?? LastPositiveEntryElapsedSeconds;
 
     private TeamLedger() { }
 
@@ -191,6 +195,15 @@ public sealed class TeamLedger : AggregateRoot
             TeamId = TeamRef,
             NewTotalScore = TotalScore
         });
+    }
+
+    public void SetCompletionElapsedSeconds(double elapsedSeconds)
+    {
+        ThrowIfClosed();
+        if (elapsedSeconds < 0)
+            throw new ScoringDomainException("El tiempo transcurrido no puede ser negativo.");
+
+        CompletionElapsedSeconds = elapsedSeconds;
     }
 
     // ── Helper privado ─────────────────────────────────────────────────────────

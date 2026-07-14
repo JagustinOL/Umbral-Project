@@ -2739,6 +2739,104 @@
                   ]
                 }
               }
+            },
+            {
+              "name": "Listar solicitudes de unión (HU-49)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/join-requests",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "join-requests"]
+                }
+              }
+            },
+            {
+              "name": "Aprobar solicitud de unión",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"decision\": \"Approve\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/join-requests/{{teamId}}/decision",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "join-requests", "{{teamId}}", "decision"]
+                }
+              }
+            },
+            {
+              "name": "Liberar pista manual (HU-54)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hintId\": \"{{hintId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/hints/release",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "hints", "release"]
+                }
+              }
+            },
+            {
+              "name": "Aplicar penalización manual (HU-55)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"points\": 50,\n  \"reason\": \"Incumplimiento de reglas\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/penalties",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "penalties"]
+                }
+              }
+            },
+            {
+              "name": "Enviar mensaje de soporte (HU-56)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"message\": \"Sigan buscando el código en el salón A\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/messages",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "messages"]
+                }
+              }
+            },
+            {
+              "name": "Pausar/Reanudar sesión (HU-62)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Pausa operativa\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/pause",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "pause"]
+                }
+              }
             }
           ]
         }
@@ -2898,6 +2996,59 @@
                 "sessions",
                 "{{sessionId}}",
                 "ranking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Historial de sesiones (HU-64)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/api/v1/audit/sessions?page=1&pageSize=25",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "api",
+                "v1",
+                "audit",
+                "sessions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "25"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle auditoría de sesión (HU-65)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/api/v1/audit/sessions/{{sessionId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "api",
+                "v1",
+                "audit",
+                "sessions",
+                "{{sessionId}}"
               ]
             }
           }

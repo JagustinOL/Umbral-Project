@@ -14,6 +14,7 @@ const missionApiBaseUrl = (
 
 const SESSION_API_BASE_URL = `${sessionApiBaseUrl}/api/v1`;
 const MISSION_API_BASE_URL = `${missionApiBaseUrl}/api/v1`;
+const SCORING_API_BASE_URL = `${sessionApiBaseUrl}/api/v1`;
 
 export class ApiError extends Error {
   status: number;
@@ -159,4 +160,11 @@ export function missionApiRequest<T>(
   options?: RequestOptions,
 ): Promise<T> {
   return request<T>(MISSION_API_BASE_URL, endpoint, options);
+}
+
+export function scoringApiRequest<T>(
+  endpoint: string,
+  options?: RequestOptions,
+): Promise<T> {
+  return request<T>(SCORING_API_BASE_URL, endpoint, options);
 }

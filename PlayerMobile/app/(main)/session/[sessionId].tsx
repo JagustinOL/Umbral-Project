@@ -11,6 +11,7 @@ import {
 import { ConnectionIndicator } from '../../../src/components/ConnectionIndicator';
 import { FinalSummaryPanel } from '../../../src/components/gameplay/FinalSummaryPanel';
 import { GameplayTabBar } from '../../../src/components/gameplay/GameplayTabBar';
+import { GameplayFeedbackBanner } from '../../../src/components/gameplay/GameplayFeedbackBanner';
 import { HintsPanel } from '../../../src/components/gameplay/HintsPanel';
 import { PenaltiesPanel } from '../../../src/components/gameplay/PenaltiesPanel';
 import { PlayPanel } from '../../../src/components/gameplay/PlayPanel';
@@ -73,6 +74,13 @@ export default function LiveSessionScreen() {
 
         <ConnectionIndicator state={gameplay.connectionState} />
         <SessionStatusBanner status={gameplay.sessionStatus} />
+        {gameplay.supportMessage ? (
+          <GameplayFeedbackBanner
+            tone="info"
+            title="Mensaje del operador"
+            message={gameplay.supportMessage}
+          />
+        ) : null}
 
         <GameplayTabBar
           active={activeTab}

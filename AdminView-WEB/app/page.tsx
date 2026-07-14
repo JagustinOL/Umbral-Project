@@ -5,6 +5,7 @@ import { Sidebar, NavSection } from "@/components/umbral/Sidebar";
 import { MissionCatalog } from "@/components/umbral/MissionCatalog";
 import { MissionBuilder } from "@/components/umbral/MissionBuilder";
 import { OperatorManagement } from "@/components/umbral/OperatorManagement";
+import { AuditHistory } from "@/components/umbral/AuditHistory";
 import {
   CreateMissionPayload,
   CreateOperatorPayload,
@@ -321,6 +322,8 @@ export default function DashboardPage() {
               onClearAssignmentError={() => setAssignmentError(null)}
             />
           )}
+
+          {section === "audit" && <AuditHistory />}
         </div>
       </main>
     </div>

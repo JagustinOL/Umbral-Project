@@ -48,6 +48,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
     private readonly ITeamRepository _teamRepository;
     private readonly IMissionIntegrationService _missionIntegration;
     private readonly IDomainEventPublisher _eventPublisher;
+    private readonly ILiveSessionRealtimeNotifier _realtimeNotifier;
     private readonly TriviaEvidenceSubmissionProcessor _triviaProcessor;
     private readonly TreasureHuntEvidenceSubmissionProcessor _treasureHuntProcessor;
 
@@ -56,6 +57,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         ITeamRepository teamRepository,
         IMissionIntegrationService missionIntegration,
         IDomainEventPublisher eventPublisher,
+        ILiveSessionRealtimeNotifier realtimeNotifier,
         TriviaEvidenceSubmissionProcessor triviaProcessor,
         TreasureHuntEvidenceSubmissionProcessor treasureHuntProcessor)
     {
@@ -63,6 +65,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         _teamRepository = teamRepository;
         _missionIntegration = missionIntegration;
         _eventPublisher = eventPublisher;
+        _realtimeNotifier = realtimeNotifier;
         _triviaProcessor = triviaProcessor;
         _treasureHuntProcessor = treasureHuntProcessor;
     }
@@ -169,6 +172,10 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, answer, rules, questionIndex));
         await SaveAndPublishAsync(session, cancellationToken);
+        await _realtimeNotifier.NotifyTriviaAnswerSubmittedAsync(
+            sessionId, teamId, nodeId, result.IsCorrect, cancellationToken);
+        await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
+            sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
     }
 
@@ -185,6 +192,10 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, foundCode, rules));
         await SaveAndPublishAsync(session, cancellationToken);
+        await _realtimeNotifier.NotifyHuntLocationReachedAsync(
+            sessionId, teamId, nodeId, result.IsCorrect, cancellationToken);
+        await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
+            sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
     }
 

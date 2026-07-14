@@ -24,9 +24,13 @@ public sealed class AuditLog : AggregateRoot
     private readonly List<SessionEvent> _events = [];
 
     public Guid SessionRef { get; private set; }
+    public Guid MissionRef { get; private set; }
+    public Guid OperatorRef { get; private set; }
+    public DateTime StartedAtUtc { get; private set; }
+    public DateTime? EndedAtUtc { get; private set; }
+    public string Status { get; private set; } = "Open";
     public bool IsClosed { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
-    public DateTime? ClosedAtUtc { get; private set; }
 
     public IReadOnlyList<SessionEvent> Events => _events.AsReadOnly();
 
@@ -38,17 +42,29 @@ public sealed class AuditLog : AggregateRoot
     /// Crea un nuevo AuditLog al recibir SessionStartedEvent.
     /// Un AuditLog = una sesión.
     /// </summary>
-    public static AuditLog Create(Guid sessionRef)
+    public static AuditLog Create(
+        Guid sessionRef,
+        Guid missionRef,
+        Guid operatorRef,
+        DateTime startedAtUtc)
     {
         if (sessionRef == Guid.Empty)
             throw new ArgumentException("SessionRef no puede ser vacío.", nameof(sessionRef));
+        if (missionRef == Guid.Empty)
+            throw new ArgumentException("MissionRef no puede ser vacío.", nameof(missionRef));
+        if (operatorRef == Guid.Empty)
+            throw new ArgumentException("OperatorRef no puede ser vacío.", nameof(operatorRef));
 
         return new AuditLog
         {
             Id = Guid.NewGuid(),
             SessionRef = sessionRef,
+            MissionRef = missionRef,
+            OperatorRef = operatorRef,
+            StartedAtUtc = startedAtUtc,
+            Status = "Open",
             IsClosed = false,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
         };
     }
 
@@ -84,14 +100,17 @@ public sealed class AuditLog : AggregateRoot
     /// Cierra el AuditLog. Llamado al recibir SessionFinalizedEvent o Cancelled.
     /// Una vez cerrado es inmutable — ningún evento adicional puede registrarse.
     /// </summary>
-    public void Close()
+    public void Close(string status = "Finished", DateTime? endedAtUtc = null)
     {
         if (IsClosed)
             throw new ScoringDomainException(
                 $"El AuditLog de la sesión {SessionRef} ya está cerrado.");
+        if (status is not ("Finished" or "Cancelled"))
+            throw new ArgumentException("El estado de cierre debe ser Finished o Cancelled.", nameof(status));
 
         IsClosed = true;
-        ClosedAtUtc = DateTime.UtcNow;
+        Status = status;
+        EndedAtUtc = endedAtUtc ?? DateTime.UtcNow;
     }
 
     /// <summary>
