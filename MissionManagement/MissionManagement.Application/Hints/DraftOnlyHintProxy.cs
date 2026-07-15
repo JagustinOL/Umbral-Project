@@ -34,6 +34,11 @@ public sealed class DraftOnlyHintProxy : IHintAccessService
         if (_currentUser.IsInRole("admin") || _currentUser.IsInRole("operator"))
             return await _inner.GetHintsForNodeAsync(missionId, nodeId, cancellationToken);
 
+        // Llamadas service-to-service (p. ej. SessionManagement → operator-board / proxy jugador)
+        // llegan sin principal autenticado. El filtrado de pistas liberadas ocurre en SessionManagement.
+        if (!_currentUser.IsAuthenticated)
+            return await _inner.GetHintsForNodeAsync(missionId, nodeId, cancellationToken);
+
         var mission = await _repository.GetByIdAsync(missionId, cancellationToken);
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={missionId}.");

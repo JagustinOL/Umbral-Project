@@ -4,17 +4,25 @@ import { FormTextField } from '../FormTextField';
 import { PrimaryButton } from '../PrimaryButton';
 import { GameplayFeedbackBanner } from './GameplayFeedbackBanner';
 import { TriviaQuestionPanel } from './TriviaQuestionPanel';
+import { TreasureAreaMap } from './TreasureAreaMap';
 import { colors, typography } from '../../constants/theme';
 import type { TeamCurrentNodeContent, TeamCurrentStage } from '../../types/gameplay';
 import * as gameplayService from '../../services/gameplayService';
 import { showUserAlert } from '../../utils/confirm';
+import {
+  feedbackFromTriviaResult,
+  type TriviaFeedback,
+} from '../../utils/triviaFeedback';
+
+const ERROR_FEEDBACK_MS = 5000;
 
 type PlayPanelProps = {
   sessionId: string;
   teamId: string;
   stage: TeamCurrentStage | null;
   canSubmit: boolean;
-  onSubmitted: () => void;
+  onSubmitted: () => void | Promise<unknown>;
+  sharedTriviaFeedback?: TriviaFeedback | null;
 };
 
 type FeedbackState = {
@@ -29,6 +37,7 @@ export function PlayPanel({
   stage,
   canSubmit,
   onSubmitted,
+  sharedTriviaFeedback = null,
 }: PlayPanelProps) {
   const [nodeContent, setNodeContent] = useState<TeamCurrentNodeContent | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
@@ -69,6 +78,28 @@ export function PlayPanel({
     void loadNodeContent();
   }, [loadNodeContent]);
 
+  useEffect(() => {
+    if (!sharedTriviaFeedback) {
+      return;
+    }
+    // El banner compartido se muestra a nivel de sesión; aquí solo ocultamos el nodo cerrado.
+    if (sharedTriviaFeedback.nodeCompleted) {
+      setNodeContent(null);
+    }
+  }, [sharedTriviaFeedback]);
+
+  useEffect(() => {
+    if (feedback?.tone !== 'error') {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setFeedback(null);
+    }, ERROR_FEEDBACK_MS);
+
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
   const currentQuestionIndex =
     nodeContent?.currentQuestionIndex ?? 0;
   const currentQuestion =
@@ -89,35 +120,18 @@ export function PlayPanel({
         questionIndex: currentQuestionIndex,
       });
 
-      if (result.isCorrect && result.nodeCompleted) {
-        setFeedback({
-          tone: 'success',
-          title: '¡Trivia completada!',
-          message: `Etapa superada. +${result.awardedPoints} pts.`,
-        });
-        showUserAlert(
-          '¡Trivia completada!',
-          `Etapa superada. +${result.awardedPoints} pts.`,
-        );
-      } else if (result.isCorrect) {
-        setFeedback({
-          tone: 'success',
-          title: '¡Correcto!',
-          message: 'Continúa con la siguiente pregunta.',
-        });
-        showUserAlert('¡Correcto!', 'Continúa con la siguiente pregunta.');
-      } else {
-        setFeedback({
-          tone: 'error',
-          title: 'Incorrecto',
-          message: 'Inténtalo de nuevo.',
-        });
-        showUserAlert('Incorrecto', 'Inténtalo de nuevo.');
-      }
+      const nextFeedback = feedbackFromTriviaResult(result);
+      // Banner compartido llega por SignalR a todo el equipo; alerta local solo al que respondió.
+      showUserAlert(nextFeedback.title, nextFeedback.message);
 
       setSelectedOption(null);
-      onSubmitted();
-      await loadNodeContent();
+      if (result.nodeCompleted) {
+        setNodeContent(null);
+      }
+      await onSubmitted();
+      if (!result.nodeCompleted) {
+        await loadNodeContent();
+      }
     } catch (error) {
       showUserAlert(
         'Error al enviar',
@@ -164,8 +178,13 @@ export function PlayPanel({
       }
 
       setCode('');
-      onSubmitted();
-      await loadNodeContent();
+      if (result.isCorrect) {
+        setNodeContent(null);
+      }
+      await onSubmitted();
+      if (!result.isCorrect) {
+        await loadNodeContent();
+      }
     } catch (error) {
       showUserAlert(
         'Error al enviar código',
@@ -186,22 +205,14 @@ export function PlayPanel({
         <GameplayFeedbackBanner
           tone="success"
           title="¡Misión completada!"
-          message="Todas las etapas fueron superadas. Espera a que el operador finalice la sesión o revisa el ranking."
+          message="Todas las etapas fueron superadas. Espera a que el operador finalice la sesión; luego podrás ver el resumen y el ranking."
         />
       </View>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.eyebrow}>ETAPA ACTUAL</Text>
-      <Text style={styles.title}>
-        Nodo #{stage.currentExecutionOrder ?? '—'}
-      </Text>
-      <Text style={styles.meta}>
-        Tipo: {stage.currentNodeType ?? 'Desconocido'}
-      </Text>
-
+    <View style={styles.wrapper}>
       {feedback ? (
         <GameplayFeedbackBanner
           tone={feedback.tone}
@@ -210,55 +221,74 @@ export function PlayPanel({
         />
       ) : null}
 
-      {!canSubmit ? (
-        <Text style={styles.blocked}>
-          Los envíos están deshabilitados mientras la sesión está pausada o finalizada.
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>ETAPA ACTUAL</Text>
+        <Text style={styles.title}>
+          Nodo #{stage.currentExecutionOrder ?? '—'}
         </Text>
-      ) : null}
+        <Text style={styles.meta}>
+          Tipo: {stage.currentNodeType ?? 'Desconocido'}
+        </Text>
 
-      {contentLoading ? (
-        <ActivityIndicator color={colors.primary} size="large" />
-      ) : null}
+        {!canSubmit ? (
+          <Text style={styles.blocked}>
+            Los envíos están deshabilitados mientras la sesión está pausada o finalizada.
+          </Text>
+        ) : null}
 
-      {nodeType.includes('trivia') && currentQuestion && nodeContent ? (
-        <TriviaQuestionPanel
-          question={currentQuestion}
-          questionIndex={currentQuestionIndex}
-          totalQuestions={nodeContent.totalQuestions}
-          selectedOption={selectedOption}
-          loading={loading}
-          canSubmit={canSubmit}
-          onSelectOption={setSelectedOption}
-          onSubmit={handleTrivia}
-        />
-      ) : null}
+        {contentLoading ? (
+          <ActivityIndicator color={colors.primary} size="large" />
+        ) : null}
 
-      {nodeType.includes('treasure') ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Búsqueda del tesoro</Text>
-          {nodeContent?.instructions ? (
-            <Text style={styles.instructions}>{nodeContent.instructions}</Text>
-          ) : null}
-          <FormTextField
-            label="Código QR / tesoro"
-            value={code}
-            onChangeText={setCode}
-            autoCapitalize="characters"
-            editable={canSubmit}
-          />
-          <PrimaryButton
-            label="Enviar código"
+        {nodeType.includes('trivia') && currentQuestion && nodeContent ? (
+          <TriviaQuestionPanel
+            question={currentQuestion}
+            questionIndex={currentQuestionIndex}
+            totalQuestions={nodeContent.totalQuestions}
+            selectedOption={selectedOption}
             loading={loading}
-            locked={!canSubmit}
-            onPress={handleTreasure}
+            canSubmit={canSubmit}
+            onSelectOption={setSelectedOption}
+            onSubmit={handleTrivia}
           />
-        </View>
-      ) : null}
+        ) : null}
+
+        {nodeType.includes('treasure') ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Búsqueda del tesoro</Text>
+            {nodeContent?.instructions ? (
+              <Text style={styles.instructions}>{nodeContent.instructions}</Text>
+            ) : null}
+            <FormTextField
+              label="Código QR / tesoro"
+              value={code}
+              onChangeText={setCode}
+              autoCapitalize="characters"
+              editable={canSubmit}
+            />
+            {nodeContent?.destination ? (
+              <TreasureAreaMap
+                latitude={nodeContent.destination.latitude}
+                longitude={nodeContent.destination.longitude}
+              />
+            ) : null}
+            <PrimaryButton
+              label="Enviar código"
+              loading={loading}
+              locked={!canSubmit}
+              onPress={handleTreasure}
+            />
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    gap: 0,
+  },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

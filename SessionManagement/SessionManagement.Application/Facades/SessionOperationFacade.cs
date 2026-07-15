@@ -127,6 +127,13 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var session = await GetOperatorSessionAsync(operatorId, sessionId, cancellationToken);
         await ValidateMissionAssignmentAsync(operatorId, session.MissionRef, cancellationToken);
 
+        // Idempotente: si ya está cerrada, no reintentamos la transición.
+        if (session.Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
+        {
+            await TeamSessionLockService.ReleaseTeamsFromSessionAsync(session, _teamRepository, cancellationToken);
+            return;
+        }
+
         try
         {
             session.Finalize();
@@ -147,7 +154,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
 
         try
         {
-            session.Cancel();
+            session.Cancel("El operador canceló la sesión antes de iniciarla.");
         }
         catch (SessionManagement.Domain.Exceptions.SessionDomainException ex)
         {
@@ -172,8 +179,9 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, answer, rules, questionIndex));
         await SaveAndPublishAsync(session, cancellationToken);
+        await ReleaseTeamsIfSessionFinalizedAsync(session, cancellationToken);
         await _realtimeNotifier.NotifyTriviaAnswerSubmittedAsync(
-            sessionId, teamId, nodeId, result.IsCorrect, cancellationToken);
+            sessionId, teamId, nodeId, result.IsCorrect, result.NodeCompleted, result.AwardedPoints, cancellationToken);
         await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
             sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
@@ -192,11 +200,22 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, foundCode, rules));
         await SaveAndPublishAsync(session, cancellationToken);
+        await ReleaseTeamsIfSessionFinalizedAsync(session, cancellationToken);
         await _realtimeNotifier.NotifyHuntLocationReachedAsync(
             sessionId, teamId, nodeId, result.IsCorrect, cancellationToken);
         await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
             sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
+    }
+
+    private async Task ReleaseTeamsIfSessionFinalizedAsync(
+        LiveSession session,
+        CancellationToken cancellationToken)
+    {
+        if (session.Status is not (LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled))
+            return;
+
+        await TeamSessionLockService.ReleaseTeamsFromSessionAsync(session, _teamRepository, cancellationToken);
     }
 
     public async Task SaveAndPublishAsync(LiveSession session, CancellationToken cancellationToken = default)

@@ -28,7 +28,7 @@ public sealed class GetGamesByStageHandlerTests
     public async Task Handle_ReturnsChildGames()
     {
         var mission = MissionTestData.CreateMissionWithStage(out var stage);
-        mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1);
+        mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1, baseScore: 100);
 
         var repository = new Mock<IMissionRepository>();
         repository.Setup(r => r.GetByIdAsync(mission.Id, It.IsAny<CancellationToken>()))

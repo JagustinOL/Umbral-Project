@@ -43,6 +43,23 @@ export type SupportMessagePayload = {
   message: string;
 };
 
+export type TeamProgressUpdatedPayload = {
+  sessionId: string;
+  teamId: string;
+  currentNodeId?: string | null;
+  nextNodeId?: string | null;
+  nodeCompleted: boolean;
+};
+
+export type TriviaAnswerSubmittedPayload = {
+  sessionId: string;
+  teamId: string;
+  nodeId: string;
+  isCorrect: boolean;
+  nodeCompleted: boolean;
+  awardedPoints: number;
+};
+
 export type JoinRequestResolvedPayload = {
   sessionId: string;
   teamId: string;
@@ -50,12 +67,25 @@ export type JoinRequestResolvedPayload = {
   decision: string;
 };
 
+/** Backend envía "Approved" | "Rejected" (enum); aceptar también variantes cortas. */
+export function isJoinDecisionApproved(decision: string): boolean {
+  const normalized = decision.trim().toLowerCase();
+  return normalized === 'approved' || normalized === 'approve';
+}
+
+export function isJoinDecisionRejected(decision: string): boolean {
+  const normalized = decision.trim().toLowerCase();
+  return normalized === 'rejected' || normalized === 'reject';
+}
+
 export type LiveSessionHubCallbacks = {
   onSessionStateChanged?: (payload: SessionStatePayload) => void;
   onScoreUpdate?: (payload: ScoreUpdatePayload) => void;
   onManualPenalty?: (payload: ManualPenaltyPayload) => void;
   onHintReleased?: (payload: HintReleasedPayload) => void;
   onSupportMessage?: (payload: SupportMessagePayload) => void;
+  onTeamProgressUpdated?: (payload: TeamProgressUpdatedPayload) => void;
+  onTriviaAnswerSubmitted?: (payload: TriviaAnswerSubmittedPayload) => void;
   onJoinRequestResolved?: (payload: JoinRequestResolvedPayload) => void;
   onReconnecting?: () => void;
   onReconnected?: () => void;
@@ -89,6 +119,9 @@ export async function connectLiveSessionHub(
   connection = new HubConnectionBuilder()
     .withUrl(hubUrl, {
       accessTokenFactory: () => token,
+      // JWT goes via Authorization / access_token; cookies are not used.
+      // Default withCredentials:true breaks browser CORS without Allow-Credentials.
+      withCredentials: false,
     })
     .withAutomaticReconnect([0, 2000, 5000, 10000, 20000])
     .configureLogging(LogLevel.Warning)
@@ -112,6 +145,14 @@ export async function connectLiveSessionHub(
 
   connection.on('ReceiveSupportMessage', (payload: SupportMessagePayload) => {
     callbacks.onSupportMessage?.(payload);
+  });
+
+  connection.on('TeamProgressUpdated', (payload: TeamProgressUpdatedPayload) => {
+    callbacks.onTeamProgressUpdated?.(payload);
+  });
+
+  connection.on('TriviaAnswerSubmitted', (payload: TriviaAnswerSubmittedPayload) => {
+    callbacks.onTriviaAnswerSubmitted?.(payload);
   });
 
   connection.on('JoinRequestResolved', (payload: JoinRequestResolvedPayload) => {

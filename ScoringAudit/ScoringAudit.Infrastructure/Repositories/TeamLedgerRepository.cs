@@ -20,7 +20,7 @@ public sealed class TeamLedgerRepository : ITeamLedgerRepository
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.TeamLedgers
-            .Include("_entries")
+            .Include(x => x.Entries)
             .FirstOrDefaultAsync(x => x.TeamRef == teamRef && x.SessionRef == sessionRef, cancellationToken);
     }
 
@@ -29,7 +29,7 @@ public sealed class TeamLedgerRepository : ITeamLedgerRepository
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.TeamLedgers
-            .Include("_entries")
+            .Include(x => x.Entries)
             .Where(x => x.SessionRef == sessionRef)
             .ToListAsync(cancellationToken);
     }

@@ -19,7 +19,8 @@ public sealed class GetNodePlayerContentHandlerTests
                 new MissionManagement.Domain.ValueObjects.TriviaQuestion("Q1", ["A", "B"], 0),
                 new MissionManagement.Domain.ValueObjects.TriviaQuestion("Q2", ["C", "D"], 1),
             ],
-            1);
+            1,
+            baseScore: 100);
 
         var triviaNode = mission.Nodes.SelectMany(n => n.Children).First(n => n.NodeType.ToString() == "Trivia");
         var repository = new Mock<IMissionRepository>();
@@ -35,6 +36,7 @@ public sealed class GetNodePlayerContentHandlerTests
         result.Questions![0].Prompt.Should().Be("Q1");
         result.Questions[0].Options.Should().Equal("A", "B");
         result.Instructions.Should().BeNull();
+        result.Destination.Should().BeNull();
     }
 
     [Fact]
@@ -52,6 +54,9 @@ public sealed class GetNodePlayerContentHandlerTests
 
         result.Instructions.Should().NotBeNullOrWhiteSpace();
         result.Questions.Should().BeNull();
+        result.Destination.Should().NotBeNull();
+        result.Destination!.Latitude.Should().Be(4.711);
+        result.Destination.Longitude.Should().Be(-74.0721);
     }
 
     [Fact]

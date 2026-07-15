@@ -1,3 +1,5 @@
+using SessionManagement.Application.Dtos;
+
 namespace SessionManagement.Application.Hints;
 
 public interface IPlayerHintPanelService
@@ -6,6 +8,11 @@ public interface IPlayerHintPanelService
         Guid sessionId,
         Guid teamId,
         Guid nodeId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<TeamReleasedHintDto>> GetAllReleasedHintsForTeamAsync(
+        Guid sessionId,
+        Guid teamId,
         CancellationToken cancellationToken = default);
 }
 

@@ -1,3 +1,5 @@
+using ScoringAudit.Application.Queries;
+
 namespace ScoringAudit.Application.Messaging;
 
 public sealed record EvidenceValidatedIntegrationEvent
@@ -76,6 +78,7 @@ public sealed record TeamScoreUpdatedIntegrationEvent
     public Guid SessionId { get; init; }
     public Guid TeamId { get; init; }
     public int NewTotalScore { get; init; }
+    public IReadOnlyList<RankingItemDto> Ranking { get; init; } = [];
 }
 
 public sealed record DomainEventEnvelope

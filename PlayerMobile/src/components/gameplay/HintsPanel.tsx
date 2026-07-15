@@ -6,6 +6,14 @@ type HintsPanelProps = {
   hints: TeamHint[];
 };
 
+function nodeHeading(hint: TeamHint): string | null {
+  if (!hint.nodePrompt?.trim()) {
+    return null;
+  }
+  const isTrivia = (hint.nodeType ?? '').toLowerCase() === 'trivia';
+  return isTrivia ? `Pregunta · ${hint.nodePrompt}` : hint.nodePrompt;
+}
+
 export function HintsPanel({ hints }: HintsPanelProps) {
   if (hints.length === 0) {
     return (
@@ -20,18 +28,21 @@ export function HintsPanel({ hints }: HintsPanelProps) {
 
   return (
     <View style={styles.list}>
-      {hints.map((hint) => (
-        <View key={`${hint.hintId}-${hint.releasedAtUtc}`} style={styles.card}>
-          <Text style={styles.badge}>
-            {hint.wasManualRelease ? 'OPERATOR' : 'AUTO'} · −{hint.penaltyPoints} pts
-          </Text>
-          <Text style={styles.content}>{hint.content}</Text>
-          <Text style={styles.meta}>
-            Node {hint.missionNodeId.slice(0, 8)}… ·{' '}
-            {new Date(hint.releasedAtUtc).toLocaleTimeString()}
-          </Text>
-        </View>
-      ))}
+      {hints.map((hint) => {
+        const heading = nodeHeading(hint);
+        return (
+          <View key={`${hint.hintId}-${hint.releasedAtUtc}`} style={styles.card}>
+            <Text style={styles.badge}>
+              {hint.wasManualRelease ? 'OPERATOR' : 'AUTO'} · −{hint.penaltyPoints} pts
+            </Text>
+            {heading ? <Text style={styles.nodeHeading}>{heading}</Text> : null}
+            <Text style={styles.content}>{hint.content}</Text>
+            <Text style={styles.meta}>
+              {new Date(hint.releasedAtUtc).toLocaleTimeString()}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -52,6 +63,13 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
     fontWeight: '700',
     letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  nodeHeading: {
+    color: colors.accent,
+    fontSize: typography.caption,
+    fontWeight: '600',
+    lineHeight: 18,
     marginBottom: 8,
   },
   content: {

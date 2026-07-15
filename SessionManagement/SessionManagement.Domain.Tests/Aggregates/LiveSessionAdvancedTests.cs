@@ -11,6 +11,8 @@ public sealed class LiveSessionAdvancedTests
     private static readonly Guid TeamId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid NodeId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
+    private static readonly Guid NodeB = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+
     private static LiveSession BuildActiveSession()
     {
         var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
@@ -21,13 +23,16 @@ public sealed class LiveSessionAdvancedTests
         return session;
     }
 
+    private static IReadOnlyList<NodeValidationRule> SingleNodeRules() =>
+        [new NodeValidationRule(NodeId, 1, NodeValidationType.Trivia, ["ok"])];
+
     [Fact]
     public void ReleaseHint_WhenActive_AddsReleasedHint()
     {
         var session = BuildActiveSession();
         var hintId = Guid.NewGuid();
 
-        session.ReleaseHint(TeamId, hintId, NodeId, penaltyPoints: 10);
+        session.ReleaseHint(TeamId, hintId, NodeId, penaltyPoints: 10, SingleNodeRules());
 
         session.ReleasedHints.Should().ContainSingle(r => r.HintId == hintId);
         session.DomainEvents.Should().Contain(e => e.GetType().Name == "HintReleasedEvent");
@@ -38,11 +43,52 @@ public sealed class LiveSessionAdvancedTests
     {
         var session = BuildActiveSession();
         var hintId = Guid.NewGuid();
-        session.ReleaseHint(TeamId, hintId, NodeId, 5);
+        session.ReleaseHint(TeamId, hintId, NodeId, 5, SingleNodeRules());
 
-        var act = () => session.ReleaseHint(TeamId, hintId, NodeId, 5);
+        var act = () => session.ReleaseHint(TeamId, hintId, NodeId, 5, SingleNodeRules());
 
         act.Should().Throw<SessionDomainException>().WithMessage("*RB-04*");
+    }
+
+    [Fact]
+    public void ReleaseHint_WhenNodeAlreadyPassed_ThrowsSessionDomainException()
+    {
+        var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
+            [new AllowedNode(NodeId, "Trivia", 100), new AllowedNode(NodeB, "TreasureHunt", 150)], 1m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+
+        var rules = new[]
+        {
+            new NodeValidationRule(NodeId, 1, NodeValidationType.Trivia, ["Answer"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, ["CODE"]),
+        };
+        session.SubmitTriviaAnswer(TeamId, NodeId, "Answer", 0, rules);
+
+        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeId, 5, rules);
+
+        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+    }
+
+    [Fact]
+    public void ReleaseHint_WhenNodeIsFuture_ThrowsSessionDomainException()
+    {
+        var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
+            [new AllowedNode(NodeId, "Trivia", 100), new AllowedNode(NodeB, "TreasureHunt", 150)], 1m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+
+        var rules = new[]
+        {
+            new NodeValidationRule(NodeId, 1, NodeValidationType.Trivia, ["Answer"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, ["CODE"]),
+        };
+
+        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeB, 5, rules);
+
+        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
     }
 
     [Fact]

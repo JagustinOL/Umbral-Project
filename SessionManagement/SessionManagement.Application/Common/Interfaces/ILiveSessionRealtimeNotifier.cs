@@ -56,6 +56,8 @@ public interface ILiveSessionRealtimeNotifier
         Guid teamId,
         Guid nodeId,
         bool isCorrect,
+        bool nodeCompleted,
+        int awardedPoints,
         CancellationToken cancellationToken = default);
 
     Task NotifyHuntLocationReachedAsync(

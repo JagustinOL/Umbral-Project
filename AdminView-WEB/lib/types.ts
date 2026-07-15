@@ -105,6 +105,7 @@ export interface UpdateNodePayload {
 export interface AddTriviaNodePayload {
   questions: TriviaQuestion[];
   executionOrder: number;
+  baseScore: number;
 }
 
 export interface AddTreasureHuntPayload {
@@ -112,6 +113,7 @@ export interface AddTreasureHuntPayload {
   secretCode: string;
   destination: GpsCoordinate;
   executionOrder: number;
+  baseScore: number;
 }
 
 export interface CreateOperatorPayload {

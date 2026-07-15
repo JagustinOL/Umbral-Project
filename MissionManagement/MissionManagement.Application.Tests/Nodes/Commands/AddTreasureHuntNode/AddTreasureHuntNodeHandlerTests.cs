@@ -30,7 +30,8 @@ public sealed class AddTreasureHuntNodeHandlerTests
             Instructions: "Sigue la ruta",
             SecretCode: "ABC123",
             Destination: new GpsCoordinate(4.711, -74.0721),
-            ExecutionOrder: 1);
+            ExecutionOrder: 1,
+            BaseScore: 100);
 
         // Act
         var action = () => handler.Handle(command, CancellationToken.None);
@@ -59,17 +60,19 @@ public sealed class AddTreasureHuntNodeHandlerTests
             Instructions: "Sigue la ruta",
             SecretCode: "ABC123",
             Destination: new GpsCoordinate(4.711, -74.0721),
-            ExecutionOrder: 1);
+            ExecutionOrder: 1,
+            BaseScore: 150);
 
         // Act
         var nodeId = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         nodeId.Should().NotBe(Guid.Empty);
-        mission.FindNodeById(nodeId).Should().NotBeNull();
+        var node = mission.FindNodeById(nodeId);
+        node.Should().NotBeNull();
+        node!.BaseScore.Should().Be(150);
         _repositoryMock.Verify(
             r => r.SaveAsync(mission, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
-

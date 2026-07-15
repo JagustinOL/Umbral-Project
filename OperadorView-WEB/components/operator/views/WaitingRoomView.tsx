@@ -22,6 +22,7 @@ interface WaitingRoomViewProps {
   joinCode: string;
   onBack: () => void;
   onStartSession: () => Promise<void>;
+  onCancelled: () => void;
 }
 
 export function WaitingRoomView({
@@ -31,12 +32,14 @@ export function WaitingRoomView({
   joinCode,
   onBack,
   onStartSession,
+  onCancelled,
 }: WaitingRoomViewProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [teamsError, setTeamsError] = useState<string | null>(null);
   const [sessionStarting, setSessionStarting] = useState(false);
+  const [sessionCancelling, setSessionCancelling] = useState(false);
   const [joinRequests, setJoinRequests] = useState<SessionJoinRequestDto[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(true);
   const [requestActionTeamId, setRequestActionTeamId] = useState<string | null>(null);
@@ -119,6 +122,27 @@ export function WaitingRoomView({
       toast.error(getOperatorSessionApiErrorMessage(error));
     } finally {
       setSessionStarting(false);
+    }
+  };
+
+  const handleCancelSession = async () => {
+    if (
+      !window.confirm(
+        '¿Cancelar esta sesión? Los equipos inscritos serán notificados y la misión quedará libre para crear otra sesión.',
+      )
+    ) {
+      return;
+    }
+
+    setSessionCancelling(true);
+    try {
+      await operatorSessionService.cancelSession(operatorId, sessionId);
+      toast.success('Sesión cancelada.');
+      onCancelled();
+    } catch (error) {
+      toast.error(getOperatorSessionApiErrorMessage(error));
+    } finally {
+      setSessionCancelling(false);
     }
   };
 
@@ -222,16 +246,29 @@ export function WaitingRoomView({
             </div>
 
             <StartSessionButton
-              disabled={approvedTeamCount === 0}
+              disabled={approvedTeamCount === 0 || sessionCancelling}
               loading={sessionStarting}
               onStart={() => void handleStartSession()}
             />
+
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={sessionStarting || sessionCancelling}
+              onClick={() => void handleCancelSession()}
+            >
+              {sessionCancelling ? 'Cancelando…' : 'Cancelar sesión'}
+            </Button>
 
             {approvedTeamCount === 0 && (
               <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">
                 Se requiere al menos un equipo registrado para iniciar la sesión.
               </p>
             )}
+
+            <p className="text-xs text-muted-foreground">
+              Puede cancelar la sesión mientras esté pendiente. Los jugadores inscritos serán avisados.
+            </p>
           </div>
         </div>
       </div>

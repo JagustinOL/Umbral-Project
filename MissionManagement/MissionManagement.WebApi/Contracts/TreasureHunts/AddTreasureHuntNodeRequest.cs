@@ -4,6 +4,6 @@ public sealed record AddTreasureHuntNodeRequest(
     string Instructions,
     string SecretCode,
     GpsCoordinateRequest Destination,
-    int ExecutionOrder
+    int ExecutionOrder,
+    int BaseScore
 );
-

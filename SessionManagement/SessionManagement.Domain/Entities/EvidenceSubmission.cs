@@ -15,8 +15,9 @@ namespace SessionManagement.Domain.Entities;
 /// sesión y estado de validación. Esta entidad es el registro inmutable.
 ///
 /// El campo IsValid se establece UNA SOLA VEZ. Una evidencia no puede
-/// re-validarse ni modificarse — si fue incorrecta, el equipo debe
-/// enviar una nueva evidencia.
+/// re-validarse ni modificarse. En Trivia, un intento incorrecto cierra
+/// el nodo (sin reintento); en Búsqueda del Tesoro el equipo puede
+/// enviar una nueva evidencia hasta acertar el código.
 /// </summary>
 public sealed class EvidenceSubmission : Entity
 {

@@ -60,7 +60,8 @@ public sealed class GetTeamCurrentNodeContentHandler
                 .ToList(),
             Instructions: content.Instructions,
             CurrentQuestionIndex: currentQuestionIndex,
-            TotalQuestions: totalQuestions);
+            TotalQuestions: totalQuestions,
+            Destination: content.Destination);
     }
 
     private async Task<IReadOnlyList<NodeValidationRule>> BuildRulesAsync(

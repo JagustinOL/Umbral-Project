@@ -58,9 +58,19 @@ public abstract class EvidenceSubmissionProcessor
         else
         {
             session.MarkEvidenceAsInvalid(evidence.Id, context.RejectionReason ?? "Respuesta incorrecta.");
+            // Trivia: un solo intento; al fallar se cierra el nodo y se avanza (0 pts).
+            if (ExpectedType == NodeValidationType.Trivia)
+                nodeCompleted = true;
         }
 
-        return BuildResult(session, request, context, nodeCompleted);
+        var orderedRules = request.ValidationRules.OrderBy(x => x.ExecutionOrder).ToList();
+        var nextRule = orderedRules.FirstOrDefault(rule =>
+            !NodeProgressHelper.IsNodeCompleted(session, request.TeamId, rule));
+
+        if (nodeCompleted && nextRule is null)
+            session.MarkTeamCompleted(request.TeamId);
+
+        return BuildResult(session, request, context, nodeCompleted, nextRule);
     }
 
     protected virtual string NormalizePayload(string payload) => payload.Trim();
@@ -69,11 +79,9 @@ public abstract class EvidenceSubmissionProcessor
         LiveSession session,
         EvidenceSubmissionRequest request,
         EvidenceValidationContext context,
-        bool nodeCompleted)
+        bool nodeCompleted,
+        NodeValidationRule? nextRule)
     {
-        var orderedRules = request.ValidationRules.OrderBy(x => x.ExecutionOrder).ToList();
-        var nextRule = orderedRules.FirstOrDefault(rule =>
-            !NodeProgressHelper.IsNodeCompleted(session, request.TeamId, rule));
         var baseScore = session.AllowedNodes.FirstOrDefault(x => x.NodeId == request.NodeId)?.BaseScore ?? 0;
         var totalQuestions = context.CurrentRule?.ExpectedAnswers.Count ?? 1;
 
@@ -81,7 +89,7 @@ public abstract class EvidenceSubmissionProcessor
             IsCorrect: context.IsCorrect,
             CurrentNodeId: request.NodeId,
             NextNodeId: nodeCompleted ? nextRule?.NodeId : request.NodeId,
-            AwardedPoints: nodeCompleted ? baseScore : 0,
+            AwardedPoints: context.IsCorrect && nodeCompleted ? baseScore : 0,
             AnsweredQuestionIndex: context.ResolvedQuestionIndex,
             TotalQuestions: totalQuestions,
             NodeCompleted: nodeCompleted);

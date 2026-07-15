@@ -3,6 +3,7 @@ using MediatR;
 using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Entities;
 using ScoringAudit.Domain.Repositories;
+using ScoringAudit.Domain.Services;
 using ScoringAudit.Domain.ValueObjects;
 
 namespace ScoringAudit.Application.Events;
@@ -13,11 +14,19 @@ public sealed class ProcessManualPenaltyHandler : IRequestHandler<ProcessManualP
 {
     private readonly ITeamLedgerRepository _ledgerRepository;
     private readonly IAuditLogRepository _auditLogRepository;
+    private readonly RankingManagerService _rankingManager;
+    private readonly ITeamScoreUpdatePublisher _scoreUpdatePublisher;
 
-    public ProcessManualPenaltyHandler(ITeamLedgerRepository ledgerRepository, IAuditLogRepository auditLogRepository)
+    public ProcessManualPenaltyHandler(
+        ITeamLedgerRepository ledgerRepository,
+        IAuditLogRepository auditLogRepository,
+        RankingManagerService rankingManager,
+        ITeamScoreUpdatePublisher scoreUpdatePublisher)
     {
         _ledgerRepository = ledgerRepository;
         _auditLogRepository = auditLogRepository;
+        _rankingManager = rankingManager;
+        _scoreUpdatePublisher = scoreUpdatePublisher;
     }
 
     public async Task Handle(ProcessManualPenaltyCommand request, CancellationToken cancellationToken)
@@ -42,5 +51,16 @@ public sealed class ProcessManualPenaltyHandler : IRequestHandler<ProcessManualP
             evt.TeamId,
             metadata: JsonSerializer.Serialize(new { evt.OperatorRef, evt.PenaltyPoints, evt.Reason }));
         await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
+
+        var ledgers = await _ledgerRepository.GetBySessionAsync(evt.SessionId, cancellationToken);
+        await _scoreUpdatePublisher.PublishAsync(
+            new TeamScoreUpdatedIntegrationEvent
+            {
+                SessionId = evt.SessionId,
+                TeamId = evt.TeamId,
+                NewTotalScore = ledger.TotalScore,
+                Ranking = RankingSnapshotMapper.ToDto(_rankingManager.BuildRanking(ledgers))
+            },
+            cancellationToken);
     }
 }

@@ -81,6 +81,13 @@ export default function LiveSessionScreen() {
             message={gameplay.supportMessage}
           />
         ) : null}
+        {gameplay.triviaFeedback ? (
+          <GameplayFeedbackBanner
+            tone={gameplay.triviaFeedback.tone}
+            title={gameplay.triviaFeedback.title}
+            message={gameplay.triviaFeedback.message}
+          />
+        ) : null}
 
         <GameplayTabBar
           active={activeTab}
@@ -99,6 +106,7 @@ export default function LiveSessionScreen() {
             stage={gameplay.stage}
             canSubmit={gameplay.isPlayable}
             onSubmitted={gameplay.refreshStage}
+            sharedTriviaFeedback={gameplay.triviaFeedback}
           />
         ) : null}
 

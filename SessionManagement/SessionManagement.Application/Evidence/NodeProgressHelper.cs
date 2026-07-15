@@ -18,6 +18,15 @@ public static class NodeProgressHelper
                 e.IsValid == true);
         }
 
+        // Trivia: cierra con fallo (cualquier intento inválido) o al completar todas las preguntas.
+        var hasFailedAttempt = session.EvidenceSubmissions.Any(e =>
+            e.TeamId == teamId &&
+            e.MissionNodeId == rule.NodeId &&
+            e.IsValid == false);
+
+        if (hasFailedAttempt)
+            return true;
+
         var answeredIndices = session.EvidenceSubmissions
             .Where(e =>
                 e.TeamId == teamId &&

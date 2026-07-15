@@ -66,4 +66,35 @@ public sealed class LiveSessionMultiQuestionTriviaTests
         var act = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Answer2", 1, rules);
         act.Should().Throw<SessionDomainException>().WithMessage("*pregunta 0*");
     }
+
+    [Fact]
+    public void SubmitTriviaAnswer_WhenWrongOnFirstQuestion_ClosesNodeWithoutRetry()
+    {
+        var session = LiveSession.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            [
+                new AllowedNode(TriviaNodeId, "Trivia", 100),
+                new AllowedNode(TreasureNodeId, "TreasureHunt", 150)
+            ],
+            1.0m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+
+        IReadOnlyList<NodeValidationRule> rules =
+        [
+            new NodeValidationRule(TriviaNodeId, 1, NodeValidationType.Trivia, ["Answer1", "Answer2"]),
+            new NodeValidationRule(TreasureNodeId, 2, NodeValidationType.TreasureHunt, ["CODE-123"])
+        ];
+
+        var wrong = session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "bad", 0, rules);
+        wrong.IsCorrect.Should().BeFalse();
+        wrong.NodeCompleted.Should().BeTrue();
+        wrong.AwardedPoints.Should().Be(0);
+        wrong.NextNodeId.Should().Be(TreasureNodeId);
+
+        var retry = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Answer1", 0, rules);
+        retry.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+    }
 }

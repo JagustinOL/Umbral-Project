@@ -1,4 +1,5 @@
 using MediatR;
+using SessionManagement.Application.Common;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Exceptions;
@@ -33,30 +34,28 @@ public sealed class ReleaseManualHintHandler : IRequestHandler<ReleaseManualHint
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
             throw new NotFoundException("La misión no está asignada al operador (RN-16).");
 
-        MissionHintData? hintData = null;
-        Guid missionNodeId = Guid.Empty;
-        foreach (var node in session.AllowedNodes)
-        {
-            var hints = await _missionIntegration.GetHintsForNodeAsync(
-                session.MissionRef, node.NodeId, cancellationToken);
-            hintData = hints.FirstOrDefault(h => h.Id == request.HintId);
-            if (hintData is not null)
-            {
-                missionNodeId = node.NodeId;
-                break;
-            }
-        }
+        var rules = await NodeValidationRulesFactory.BuildAsync(
+            _missionIntegration, session.MissionRef, cancellationToken);
 
-        if (hintData is null)
-            throw new NotFoundException($"No se encontró la pista {request.HintId} en la misión.");
+        var currentNodeId = session.GetCurrentNodeForTeam(request.TeamId, rules);
+        if (currentNodeId is null)
+            throw new ConflictException(
+                "El equipo ya completó todos los juegos; no se pueden liberar más pistas (RN-04).");
+
+        var hints = await _missionIntegration.GetHintsForNodeAsync(
+            session.MissionRef, currentNodeId.Value, cancellationToken);
+        var hintData = hints.FirstOrDefault(h => h.Id == request.HintId)
+            ?? throw new NotFoundException(
+                $"No se encontró la pista {request.HintId} en el juego actual del equipo.");
 
         try
         {
             session.ReleaseHint(
                 request.TeamId,
                 request.HintId,
-                missionNodeId,
+                currentNodeId.Value,
                 hintData.PenaltyPoints,
+                rules,
                 wasManualRelease: true);
 
             await _sessionRepository.SaveAsync(session, cancellationToken);

@@ -53,6 +53,8 @@ HTTP → Route struct + Body contract → ToCommand() / ToQuery() → MediatR �
 | SessionManagement | `OperatorSessionValidationController` | `OperatorRoute`, `OperatorMissionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `LiveSessionsController` | `LiveSessionTeamRoute` | `LiveSessionMappings` |
 | SessionManagement | `PlayerHintsController` | `LiveSessionTeamNodeRoute` | — (servicio `IPlayerHintPanelService`) |
+| SessionManagement | `TeamReleasedHintsController` | — | — (servicio `IPlayerHintPanelService`) |
+| SessionManagement | `OperatorSessionControlController` | — | `GetOperatorSessionBoardQuery`, release/pause/penalties |
 | SessionManagement | `TeamsController` | `TeamRoute`, `TeamActionRoute`, `TeamJoinRequestRoute`, `TeamMemberActionRoute` | `TeamMappings` |
 | SessionManagement | `MissionSessionValidationController` | `MissionRoute` | `MissionSessionValidationMappings` |
 | SessionManagement | `PlayerTeamMembershipController` | `PlayerRoute` | `PlayerTeamMembershipMappings` |
@@ -883,10 +885,45 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/hints/release`
 - **Capa Application:** `ReleaseManualHintCommand`
+- **Validación:** sesión Active; RN-06 (no duplicar); RN-04/RN-07 (solo pistas del nodo actual del equipo).
 - **Body / Payload (Request):**
   ```json
   {
     "hintId": "Guid"
+  }
+  ```
+
+### Tablero operador (progreso + pistas disponibles)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/operator-board`
+- **Capa Application:** `GetOperatorSessionBoardQuery`
+- **Auth:** `operator`, `admin` (RN-16)
+- **Response (200 OK):**
+  ```json
+  {
+    "sessionId": "Guid",
+    "sessionStatus": "Active",
+    "teams": [
+      {
+        "teamId": "Guid",
+        "teamName": "string | null",
+        "participationStatus": "Active",
+        "currentNodeId": "Guid | null",
+        "currentNodeType": "Trivia | TreasureHunt | null",
+        "currentExecutionOrder": 1,
+        "currentGameLabel": "Trivia · Orden 1",
+        "isMissionCompleted": false,
+        "availableHints": [
+          {
+            "hintId": "Guid",
+            "order": 1,
+            "content": "string",
+            "penaltyPoints": 0
+          }
+        ],
+        "releasedHints": []
+      }
+    ]
   }
   ```
 
@@ -1101,13 +1138,34 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   }
   ```
 
-### Consultar pistas liberadas al equipo (jugador)
+### Consultar pistas liberadas al equipo (jugador, sesión completa)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/teams/{teamId}/hints`
+- **WebApi:** `TeamReleasedHintsController` → `IPlayerHintPanelService.GetAllReleasedHintsForTeamAsync`
+- **Auth:** `player`
+- **Body / Payload (Request):** ninguno.
+- **Response (200 OK):** solo pistas liberadas por el operador (proxy `PlayerReleasedHintsProxy`):
+  ```json
+  [
+    {
+      "hintId": "Guid",
+      "missionNodeId": "Guid",
+      "order": 1,
+      "content": "string",
+      "penaltyPoints": 0,
+      "releasedAtUtc": "2026-01-01T00:00:00Z",
+      "wasManualRelease": true
+    }
+  ]
+  ```
+
+### Consultar pistas liberadas al equipo (jugador, por nodo)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `GET /api/v1/live-sessions/{sessionId}/teams/{teamId}/nodes/{nodeId}/hints`
 - **WebApi:** `LiveSessionTeamNodeRoute` → `IPlayerHintPanelService.GetReleasedHintsForTeamAsync`
-- **Auth:** `player`, `operator`, `admin`
+- **Auth:** `player`
 - **Body / Payload (Request):** ninguno.
-- **Response (200 OK):** lista de pistas ya liberadas al equipo (proxy `PlayerReleasedHintsProxy`).
+- **Response (200 OK):** lista de pistas ya liberadas al equipo en ese nodo (proxy `PlayerReleasedHintsProxy`).
 
 ## MissionManagement · Integración y validación
 

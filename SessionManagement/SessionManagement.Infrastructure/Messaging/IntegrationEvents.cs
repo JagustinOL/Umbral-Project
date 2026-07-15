@@ -73,6 +73,22 @@ public sealed record TeamCompletedMissionIntegrationEvent
     public double ElapsedSeconds { get; init; }
 }
 
+public sealed record TeamScoreUpdatedIntegrationEvent
+{
+    public Guid SessionId { get; init; }
+    public Guid TeamId { get; init; }
+    public int NewTotalScore { get; init; }
+    public IReadOnlyList<RankingSnapshotItem> Ranking { get; init; } = [];
+}
+
+public sealed record RankingSnapshotItem(
+    int Position,
+    Guid TeamId,
+    string TeamName,
+    int TotalScore,
+    int CompletedNodes,
+    double LastElapsedSeconds);
+
 public sealed record DomainEventEnvelope
 {
     public string EventType { get; init; } = string.Empty;

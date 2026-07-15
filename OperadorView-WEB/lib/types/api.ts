@@ -48,11 +48,50 @@ export interface SessionJoinRequestDto {
 }
 
 export interface RankingEntryDto {
+  position?: number;
   teamId: string;
   teamName: string;
   totalScore: number;
   completedNodes: number;
   lastElapsedSeconds: number;
+}
+
+export interface OperatorAvailableHintDto {
+  hintId: string;
+  order: number;
+  content: string;
+  penaltyPoints: number;
+  nodeType: string | null;
+  nodePrompt: string | null;
+}
+
+export interface OperatorReleasedHintSummaryDto {
+  hintId: string;
+  missionNodeId: string;
+  penaltyPoints: number;
+  releasedAtUtc: string;
+  wasManualRelease: boolean;
+  nodeType: string | null;
+  nodePrompt: string | null;
+}
+
+export interface OperatorTeamBoardEntryDto {
+  teamId: string;
+  teamName: string | null;
+  participationStatus: string;
+  currentNodeId: string | null;
+  currentNodeType: string | null;
+  currentExecutionOrder: number | null;
+  currentGameLabel: string | null;
+  isMissionCompleted: boolean;
+  availableHints: OperatorAvailableHintDto[];
+  releasedHints: OperatorReleasedHintSummaryDto[];
+}
+
+export interface OperatorSessionBoardDto {
+  sessionId: string;
+  sessionStatus: string;
+  teams: OperatorTeamBoardEntryDto[];
 }
 
 export interface HistoricalSessionDto {

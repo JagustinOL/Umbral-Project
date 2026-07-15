@@ -141,7 +141,7 @@ public sealed class Mission : AggregateRoot
         Guid parentNodeId,
         IReadOnlyList<TriviaQuestion> questions,
         int executionOrder,
-        int baseScore = 0)
+        int baseScore)
     {
         ThrowIfNotDraft("agregar juegos de trivia");
         var triviaNode = MissionNode.CreateTrivia(
@@ -160,7 +160,7 @@ public sealed class Mission : AggregateRoot
         string secretCode,
         GpsCoordinate destination,
         int executionOrder,
-        int baseScore = 0)
+        int baseScore)
     {
         ThrowIfNotDraft("agregar juegos de busqueda");
         var treasureNode = MissionNode.CreateTreasureHunt(
@@ -214,7 +214,7 @@ public sealed class Mission : AggregateRoot
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
-    public void UpdateTriviaNode(Guid nodeId, IReadOnlyList<TriviaQuestion> questions)
+    public void UpdateTriviaNode(Guid nodeId, IReadOnlyList<TriviaQuestion> questions, int baseScore)
     {
         if (nodeId == Guid.Empty)
             throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
@@ -225,6 +225,7 @@ public sealed class Mission : AggregateRoot
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
         node.UpdateTriviaQuestions(questions);
+        node.UpdateBaseScore(baseScore);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
@@ -232,7 +233,8 @@ public sealed class Mission : AggregateRoot
         Guid nodeId,
         string instructions,
         string secretCode,
-        GpsCoordinate destination)
+        GpsCoordinate destination,
+        int baseScore)
     {
         if (nodeId == Guid.Empty)
             throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
@@ -243,6 +245,7 @@ public sealed class Mission : AggregateRoot
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
         node.UpdateTreasureHunt(instructions, secretCode, destination);
+        node.UpdateBaseScore(baseScore);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 

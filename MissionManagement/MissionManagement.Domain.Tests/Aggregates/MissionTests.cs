@@ -117,7 +117,8 @@ public sealed class MissionTests
         var action = () => mission.AddTriviaNode(
             parentNodeId: stage.Id,
             questions: questions,
-            executionOrder: 1);
+            executionOrder: 1,
+            baseScore: 100);
 
         // Assert
         action.Should().Throw<InvalidOperationException>()
@@ -134,7 +135,8 @@ public sealed class MissionTests
         var triviaId = mission.AddTriviaNode(
             stage.Id,
             [new TriviaQuestion("¿Pregunta?", ["A", "B"], correctOptionIndex: 0)],
-            executionOrder: 1);
+            executionOrder: 1,
+            baseScore: 100);
         mission.Activate();
 
         var hint = Hint.Create(

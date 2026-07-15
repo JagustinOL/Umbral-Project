@@ -21,11 +21,12 @@ public sealed class DtoCoverageTests
         _ = new SessionTeamsDto(id, [id], 1);
         _ = new SubmissionResultDto(true, id, id, 100, 0, 1, true);
         _ = new TeamCurrentStageDto(id, id, id, "Trivia", 1, false);
-        _ = new TeamCurrentNodeContentDto(id, "Trivia", [new PlayerTriviaQuestionDto("Q", ["A"])], null, 0, 1);
+        _ = new TeamCurrentNodeContentDto(id, "Trivia", [new PlayerTriviaQuestionDto("Q", ["A"])], null, 0, 1, null);
         _ = new TeamDetailsDto(id, "T", "CODE", false, null, false, [new TeamMemberDto(id, "M", "Leader", DateTime.UtcNow)]);
         _ = new SubmitJoinRequestResult(id, id);
         _ = new AssignedMissionData(id, id, "M");
         _ = new MissionNodeValidationData(id, "Trivia", 1, 10, ["A"]);
-        _ = new PlayerNodeContentData(id, "Trivia", [new PlayerTriviaQuestionData("Q", ["A"])], null);
+        _ = new PlayerNodeContentData(id, "Trivia", [new PlayerTriviaQuestionData("Q", ["A"])], null, null);
+        _ = new GpsCoordinateData(10.496, -66.899);
     }
 }

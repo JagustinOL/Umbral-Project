@@ -6,6 +6,7 @@ import {
   MissionHasOpenSessionsResponse,
   OperatorAssignedMissionDto,
   OperatorOpenSessionDto,
+  OperatorSessionBoardDto,
   RankingEntryDto,
   SessionAuditDetailDto,
   SessionJoinRequestDto,
@@ -96,6 +97,15 @@ export const operatorSessionService = {
     });
   },
 
+  async getOperatorBoard(
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<OperatorSessionBoardDto> {
+    return sessionApiRequest<OperatorSessionBoardDto>(`/sessions/${sessionId}/operator-board`, {
+      signal,
+    });
+  },
+
   async releaseHint(sessionId: string, teamId: string, hintId: string): Promise<void> {
     await sessionApiRequest<void>(`/sessions/${sessionId}/teams/${teamId}/hints/release`, {
       method: "POST",
@@ -123,6 +133,12 @@ export const operatorSessionService = {
 
   async finalizeSession(operatorId: string, sessionId: string): Promise<void> {
     await sessionApiRequest<void>(`/operators/${operatorId}/sessions/${sessionId}/finalize`, {
+      method: "PUT",
+    });
+  },
+
+  async cancelSession(operatorId: string, sessionId: string): Promise<void> {
+    await sessionApiRequest<void>(`/operators/${operatorId}/sessions/${sessionId}/cancel`, {
       method: "PUT",
     });
   },

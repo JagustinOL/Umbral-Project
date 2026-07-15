@@ -32,7 +32,9 @@ export function AssignedMissionCard({
     onOpenSession(mission.missionId, mission.title);
   };
 
-  const canEnterWaitingRoom = openSession?.status === 'Pending';
+  const status = openSession?.status ?? null;
+  const canEnterWaitingRoom = status === 'Pending' || status === 'Preparation';
+  const canContinueLive = status === 'Active' || status === 'Paused';
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 flex flex-col gap-4">
@@ -52,7 +54,7 @@ export function AssignedMissionCard({
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
           {canEnterWaitingRoom
             ? 'Hay una sesión pendiente. Puede volver a la sala de espera; no podrá crear otra hasta finalizarla.'
-            : `Sesión en curso (${openSession?.status ?? 'activa'}). Finalícela antes de crear una nueva.`}
+            : `Sesión en curso (${status ?? 'activa'}). Vuelva a la sesión en vivo y use «Finalizar sesión» antes de crear una nueva.`}
         </p>
       )}
 
@@ -60,6 +62,11 @@ export function AssignedMissionCard({
         <Button onClick={handleOpenSession} variant="default" className="w-full gap-2 mt-auto">
           <DoorOpenIcon className="h-4 w-4" />
           Ver sala de espera
+        </Button>
+      ) : hasOpenSession && canContinueLive ? (
+        <Button onClick={handleOpenSession} variant="default" className="w-full gap-2 mt-auto">
+          <PlayIcon className="h-4 w-4" />
+          Continuar sesión en vivo
         </Button>
       ) : hasOpenSession ? null : (
         <Button

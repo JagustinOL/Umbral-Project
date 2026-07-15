@@ -18,7 +18,9 @@ import {
   disconnectLiveSessionHub,
   type ManualPenaltyPayload,
   type SupportMessagePayload,
+  type TriviaAnswerSubmittedPayload,
 } from '../services/signalRService';
+import { feedbackFromTriviaResult, type TriviaFeedback } from '../utils/triviaFeedback';
 
 type UseLiveSessionGameplayOptions = {
   sessionId: string;
@@ -42,6 +44,7 @@ export function useLiveSessionGameplay({
   const [isLoading, setIsLoading] = useState(true);
   const [lastPenaltyAlert, setLastPenaltyAlert] = useState<string | null>(null);
   const [supportMessage, setSupportMessage] = useState<string | null>(null);
+  const [triviaFeedback, setTriviaFeedback] = useState<TriviaFeedback | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshStage = useCallback(async () => {
@@ -135,6 +138,40 @@ export function useLiveSessionGameplay({
     setSupportMessage(payload.message);
   }, [teamId]);
 
+  const handleTriviaAnswerSubmitted = useCallback(
+    (payload: TriviaAnswerSubmittedPayload) => {
+      if (payload.teamId.toLowerCase() !== teamId.toLowerCase()) {
+        return;
+      }
+
+      const feedback = feedbackFromTriviaResult({
+        isCorrect: payload.isCorrect,
+        nodeCompleted: payload.nodeCompleted,
+        awardedPoints: payload.awardedPoints ?? 0,
+      });
+      setTriviaFeedback(feedback);
+
+      if (payload.isCorrect) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    },
+    [teamId],
+  );
+
+  useEffect(() => {
+    if (triviaFeedback?.tone !== 'error') {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setTriviaFeedback(null);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [triviaFeedback]);
+
   useEffect(() => {
     if (!enabled || !sessionId || !teamId) {
       return;
@@ -159,6 +196,12 @@ export function useLiveSessionGameplay({
         }
       },
       onSupportMessage: handleSupportMessage,
+      onTriviaAnswerSubmitted: handleTriviaAnswerSubmitted,
+      onTeamProgressUpdated: (payload) => {
+        if (payload.teamId.toLowerCase() === teamId.toLowerCase()) {
+          void refreshStage();
+        }
+      },
       onReconnecting: () => setConnectionState('reconnecting'),
       onReconnected: () => {
         setConnectionState('connected');
@@ -188,6 +231,7 @@ export function useLiveSessionGameplay({
     syncSessionStatus,
     handlePenalty,
     handleSupportMessage,
+    handleTriviaAnswerSubmitted,
     refreshHints,
   ]);
 
@@ -201,6 +245,7 @@ export function useLiveSessionGameplay({
     isLoading,
     lastPenaltyAlert,
     supportMessage,
+    triviaFeedback,
     isPlayable: isSessionPlayable(sessionStatus),
     isPaused: sessionStatus.toLowerCase() === 'paused',
     isTerminal: isSessionTerminal(sessionStatus),
@@ -211,5 +256,6 @@ export function useLiveSessionGameplay({
     refreshPenalties,
     clearPenaltyAlert: () => setLastPenaltyAlert(null),
     clearSupportMessage: () => setSupportMessage(null),
+    clearTriviaFeedback: () => setTriviaFeedback(null),
   };
 }

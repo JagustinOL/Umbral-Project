@@ -73,7 +73,7 @@ public sealed class GetSessionAuditDetailHandler
         var ledgers = await _ledgerRepository.GetBySessionAsync(request.SessionId, cancellationToken);
         var ranking = _rankingManager.BuildRanking(ledgers)
             .Select(x => new RankingItemDto(
-                x.TeamId, x.TeamName, x.TotalScore, x.CompletedNodes, x.TotalElapsedSeconds))
+                x.Position, x.TeamId, x.TeamName, x.TotalScore, x.CompletedNodes, x.TotalElapsedSeconds))
             .ToList();
 
         return new SessionAuditDetailDto(

@@ -116,10 +116,11 @@ public sealed class LiveSessionFullCoverageTests
         var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", 0, rules);
         wrongAnswer.IsCorrect.Should().BeFalse();
         wrongAnswer.AwardedPoints.Should().Be(0);
+        wrongAnswer.NodeCompleted.Should().BeTrue();
+        wrongAnswer.NextNodeId.Should().Be(NodeB);
 
-        var correct = session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", 0, rules);
-        correct.IsCorrect.Should().BeTrue();
-        correct.NextNodeId.Should().Be(NodeB);
+        var retry = () => session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", 0, rules);
+        retry.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
     }
 
     [Fact]
@@ -145,7 +146,8 @@ public sealed class LiveSessionFullCoverageTests
     {
         var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
             [new AllowedNode(NodeA, "Trivia", 10)], 1m);
-        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeA, 5);
+        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]) };
+        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeA, 5, rules);
         act.Should().Throw<SessionDomainException>();
     }
 

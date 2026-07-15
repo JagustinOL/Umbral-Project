@@ -8,7 +8,7 @@ namespace ScoringAudit.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/sessions/{sessionId:guid}/ranking")]
-[Authorize(Roles = "admin,operator")]
+[Authorize(Roles = "admin,operator,player")]
 public sealed class RankingController : ControllerBase
 {
     private readonly IMediator _mediator;

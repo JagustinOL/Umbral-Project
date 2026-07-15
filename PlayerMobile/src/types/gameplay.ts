@@ -22,6 +22,11 @@ export type PlayerTriviaQuestion = {
   options: string[];
 };
 
+export type GpsCoordinate = {
+  latitude: number;
+  longitude: number;
+};
+
 export type TeamCurrentNodeContent = {
   nodeId: string;
   nodeType: string;
@@ -29,6 +34,7 @@ export type TeamCurrentNodeContent = {
   instructions: string | null;
   currentQuestionIndex: number;
   totalQuestions: number;
+  destination: GpsCoordinate | null;
 };
 
 export type TeamHint = {
@@ -39,6 +45,8 @@ export type TeamHint = {
   penaltyPoints: number;
   releasedAtUtc: string;
   wasManualRelease: boolean;
+  nodeType?: string | null;
+  nodePrompt?: string | null;
 };
 
 export type RankingEntry = {

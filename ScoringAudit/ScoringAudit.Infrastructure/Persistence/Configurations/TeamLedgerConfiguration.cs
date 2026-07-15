@@ -41,6 +41,11 @@ public sealed class TeamLedgerConfiguration : IEntityTypeConfiguration<TeamLedge
 
 public sealed class ScoreEntryConfiguration : IEntityTypeConfiguration<ScoreEntry>
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public void Configure(EntityTypeBuilder<ScoreEntry> builder)
     {
         builder.ToTable("score_entries");
@@ -56,18 +61,18 @@ public sealed class ScoreEntryConfiguration : IEntityTypeConfiguration<ScoreEntr
             .HasColumnName("origin")
             .HasColumnType("jsonb")
             .HasConversion(
-                value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => value == null ? null : JsonSerializer.Serialize(value, JsonOptions),
                 value => string.IsNullOrWhiteSpace(value)
                     ? null
-                    : JsonSerializer.Deserialize<ScoreOrigin>(value, (JsonSerializerOptions?)null));
+                    : JsonSerializer.Deserialize<ScoreOrigin>(value, JsonOptions));
 
         builder.Property(x => x.PenaltyReason)
             .HasColumnName("penalty_reason")
             .HasColumnType("jsonb")
             .HasConversion(
-                value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => value == null ? null : JsonSerializer.Serialize(value, JsonOptions),
                 value => string.IsNullOrWhiteSpace(value)
                     ? null
-                    : JsonSerializer.Deserialize<PenaltyReason>(value, (JsonSerializerOptions?)null));
+                    : JsonSerializer.Deserialize<PenaltyReason>(value, JsonOptions));
     }
 }

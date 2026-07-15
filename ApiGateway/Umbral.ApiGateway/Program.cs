@@ -8,7 +8,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod();
+        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 
         if (builder.Environment.IsDevelopment())
         {

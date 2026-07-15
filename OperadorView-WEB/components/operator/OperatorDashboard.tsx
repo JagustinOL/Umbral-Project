@@ -253,6 +253,11 @@ export function OperatorDashboard() {
               joinCode={activeSession.joinCode}
               onBack={handleBackToMissions}
               onStartSession={handleStartSession}
+              onCancelled={() => {
+                setActiveSession(null);
+                setCurrentView("missions");
+                void loadMissions();
+              }}
             />
           )}
 

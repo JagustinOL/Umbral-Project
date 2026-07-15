@@ -70,5 +70,6 @@ public sealed class FakeMissionIntegrationService : IMissionIntegrationService
             nodeId,
             "Trivia",
             [new PlayerTriviaQuestionData("Sample question", ["A", "B"])],
+            null,
             null));
 }

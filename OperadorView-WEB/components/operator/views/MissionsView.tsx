@@ -44,7 +44,7 @@ export function MissionsView({
 
       <InfoAlert
         title="Misiones asignadas"
-        description="Solo aparecen las misiones vinculadas a su operador. Si ya hay una sesión activa, puede volver a la sala de espera; crear otra sesión queda bloqueado hasta finalizarla."
+        description="Solo aparecen las misiones vinculadas a su operador. Si hay una sesión abierta, puede volver a ella; crear otra queda bloqueado hasta que la finalice con el botón «Finalizar sesión»."
       />
 
       {errorMessage && (

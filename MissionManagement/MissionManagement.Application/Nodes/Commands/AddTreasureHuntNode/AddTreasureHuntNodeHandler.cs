@@ -24,7 +24,8 @@ public sealed class AddTreasureHuntNodeHandler : IRequestHandler<AddTreasureHunt
             instructions: request.Instructions,
             secretCode: request.SecretCode,
             destination: request.Destination,
-            executionOrder: request.ExecutionOrder);
+            executionOrder: request.ExecutionOrder,
+            baseScore: request.BaseScore);
 
         await _repository.SaveAsync(mission, cancellationToken);
         return nodeId;

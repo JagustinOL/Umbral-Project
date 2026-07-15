@@ -15,7 +15,7 @@ public sealed class GetMissionNodeValidationsEdgeTests
     public async Task Handle_WhenTreasureWithoutSecret_ThrowsConflict()
     {
         var mission = MissionTestData.CreateMissionWithStage(out var stage);
-        var thId = mission.AddTreasureHuntNode(stage.Id, "Go", "SECRET", new GpsCoordinate(1, 2), 1);
+        var thId = mission.AddTreasureHuntNode(stage.Id, "Go", "SECRET", new GpsCoordinate(1, 2), 1, baseScore: 100);
         var thNode = mission.FindNodeById(thId)!;
         typeof(MissionManagement.Domain.Entities.MissionNode)
             .GetProperty(nameof(MissionManagement.Domain.Entities.MissionNode.SecretCode))!
@@ -34,7 +34,7 @@ public sealed class GetMissionNodeValidationsEdgeTests
     public async Task Handle_WhenTriviaHasNoQuestions_ThrowsConflict()
     {
         var mission = MissionTestData.CreateMissionWithStage(out var stage);
-        var triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1);
+        var triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1, baseScore: 100);
         mission.FindNodeById(triviaId)!.TriviaQuestions.Clear();
 
         var repo = new Mock<IMissionRepository>();
@@ -50,7 +50,7 @@ public sealed class GetMissionNodeValidationsEdgeTests
     public async Task Handle_WhenTriviaInvalidIndex_ThrowsConflict()
     {
         var mission = MissionTestData.CreateMissionWithStage(out var stage);
-        var triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1);
+        var triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q", ["A", "B"], 0)], 1, baseScore: 100);
         var node = mission.FindNodeById(triviaId)!;
         node.TriviaQuestions.Clear();
         var corrupt = (TriviaQuestion)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(TriviaQuestion));

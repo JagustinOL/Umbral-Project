@@ -114,7 +114,17 @@ async function parseResponse<T>(response: Response): Promise<T> {
         ? (parsedBody.details ?? parsedBody)
         : parsedBody;
 
-      console.error("API Error Details:", errorDetails);
+      const detail =
+        isRecord(parsedBody) && typeof parsedBody.detail === "string"
+          ? parsedBody.detail
+          : "";
+      const isBenignClosedSession =
+        response.status === 409 &&
+        /sesión ya está cerrada|Finalized|Cancelled/i.test(detail);
+
+      if (!isBenignClosedSession) {
+        console.error("API Error Details:", errorDetails);
+      }
     }
 
     throw new ApiError(getErrorMessage(response.status, parsedBody), response.status, parsedBody);

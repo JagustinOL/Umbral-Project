@@ -14,7 +14,7 @@ public sealed class GetTreasureHuntNodeByIdHandlerEdgeTests
     public async Task Handle_WhenMissingDestination_ThrowsConflict()
     {
         var mission = MissionTestData.CreateMissionWithStage(out var stage);
-        var nodeId = mission.AddTreasureHuntNode(stage.Id, "Go", "CODE", new GpsCoordinate(1, 2), 1);
+        var nodeId = mission.AddTreasureHuntNode(stage.Id, "Go", "CODE", new GpsCoordinate(1, 2), 1, baseScore: 100);
         var node = mission.FindNodeById(nodeId)!;
         typeof(MissionManagement.Domain.Entities.MissionNode)
             .GetProperty(nameof(MissionManagement.Domain.Entities.MissionNode.Destination))!

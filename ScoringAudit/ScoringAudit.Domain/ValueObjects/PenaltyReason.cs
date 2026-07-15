@@ -1,4 +1,5 @@
 using ScoringAudit.Domain.Exceptions;
+using System.Text.Json.Serialization;
 
 namespace ScoringAudit.Domain.ValueObjects;
 
@@ -23,6 +24,7 @@ public sealed record PenaltyReason
     public PenaltyCategory Category { get; }
     public Guid? AppliedByOperatorId { get; }
 
+    [JsonConstructor]
     private PenaltyReason(string description, PenaltyCategory category, Guid? appliedByOperatorId = null)
     {
         Description = description;

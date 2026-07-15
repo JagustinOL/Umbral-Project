@@ -25,12 +25,11 @@ public sealed class UserServiceAuthenticationHandler : AuthenticationHandler<Aut
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var authHeader = Request.Headers.Authorization.ToString();
-        if (!authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        // SignalR negotiate uses Authorization; WebSockets send access_token in the query string.
+        var token = ExtractBearerToken();
+        if (token is null)
             return AuthenticateResult.NoResult();
-
-        var token = authHeader["Bearer ".Length..].Trim();
-        if (string.IsNullOrWhiteSpace(token))
+        if (token.Length == 0)
             return AuthenticateResult.Fail("Bearer token vacío.");
 
         try
@@ -70,6 +69,18 @@ public sealed class UserServiceAuthenticationHandler : AuthenticationHandler<Aut
             Logger.LogWarning(ex, "Fallo al validar token contra UserService.");
             return AuthenticateResult.Fail("No fue posible validar el token.");
         }
+    }
+
+    private string? ExtractBearerToken()
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            return authHeader["Bearer ".Length..].Trim();
+
+        if (Request.Query.TryGetValue("access_token", out var accessToken))
+            return accessToken.ToString().Trim();
+
+        return null;
     }
 
     private static IEnumerable<string> CollectRoleNames(string role, IReadOnlyList<string> roles)

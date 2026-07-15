@@ -88,26 +88,40 @@ public sealed class SignalRLiveSessionRealtimeNotifier : ILiveSessionRealtimeNot
 
     public Task NotifyTeamProgressUpdatedAsync(
         Guid sessionId, Guid teamId, Guid? currentNodeId, Guid? nextNodeId, bool nodeCompleted,
-        CancellationToken cancellationToken = default) =>
-        _hub.Clients.Group(LiveSessionHub.OperatorGroup(sessionId)).TeamProgressUpdated(new
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
         {
             sessionId,
             teamId,
             currentNodeId,
             nextNodeId,
             nodeCompleted
-        });
+        };
 
+        return Task.WhenAll(
+            _hub.Clients.Group(LiveSessionHub.OperatorGroup(sessionId)).TeamProgressUpdated(payload),
+            _hub.Clients.Group(LiveSessionHub.TeamGroup(sessionId, teamId)).TeamProgressUpdated(payload));
+    }
     public Task NotifyTriviaAnswerSubmittedAsync(
         Guid sessionId, Guid teamId, Guid nodeId, bool isCorrect,
-        CancellationToken cancellationToken = default) =>
-        _hub.Clients.Group(LiveSessionHub.OperatorGroup(sessionId)).TriviaAnswerSubmitted(new
+        bool nodeCompleted, int awardedPoints,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
         {
             sessionId,
             teamId,
             nodeId,
-            isCorrect
-        });
+            isCorrect,
+            nodeCompleted,
+            awardedPoints
+        };
+
+        return Task.WhenAll(
+            _hub.Clients.Group(LiveSessionHub.OperatorGroup(sessionId)).TriviaAnswerSubmitted(payload),
+            _hub.Clients.Group(LiveSessionHub.TeamGroup(sessionId, teamId)).TriviaAnswerSubmitted(payload));
+    }
 
     public Task NotifyHuntLocationReachedAsync(
         Guid sessionId, Guid teamId, Guid nodeId, bool isCorrect,

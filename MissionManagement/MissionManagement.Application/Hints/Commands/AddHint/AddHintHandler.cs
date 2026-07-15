@@ -29,7 +29,7 @@ public sealed class AddHintHandler : IRequestHandler<AddHintCommand, Guid>
             missionNodeId: request.NodeId,
             order: nextOrder,
             content: request.Content,
-            penaltyPoints: 0);
+            penaltyPoints: request.PenaltyPoints);
 
         mission.AddHintToNode(request.NodeId, hint);
         await _repository.SaveAsync(mission, cancellationToken);

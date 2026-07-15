@@ -31,7 +31,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod();
+        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 
         if (builder.Environment.IsDevelopment())
         {
@@ -79,6 +79,7 @@ builder.Services.AddOptions<RabbitMqOptions>()
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
 builder.Services.AddScoped<ILiveSessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
+builder.Services.AddHostedService<SessionScoreUpdateRabbitMqConsumer>();
 builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();

@@ -5,6 +5,7 @@ using SessionManagement.Application.OperatorSessions.Commands.ApplyManualPenalty
 using SessionManagement.Application.OperatorSessions.Commands.ReleaseManualHint;
 using SessionManagement.Application.OperatorSessions.Commands.SendSupportMessage;
 using SessionManagement.Application.OperatorSessions.Commands.ToggleSessionPause;
+using SessionManagement.Application.OperatorSessions.Queries.GetOperatorSessionBoard;
 using SessionManagement.WebApi.Auth;
 using SessionManagement.WebApi.Contracts.OperatorSessions;
 
@@ -22,6 +23,18 @@ public sealed class OperatorSessionControlController : ControllerBase
     {
         _mediator = mediator;
         _currentUser = currentUser;
+    }
+
+    [HttpGet("operator-board")]
+    public async Task<IActionResult> GetOperatorBoard(
+        [FromRoute] Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var operatorId = RequireOperatorId();
+        var board = await _mediator.Send(
+            new GetOperatorSessionBoardQuery(operatorId, sessionId),
+            cancellationToken);
+        return Ok(board);
     }
 
     [HttpPost("teams/{teamId:guid}/hints/release")]

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { InvestigationBackground } from '../../../src/components/InvestigationBackground';
 import { LiveSessionCard } from '../../../src/components/LiveSessionCard';
+import { FormTextField } from '../../../src/components/FormTextField';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { colors, typography } from '../../../src/constants/theme';
 import { useAuth } from '../../../src/hooks/useAuth';
@@ -19,11 +20,21 @@ import * as liveSessionService from '../../../src/services/liveSessionService';
 import {
   connectLiveSessionHub,
   disconnectLiveSessionHub,
+  isJoinDecisionApproved,
+  isJoinDecisionRejected,
 } from '../../../src/services/signalRService';
 import type { LiveSessionSummary } from '../../../src/types/liveSession';
 import { isSessionTerminal } from '../../../src/types/gameplay';
 import { showUserAlert } from '../../../src/utils/confirm';
 import { normalizeGuid } from '../../../src/utils/uuid';
+import { normalizeTeamCode } from '../../../src/utils/validation';
+
+type JoinStage = 'idle' | 'pending' | 'approved' | 'rejected';
+
+function sameSessionId(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  return normalizeGuid(a).toLowerCase() === normalizeGuid(b).toLowerCase();
+}
 
 export default function SessionsTabScreen() {
   const { session } = useAuth();
@@ -34,6 +45,8 @@ export default function SessionsTabScreen() {
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [requestedSessionIds, setRequestedSessionIds] = useState<string[]>([]);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [joinStage, setJoinStage] = useState<JoinStage>('idle');
+  const [joinCodeQuery, setJoinCodeQuery] = useState('');
 
   const teamId = session?.teamId;
   const currentSessionRef = team?.currentSessionRef ?? null;
@@ -64,6 +77,50 @@ export default function SessionsTabScreen() {
     liveSession &&
     !isSessionTerminal(liveSession.status);
 
+  // Aprobado y aún no inicia: el equipo ya tiene sessionRef pero no está bloqueado.
+  const isApprovedWaitingStart =
+    !canEnterMission &&
+    (joinStage === 'approved' || (Boolean(currentSessionRef) && !isLocked));
+
+  const isAwaitingApproval =
+    !canEnterMission &&
+    !isApprovedWaitingStart &&
+    (joinStage === 'pending' || Boolean(pendingSessionId));
+
+  const trackedSessionId = pendingSessionId ?? currentSessionRef;
+
+  const availableSessions = useMemo(() => {
+    return sessions.filter((entry) => {
+      // Ya unido / con solicitud en curso: no listar en "sesiones disponibles".
+      if (sameSessionId(entry.sessionId, trackedSessionId)) {
+        return false;
+      }
+      if (
+        requestedSessionIds.some((id) => sameSessionId(id, entry.sessionId)) &&
+        (joinStage === 'pending' || joinStage === 'approved' || isApprovedWaitingStart)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    sessions,
+    trackedSessionId,
+    requestedSessionIds,
+    joinStage,
+    isApprovedWaitingStart,
+  ]);
+
+  const filteredAvailableSessions = useMemo(() => {
+    const query = normalizeTeamCode(joinCodeQuery);
+    if (!query) {
+      return availableSessions;
+    }
+    return availableSessions.filter((entry) =>
+      normalizeTeamCode(entry.joinCode).includes(query),
+    );
+  }, [availableSessions, joinCodeQuery]);
+
   const loadSessions = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -86,47 +143,112 @@ export default function SessionsTabScreen() {
     void loadSessions();
   }, [teamId, loadSessions]);
 
+  // Recuperar estado tras refresh: si el equipo ya está asignado y la sesión no arrancó.
   useEffect(() => {
-    if (!currentSessionRef) {
+    if (canEnterMission) {
+      setJoinStage('idle');
+      setPendingSessionId(null);
       return;
     }
-    setRequestedSessionIds((current) =>
-      current.some(
-        (id) =>
-          normalizeGuid(id).toLowerCase() ===
-          normalizeGuid(currentSessionRef).toLowerCase(),
-      )
-        ? current
-        : [...current, currentSessionRef],
-    );
-  }, [currentSessionRef]);
+    if (currentSessionRef && !isLocked) {
+      setJoinStage('approved');
+      setPendingSessionId(null);
+      setRequestedSessionIds((current) =>
+        current.some((id) => sameSessionId(id, currentSessionRef))
+          ? current
+          : [...current, currentSessionRef],
+      );
+    }
+  }, [canEnterMission, currentSessionRef, isLocked]);
 
   useEffect(() => {
-    const awaitingSessionId = pendingSessionId ?? (currentSessionRef && !isLocked ? currentSessionRef : null);
+    const awaitingSessionId =
+      pendingSessionId ??
+      (currentSessionRef && !isLocked ? currentSessionRef : null) ??
+      (joinStage === 'approved' || joinStage === 'pending' ? trackedSessionId : null);
+
     if (!awaitingSessionId || !teamId) {
       return;
     }
 
-    void connectLiveSessionHub(awaitingSessionId, {
-      onJoinRequestResolved: (payload) => {
-        if (normalizeGuid(payload.teamId).toLowerCase() !== normalizeGuid(teamId).toLowerCase()) {
-          return;
-        }
-        setPendingSessionId(null);
-        void Promise.all([loadTeam(), loadSessions()]);
-        showUserAlert(
-          payload.decision.toLowerCase() === 'approve' ? 'Solicitud aprobada' : 'Solicitud rechazada',
-          payload.decision.toLowerCase() === 'approve'
-            ? 'Tu equipo ya puede entrar a la misión cuando la sesión esté activa.'
-            : 'El operador rechazó la solicitud de tu equipo.',
-        );
+    void connectLiveSessionHub(
+      awaitingSessionId,
+      {
+        onJoinRequestResolved: (payload) => {
+          if (!sameSessionId(payload.teamId, teamId)) {
+            return;
+          }
+
+          if (isJoinDecisionApproved(payload.decision)) {
+            setJoinStage('approved');
+            setPendingSessionId(null);
+            void Promise.all([loadTeam(), loadSessions()]);
+            showUserAlert(
+              'Solicitud aprobada',
+              'Tu equipo fue aceptado. Espera a que el operador inicie la sesión.',
+            );
+            return;
+          }
+
+          if (isJoinDecisionRejected(payload.decision)) {
+            setJoinStage('rejected');
+            setPendingSessionId(null);
+            setRequestedSessionIds((current) =>
+              current.filter((id) => !sameSessionId(id, payload.sessionId)),
+            );
+            void Promise.all([loadTeam(), loadSessions()]);
+            showUserAlert(
+              'Solicitud rechazada',
+              'El operador rechazó la solicitud de tu equipo.',
+            );
+          }
+        },
+        onSessionStateChanged: (payload) => {
+          const status = payload.newStatus.trim().toLowerCase();
+          if (status === 'cancelled' || status === 'finalized') {
+            const closedSessionId = payload.sessionId;
+            setJoinStage('idle');
+            setPendingSessionId(null);
+            setRequestedSessionIds((current) =>
+              current.filter((id) => !sameSessionId(id, closedSessionId)),
+            );
+            void Promise.all([loadTeam(), loadSessions()]);
+            showUserAlert(
+              status === 'cancelled' ? 'Sesión cancelada' : 'Sesión finalizada',
+              payload.reason?.trim() ||
+                (status === 'cancelled'
+                  ? 'El operador canceló la sesión antes de iniciarla.'
+                  : 'El operador finalizó la sesión.'),
+            );
+            return;
+          }
+
+          void Promise.all([loadTeam(), loadSessions()]);
+        },
       },
-    }, teamId);
+      teamId,
+    ).catch((error) => {
+      showUserAlert(
+        'Conexión en vivo no disponible',
+        error instanceof Error
+          ? error.message
+          : 'No se pudo conectar al hub de la sesión. Recarga o espera la aprobación del operador.',
+      );
+    });
 
     return () => {
       void disconnectLiveSessionHub();
     };
-  }, [currentSessionRef, isLocked, loadSessions, loadTeam, pendingSessionId, teamId]);
+  }, [
+    currentSessionRef,
+    isLocked,
+    joinStage,
+    loadSessions,
+    loadTeam,
+    pendingSessionId,
+    teamId,
+    trackedSessionId,
+  ]);
 
   const handleRefresh = async () => {
     await Promise.all([loadSessions(), loadTeam()]);
@@ -155,6 +277,7 @@ export default function SessionsTabScreen() {
       });
       if (result.status.toLowerCase() === 'pending') {
         setPendingSessionId(result.sessionId);
+        setJoinStage('pending');
       }
       setRequestedSessionIds((current) =>
         current.some(
@@ -241,12 +364,22 @@ export default function SessionsTabScreen() {
           </View>
         ) : null}
 
-        {!canEnterMission && (pendingSessionId || (currentSessionRef && !isLocked)) ? (
+        {isAwaitingApproval ? (
           <View style={styles.liveCard}>
             <Text style={styles.liveEyebrow}>SOLICITUD PENDIENTE</Text>
             <Text style={styles.liveTitle}>Esperando aprobación</Text>
             <Text style={styles.liveMeta}>
               El operador debe aprobar la unión de tu equipo antes de que puedan jugar.
+            </Text>
+          </View>
+        ) : null}
+
+        {isApprovedWaitingStart ? (
+          <View style={styles.liveCard}>
+            <Text style={styles.liveEyebrow}>SOLICITUD APROBADA</Text>
+            <Text style={styles.liveTitle}>Listo para jugar</Text>
+            <Text style={styles.liveMeta}>
+              Tu equipo fue aceptado. Espera a que el operador inicie la sesión.
             </Text>
           </View>
         ) : null}
@@ -267,15 +400,30 @@ export default function SessionsTabScreen() {
 
         <Text style={styles.sectionTitle}>Sesiones disponibles</Text>
 
+        <FormTextField
+          label="Buscar por código de unión"
+          value={joinCodeQuery}
+          onChangeText={(value) => setJoinCodeQuery(normalizeTeamCode(value))}
+          placeholder="Ej. AB12CD"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={6}
+        />
+
         {isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" />
-        ) : sessions.length === 0 ? (
+        ) : availableSessions.length === 0 ? (
           <Text style={styles.empty}>
-            No hay sesiones activas en este momento. El operador debe iniciar
-            una misión.
+            {isAwaitingApproval || isApprovedWaitingStart || canEnterMission
+              ? 'No hay otras sesiones disponibles. Ya estás vinculado a una misión.'
+              : 'No hay sesiones activas en este momento. El operador debe iniciar una misión.'}
+          </Text>
+        ) : filteredAvailableSessions.length === 0 ? (
+          <Text style={styles.empty}>
+            No hay sesiones con el código "{joinCodeQuery}". Revisa el código con el operador.
           </Text>
         ) : (
-          sessions.map((entry) => (
+          filteredAvailableSessions.map((entry) => (
             <LiveSessionCard
               key={entry.sessionId}
               session={entry}

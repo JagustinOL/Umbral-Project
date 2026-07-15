@@ -45,7 +45,7 @@ public sealed class ProcessSessionJoinRequestHandler : IRequestHandler<ProcessSe
             if (request.Approve)
             {
                 team.AssignToSession(session.Id);
-                session.ApproveJoinRequest(request.TeamId, request.OperatorId);
+                session.ApproveJoinRequest(request.TeamId, request.OperatorId, team.Name);
                 await _teamRepository.SaveAsync(team, cancellationToken);
             }
             else

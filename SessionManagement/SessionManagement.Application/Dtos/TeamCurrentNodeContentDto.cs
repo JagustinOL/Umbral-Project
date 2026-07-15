@@ -1,3 +1,5 @@
+using SessionManagement.Application.Common.Interfaces;
+
 namespace SessionManagement.Application.Dtos;
 
 public sealed record TeamCurrentNodeContentDto(
@@ -6,5 +8,6 @@ public sealed record TeamCurrentNodeContentDto(
     IReadOnlyList<PlayerTriviaQuestionDto>? Questions,
     string? Instructions,
     int CurrentQuestionIndex,
-    int TotalQuestions
+    int TotalQuestions,
+    GpsCoordinateData? Destination
 );

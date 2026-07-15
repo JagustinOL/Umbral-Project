@@ -16,7 +16,7 @@ public sealed class AuditLogRepository : IAuditLogRepository
 
     public Task<AuditLog?> GetBySessionAsync(Guid sessionRef, CancellationToken cancellationToken = default) =>
         _dbContext.AuditLogs
-            .Include("_events")
+            .Include(x => x.Events)
             .FirstOrDefaultAsync(x => x.SessionRef == sessionRef, cancellationToken);
 
     public async Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetClosedPaginatedAsync(

@@ -20,7 +20,14 @@ type AuditDetail = {
   startedAtUtc: string;
   endedAtUtc: string | null;
   timeline: { eventId: string; eventType: string; occurredAtUtc: string; description: string }[];
-  ranking: { teamId: string; teamName: string; totalScore: number }[];
+  ranking: {
+    position?: number;
+    teamId: string;
+    teamName: string;
+    totalScore: number;
+    completedNodes?: number;
+    lastElapsedSeconds?: number;
+  }[];
 };
 
 function getErrorMessage(error: unknown) {

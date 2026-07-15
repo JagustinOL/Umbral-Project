@@ -142,7 +142,7 @@ public sealed class LiveSession : AggregateRoot
     ///
     /// Dispara: TeamRegisteredEvent — ScoringAudit crea el TeamLedger.
     /// </summary>
-    public void RegisterTeam(Guid teamId)
+    public void RegisterTeam(Guid teamId, string? teamName = null)
     {
         if (teamId == Guid.Empty)
             throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
@@ -164,7 +164,8 @@ public sealed class LiveSession : AggregateRoot
         RaiseDomainEvent(new TeamRegisteredEvent
         {
             SessionId = Id,
-            TeamId = teamId
+            TeamId = teamId,
+            TeamName = string.IsNullOrWhiteSpace(teamName) ? string.Empty : teamName.Trim()
         });
     }
 
@@ -239,14 +240,14 @@ public sealed class LiveSession : AggregateRoot
         SubmitJoinRequest(teamId, providedJoinCode);
     }
 
-    public void ApproveJoinRequest(Guid teamId, Guid operatorId)
+    public void ApproveJoinRequest(Guid teamId, Guid operatorId, string? teamName = null)
     {
         EnsureOperatorOwnsSession(operatorId);
 
         var request = FindPendingJoinRequest(teamId);
         request.Approve(operatorId);
 
-        RegisterTeam(teamId);
+        RegisterTeam(teamId, teamName);
 
         RaiseDomainEvent(new SessionJoinRequestResolvedEvent
         {
@@ -323,6 +324,7 @@ public sealed class LiveSession : AggregateRoot
 
     /// <summary>
     /// Marca al equipo como Completado al superar el último nodo (HU-61).
+    /// La sesión permanece Active/Paused hasta que el operador la finalice (RN-17).
     /// </summary>
     public void MarkTeamCompleted(Guid teamId)
     {
@@ -634,8 +636,9 @@ public sealed class LiveSession : AggregateRoot
     /// Libera una pista a un equipo específico.
     ///
     /// INVARIANTE RB-03: solo en estado Active.
-    /// INVARIANTE RB-04: no puede liberarse la misma pista dos veces
-    ///                   al mismo equipo para el mismo nodo.
+    /// INVARIANTE RB-04 / RN-06: no puede liberarse la misma pista dos veces al mismo equipo.
+    /// INVARIANTE RN-04 / RN-07: solo pistas del juego (nodo) actual del equipo;
+    /// no se liberan pistas de juegos ya superados ni futuros.
     ///
     /// Dispara: HintReleasedEvent — ScoringAudit registra en AuditLog
     /// y aplica la penalización de puntaje correspondiente.
@@ -645,6 +648,7 @@ public sealed class LiveSession : AggregateRoot
         Guid hintId,
         Guid missionNodeId,
         int penaltyPoints,
+        IReadOnlyList<NodeValidationRule> validationRules,
         bool wasManualRelease = true)
     {
         // RB-03
@@ -658,12 +662,30 @@ public sealed class LiveSession : AggregateRoot
 
         EnsureTeamCanPlay(teamId);
 
-        // RB-04: misma pista al mismo equipo
+        if (validationRules is null || validationRules.Count == 0)
+            throw new ArgumentException(
+                "Las reglas de validación no pueden estar vacías.", nameof(validationRules));
+
+        if (!_allowedNodes.Any(n => n.NodeId == missionNodeId))
+            throw new SessionDomainException(
+                $"El nodo {missionNodeId} no pertenece a esta sesión.");
+
+        var currentNodeId = GetCurrentNodeForTeam(teamId, validationRules);
+        if (currentNodeId is null)
+            throw new SessionDomainException(
+                "El equipo ya completó todos los juegos; no se pueden liberar más pistas (RN-04).");
+
+        if (missionNodeId != currentNodeId.Value)
+            throw new SessionDomainException(
+                $"Solo se pueden liberar pistas del juego actual del equipo (nodo {currentNodeId.Value}). " +
+                $"La pista pertenece al nodo {missionNodeId} (RN-04/RN-07).");
+
+        // RB-04 / RN-06: misma pista al mismo equipo
         bool alreadyReleased = _releasedHints
             .Any(r => r.TeamId == teamId && r.HintId == hintId);
         if (alreadyReleased)
             throw new SessionDomainException(
-                $"La pista {hintId} ya fue liberada al equipo {teamId} (RB-04). " +
+                $"La pista {hintId} ya fue liberada al equipo {teamId} (RB-04/RN-06). " +
                 $"No puede liberarse dos veces.");
 
         var released = ReleasedHint.Create(
@@ -848,6 +870,10 @@ public sealed class LiveSession : AggregateRoot
         else
         {
             MarkEvidenceAsInvalid(evidence.Id, "Respuesta/código incorrecto.");
+            // Trivia: un solo intento; al fallar se cierra el nodo y se avanza (0 pts).
+            // TreasureHunt: puede reintentar hasta enviar el código correcto.
+            if (expectedType == NodeValidationType.Trivia)
+                nodeCompleted = true;
         }
 
         var nextRule = ResolveCurrentRule(teamId, orderedRules);
@@ -860,7 +886,7 @@ public sealed class LiveSession : AggregateRoot
             IsCorrect: isCorrect,
             CurrentNodeId: nodeId,
             NextNodeId: nodeCompleted ? nextRule?.NodeId : nodeId,
-            AwardedPoints: nodeCompleted ? baseScore : 0,
+            AwardedPoints: isCorrect && nodeCompleted ? baseScore : 0,
             AnsweredQuestionIndex: resolvedQuestionIndex,
             TotalQuestions: currentRule.ExpectedAnswers.Count,
             NodeCompleted: nodeCompleted);
@@ -914,6 +940,15 @@ public sealed class LiveSession : AggregateRoot
                 e.MissionNodeId == rule.NodeId &&
                 e.IsValid == true);
         }
+
+        // Trivia: cierra con fallo (cualquier intento inválido) o al completar todas las preguntas.
+        var hasFailedAttempt = _evidenceSubmissions.Any(e =>
+            e.TeamId == teamId &&
+            e.MissionNodeId == rule.NodeId &&
+            e.IsValid == false);
+
+        if (hasFailedAttempt)
+            return true;
 
         return GetNextQuestionIndex(teamId, rule.NodeId, rule.ExpectedAnswers.Count)
             >= rule.ExpectedAnswers.Count;

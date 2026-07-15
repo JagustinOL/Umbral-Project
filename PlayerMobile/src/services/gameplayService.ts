@@ -101,10 +101,12 @@ export async function getTeamHints(
   sessionId: string,
   teamId: string,
 ): Promise<TeamHint[]> {
-  return apiRequest<TeamHint[]>(
+  // Solo pistas liberadas por el operador (nunca el catálogo completo de la misión).
+  const hints = await apiRequest<TeamHint[]>(
     API_PATHS.teamHints(sessionId, teamId),
     { baseUrl: sessionBase },
   );
+  return Array.isArray(hints) ? hints : [];
 }
 
 export async function getTeamPenalties(

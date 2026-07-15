@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ScoringAudit.Application.Events;
+using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
 using ScoringAudit.Infrastructure.Messaging;
@@ -28,6 +29,7 @@ builder.Services.AddOptions<RabbitMqOptions>()
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddSingleton<ITeamScoreUpdatePublisher, RabbitMqTeamScoreUpdatePublisher>();
 builder.Services.AddHostedService<ScoringAuditRabbitMqConsumer>();
 
 builder.Services.AddDbContext<ScoringAuditDbContext>(options =>

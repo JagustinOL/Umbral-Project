@@ -10,7 +10,7 @@ namespace MissionManagement.WebApi.Mapping;
 public static class HintMappings
 {
     public static AddHintCommand ToCommand(this AddHintRequest body, HintParentRoute route) =>
-        new(MissionId: route.MissionId, NodeId: route.NodeId, Content: body.Content);
+        new(MissionId: route.MissionId, NodeId: route.NodeId, Content: body.Content, PenaltyPoints: body.PenaltyPoints);
 
     public static GetHintsByNodeQuery ToQuery(this HintParentRoute route) =>
         new(route.MissionId, route.NodeId);
