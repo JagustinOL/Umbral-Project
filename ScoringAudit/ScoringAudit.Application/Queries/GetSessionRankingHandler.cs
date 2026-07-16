@@ -8,6 +8,7 @@ namespace ScoringAudit.Application.Queries;
 public sealed record GetSessionRankingQuery(Guid SessionId) : IRequest<IReadOnlyList<RankingItemDto>>;
 
 public sealed record RankingItemDto(
+    int Position,
     Guid TeamId,
     string TeamName,
     int TotalScore,
@@ -36,6 +37,7 @@ public sealed class GetSessionRankingHandler : IRequestHandler<GetSessionRanking
 
         return ranking
             .Select(r => new RankingItemDto(
+                r.Position,
                 r.TeamId,
                 r.TeamName,
                 r.TotalScore,

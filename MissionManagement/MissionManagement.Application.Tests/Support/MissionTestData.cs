@@ -20,7 +20,8 @@ internal static class MissionTestData
         var triviaId = mission.AddTriviaNode(
             parentNodeId: stage.Id,
             questions: [new TriviaQuestion("¿Pregunta?", ["A", "B"], correctOptionIndex: 0)],
-            executionOrder: 1);
+            executionOrder: 1,
+            baseScore: 100);
         triviaNode = mission.FindNodeById(triviaId)!;
         return mission;
     }
@@ -33,7 +34,8 @@ internal static class MissionTestData
             instructions: "Busca el código",
             secretCode: "ABC123",
             destination: new GpsCoordinate(4.711, -74.0721),
-            executionOrder: 1);
+            executionOrder: 1,
+            baseScore: 100);
         treasureNode = mission.FindNodeById(nodeId)!;
         return mission;
     }

@@ -26,7 +26,8 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: missionId,
             NodeId: Guid.NewGuid(),
-            Content: "Pista");
+            Content: "Pista",
+            PenaltyPoints: 10);
 
         var action = () => handler.Handle(command, CancellationToken.None);
 
@@ -47,7 +48,8 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: mission.Id,
             NodeId: stage.Id,
-            Content: "Pista");
+            Content: "Pista",
+            PenaltyPoints: 10);
 
         var action = () => handler.Handle(command, CancellationToken.None);
 
@@ -68,12 +70,13 @@ public sealed class AddHintHandlerTests
         var command = new AddHintCommand(
             MissionId: mission.Id,
             NodeId: gameNode.Id,
-            Content: "Pista válida");
+            Content: "Pista válida",
+            PenaltyPoints: 15);
 
         var hintId = await handler.Handle(command, CancellationToken.None);
 
         hintId.Should().NotBe(Guid.Empty);
-        gameNode.Hints.Should().ContainSingle(h => h.Id == hintId);
+        gameNode.Hints.Should().ContainSingle(h => h.Id == hintId && h.PenaltyPoints == 15);
         _repositoryMock.Verify(
             r => r.SaveAsync(mission, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -96,7 +99,8 @@ public sealed class AddHintHandlerTests
         var triviaId = mission.AddTriviaNode(
             parentNodeId: stage.Id,
             questions: [new TriviaQuestion("¿Pregunta?", ["A", "B"], correctOptionIndex: 0)],
-            executionOrder: 1);
+            executionOrder: 1,
+            baseScore: 100);
 
         gameNode = mission.FindNodeById(triviaId)!;
         return mission;

@@ -19,6 +19,7 @@ public sealed class TeamLedgerConfiguration : IEntityTypeConfiguration<TeamLedge
         builder.Property(x => x.TeamName).HasColumnName("team_name").HasMaxLength(200).IsRequired();
         builder.Property(x => x.IsClosed).HasColumnName("is_closed").IsRequired();
         builder.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+        builder.Property(x => x.CompletionElapsedSeconds).HasColumnName("completion_elapsed_seconds");
 
         builder.HasMany(x => x.Entries)
             .WithOne()
@@ -34,11 +35,17 @@ public sealed class TeamLedgerConfiguration : IEntityTypeConfiguration<TeamLedge
         builder.Ignore(x => x.CompletedNodesCount);
         builder.Ignore(x => x.PenaltiesCount);
         builder.Ignore(x => x.LastPositiveEntryElapsedSeconds);
+        builder.Ignore(x => x.TotalElapsedSeconds);
     }
 }
 
 public sealed class ScoreEntryConfiguration : IEntityTypeConfiguration<ScoreEntry>
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public void Configure(EntityTypeBuilder<ScoreEntry> builder)
     {
         builder.ToTable("score_entries");
@@ -54,18 +61,18 @@ public sealed class ScoreEntryConfiguration : IEntityTypeConfiguration<ScoreEntr
             .HasColumnName("origin")
             .HasColumnType("jsonb")
             .HasConversion(
-                value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => value == null ? null : JsonSerializer.Serialize(value, JsonOptions),
                 value => string.IsNullOrWhiteSpace(value)
                     ? null
-                    : JsonSerializer.Deserialize<ScoreOrigin>(value, (JsonSerializerOptions?)null));
+                    : JsonSerializer.Deserialize<ScoreOrigin>(value, JsonOptions));
 
         builder.Property(x => x.PenaltyReason)
             .HasColumnName("penalty_reason")
             .HasColumnType("jsonb")
             .HasConversion(
-                value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => value == null ? null : JsonSerializer.Serialize(value, JsonOptions),
                 value => string.IsNullOrWhiteSpace(value)
                     ? null
-                    : JsonSerializer.Deserialize<PenaltyReason>(value, (JsonSerializerOptions?)null));
+                    : JsonSerializer.Deserialize<PenaltyReason>(value, JsonOptions));
     }
 }

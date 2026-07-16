@@ -35,7 +35,7 @@ export async function createPlayer(input: {
 }): Promise<string> {
   const response = await apiRequest<CreatePlayerResponse>(API_PATHS.players, {
     method: 'POST',
-    baseUrl: API_CONFIG.missionManagementBaseUrl,
+    baseUrl: API_CONFIG.userServiceBaseUrl,
     body: input,
     skipAuth: true,
   });
@@ -45,7 +45,7 @@ export async function createPlayer(input: {
 
 export async function getPlayers(): Promise<PlayerProfile[]> {
   const response = await apiRequest<PlayerApiDto[]>(API_PATHS.players, {
-    baseUrl: API_CONFIG.missionManagementBaseUrl,
+    baseUrl: API_CONFIG.userServiceBaseUrl,
   });
 
   return response.map(mapPlayer);
@@ -53,7 +53,7 @@ export async function getPlayers(): Promise<PlayerProfile[]> {
 
 export async function getPlayerById(playerId: string): Promise<PlayerProfile> {
   const response = await apiRequest<PlayerApiDto>(playerPath(playerId), {
-    baseUrl: API_CONFIG.missionManagementBaseUrl,
+    baseUrl: API_CONFIG.userServiceBaseUrl,
   });
 
   return mapPlayer(response);
@@ -69,7 +69,7 @@ export async function updatePlayer(
 ): Promise<void> {
   await apiRequest<void>(playerPath(playerId), {
     method: 'PUT',
-    baseUrl: API_CONFIG.missionManagementBaseUrl,
+    baseUrl: API_CONFIG.userServiceBaseUrl,
     body: {
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
@@ -81,7 +81,7 @@ export async function updatePlayer(
 export async function deactivatePlayer(playerId: string): Promise<void> {
   await apiRequest<void>(playerPath(playerId, '/deactivate'), {
     method: 'PUT',
-    baseUrl: API_CONFIG.missionManagementBaseUrl,
+    baseUrl: API_CONFIG.userServiceBaseUrl,
     body: {},
   });
 }

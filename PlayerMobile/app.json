@@ -13,19 +13,29 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.umbral.player"
+      "bundleIdentifier": "com.umbral.player",
+      "infoPlist": {
+        "NSCameraUsageDescription": "UMBRAL usa la cámara para escanear el código QR del tesoro."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0a0e14"
       },
-      "package": "com.umbral.player"
+      "package": "com.umbral.player",
+      "permissions": ["CAMERA"]
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "UMBRAL usa la cámara para escanear el código QR del tesoro."
+        }
+      ]
     ]
   }
 }

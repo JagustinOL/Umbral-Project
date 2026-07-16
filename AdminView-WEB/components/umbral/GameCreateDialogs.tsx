@@ -16,13 +16,20 @@ import { TriviaNodeForm } from "./TriviaNodeForm";
 import { TreasureHuntForm } from "./TreasureHuntForm";
 import { GpsCoordinate, MissionNode, MissionNodeType, TriviaQuestion } from "@/lib/types";
 
+const DEFAULT_BASE_SCORE = 100;
+
 interface CreateTriviaDialogProps {
   open: boolean;
   stageId: string;
   nextOrder: number;
   isSubmitting: boolean;
   onClose: () => void;
-  onCreate: (stageId: string, questions: TriviaQuestion[], executionOrder: number) => Promise<void>;
+  onCreate: (
+    stageId: string,
+    questions: TriviaQuestion[],
+    executionOrder: number,
+    baseScore: number,
+  ) => Promise<void>;
 }
 
 export function CreateTriviaDialog({
@@ -35,10 +42,12 @@ export function CreateTriviaDialog({
 }: CreateTriviaDialogProps) {
   const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
   const [order, setOrder] = useState(nextOrder);
+  const [baseScore, setBaseScore] = useState(DEFAULT_BASE_SCORE);
 
   useEffect(() => {
     if (open) {
       setOrder(nextOrder);
+      setBaseScore(DEFAULT_BASE_SCORE);
       setQuestions([
         {
           id: "q-0",
@@ -54,7 +63,7 @@ export function CreateTriviaDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onCreate(stageId, questions, order);
+    await onCreate(stageId, questions, order, baseScore);
   };
 
   return (
@@ -67,16 +76,29 @@ export function CreateTriviaDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="trivia-order">Orden de ejecución</Label>
-            <Input
-              id="trivia-order"
-              type="number"
-              min={1}
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value, 10) || 1)}
-              disabled={isSubmitting}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="trivia-order">Orden de ejecución</Label>
+              <Input
+                id="trivia-order"
+                type="number"
+                min={1}
+                value={order}
+                onChange={(e) => setOrder(parseInt(e.target.value, 10) || 1)}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="trivia-base-score">Puntaje base</Label>
+              <Input
+                id="trivia-base-score"
+                type="number"
+                min={1}
+                value={baseScore}
+                onChange={(e) => setBaseScore(parseInt(e.target.value, 10) || 0)}
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
           <TriviaNodeForm questions={questions} onChange={setQuestions} isImmutable={false} />
           <DialogFooter>
@@ -106,6 +128,7 @@ interface CreateTreasureHuntDialogProps {
       secretCode: string;
       destination: GpsCoordinate;
       executionOrder: number;
+      baseScore: number;
     },
   ) => Promise<void>;
 }
@@ -119,6 +142,7 @@ export function CreateTreasureHuntDialog({
   onCreate,
 }: CreateTreasureHuntDialogProps) {
   const [order, setOrder] = useState(nextOrder);
+  const [baseScore, setBaseScore] = useState(DEFAULT_BASE_SCORE);
   const [draft, setDraft] = useState<MissionNode>({
     id: "draft",
     missionId: "",
@@ -126,6 +150,7 @@ export function CreateTreasureHuntDialog({
     title: "Treasure Hunt",
     description: "",
     executionOrder: nextOrder,
+    baseScore: DEFAULT_BASE_SCORE,
     instructions: "",
     secretCode: "",
     destination: { latitude: 0, longitude: 0 },
@@ -134,9 +159,11 @@ export function CreateTreasureHuntDialog({
   useEffect(() => {
     if (open) {
       setOrder(nextOrder);
+      setBaseScore(DEFAULT_BASE_SCORE);
       setDraft((prev) => ({
         ...prev,
         executionOrder: nextOrder,
+        baseScore: DEFAULT_BASE_SCORE,
         instructions: "",
         secretCode: "",
         destination: { latitude: 0, longitude: 0 },
@@ -151,29 +178,43 @@ export function CreateTreasureHuntDialog({
       secretCode: draft.secretCode ?? "",
       destination: draft.destination ?? { latitude: 0, longitude: 0 },
       executionOrder: order,
+      baseScore,
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Nueva búsqueda (HU-13)</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Instrucciones, código secreto y coordenadas GPS son obligatorios.
+            Instrucciones, código secreto y coordenadas GPS son obligatorios. El QR se genera al escribir el código.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="th-order">Orden de ejecución</Label>
-            <Input
-              id="th-order"
-              type="number"
-              min={1}
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value, 10) || 1)}
-              disabled={isSubmitting}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="th-order">Orden de ejecución</Label>
+              <Input
+                id="th-order"
+                type="number"
+                min={1}
+                value={order}
+                onChange={(e) => setOrder(parseInt(e.target.value, 10) || 1)}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="th-base-score">Puntaje base</Label>
+              <Input
+                id="th-base-score"
+                type="number"
+                min={1}
+                value={baseScore}
+                onChange={(e) => setBaseScore(parseInt(e.target.value, 10) || 0)}
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
           <TreasureHuntForm
             node={draft}

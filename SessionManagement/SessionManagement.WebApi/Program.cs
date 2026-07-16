@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -16,21 +16,22 @@ using SessionManagement.Infrastructure.Integrations;
 using SessionManagement.Infrastructure.Messaging;
 using SessionManagement.Infrastructure.Persistence;
 using SessionManagement.Infrastructure.Repositories;
-using Umbral.Shared;
-using Umbral.Shared.Auth;
-using Umbral.Shared.Messaging;
+using SessionManagement.WebApi;
+using SessionManagement.WebApi.Auth;
+using SessionManagement.WebApi.Hubs;
+using SessionManagement.WebApi.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddUmbralSerilog("SessionManagement");
+builder.AddServiceSerilog("SessionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddUmbralControllers();
+builder.Services.AddServiceControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod();
+        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 
         if (builder.Environment.IsDevelopment())
         {
@@ -55,8 +56,8 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddUmbralAuthentication(builder.Configuration);
-builder.Services.AddUmbralCrossCutting(typeof(GetActiveSessionsQuery));
+builder.Services.AddUserServiceAuthentication(builder.Configuration);
+builder.Services.AddServiceCrossCutting(typeof(GetActiveSessionsQuery));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetActiveSessionsQuery).Assembly));
@@ -66,7 +67,7 @@ builder.Services.AddDbContext<SessionManagementDbContext>(options =>
     var connectionString = builder.Configuration.GetConnectionString("SessionManagement")
         ?? builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException(
-            "No se encontró cadena de conexión. Configure ConnectionStrings:SessionManagement o ConnectionStrings:DefaultConnection.");
+            "No se encontrÃ³ cadena de conexiÃ³n. Configure ConnectionStrings:SessionManagement o ConnectionStrings:DefaultConnection.");
     options.UseNpgsql(connectionString);
 });
 
@@ -77,6 +78,9 @@ builder.Services.AddOptions<RabbitMqOptions>()
 
 builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
+builder.Services.AddScoped<ILiveSessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
+builder.Services.AddHostedService<SessionScoreUpdateRabbitMqConsumer>();
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
@@ -94,7 +98,7 @@ builder.Services.AddScoped<IPlayerHintPanelService, PlayerReleasedHintsProxy>();
 
 var missionManagementBaseUrl = builder.Configuration["MissionManagement:BaseUrl"];
 if (string.IsNullOrWhiteSpace(missionManagementBaseUrl))
-    throw new InvalidOperationException("No se encontró MissionManagement:BaseUrl para configurar la integración.");
+    throw new InvalidOperationException("No se encontrÃ³ MissionManagement:BaseUrl para configurar la integraciÃ³n.");
 
 builder.Services.AddHttpClient<IMissionIntegrationService, HttpMissionIntegrationService>(client =>
 {
@@ -115,6 +119,42 @@ using (var scope = app.Services.CreateScope())
         var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
         databaseCreator.CreateTables();
     }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw(
+            "ALTER TABLE evidence_submissions ADD COLUMN IF NOT EXISTS question_index integer NULL");
+    }
+    catch (PostgresException)
+    {
+        // La columna ya existe o la tabla aún no fue creada.
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("""
+            CREATE TABLE IF NOT EXISTS session_join_requests (
+                "Id" uuid NOT NULL PRIMARY KEY,
+                "LiveSessionId" uuid NOT NULL REFERENCES live_sessions("Id") ON DELETE CASCADE,
+                team_id uuid NOT NULL,
+                status character varying(16) NOT NULL,
+                requested_at_utc timestamp with time zone NOT NULL,
+                resolved_at_utc timestamp with time zone NULL,
+                resolved_by_operator_id uuid NULL
+            );
+            CREATE TABLE IF NOT EXISTS team_participations (
+                "Id" uuid NOT NULL PRIMARY KEY,
+                "LiveSessionId" uuid NOT NULL REFERENCES live_sessions("Id") ON DELETE CASCADE,
+                team_id uuid NOT NULL,
+                status character varying(16) NOT NULL,
+                completed_at_utc timestamp with time zone NULL
+            );
+            """);
+    }
+    catch (PostgresException)
+    {
+        // Tablas ya existen o live_sessions aún no está disponible.
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -122,7 +162,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseUmbralCrossCutting();
+app.UseServiceCrossCutting();
 app.MapControllers();
+app.MapHub<LiveSessionHub>("/hubs/live-session");
 
 app.Run();
+

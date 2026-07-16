@@ -15,8 +15,9 @@ namespace SessionManagement.Domain.Entities;
 /// sesión y estado de validación. Esta entidad es el registro inmutable.
 ///
 /// El campo IsValid se establece UNA SOLA VEZ. Una evidencia no puede
-/// re-validarse ni modificarse — si fue incorrecta, el equipo debe
-/// enviar una nueva evidencia.
+/// re-validarse ni modificarse. En Trivia, un intento incorrecto cierra
+/// el nodo (sin reintento); en Búsqueda del Tesoro el equipo puede
+/// enviar una nueva evidencia hasta acertar el código.
 /// </summary>
 public sealed class EvidenceSubmission : Entity
 {
@@ -33,6 +34,11 @@ public sealed class EvidenceSubmission : Entity
     /// código QR, etc. — depende del tipo de nodo.
     /// </summary>
     public string Payload { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Índice de pregunta trivia respondida. Null para búsqueda del tesoro u otros tipos.
+    /// </summary>
+    public int? QuestionIndex { get; private set; }
 
     public DateTime SubmittedAtUtc { get; private set; }
 
@@ -57,7 +63,8 @@ public sealed class EvidenceSubmission : Entity
     internal static EvidenceSubmission Create(
         Guid teamId,
         Guid missionNodeId,
-        string payload)
+        string payload,
+        int? questionIndex = null)
     {
         if (teamId == Guid.Empty)
             throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
@@ -65,6 +72,8 @@ public sealed class EvidenceSubmission : Entity
             throw new ArgumentException("MissionNodeId no puede ser vacío.", nameof(missionNodeId));
         if (string.IsNullOrWhiteSpace(payload))
             throw new ArgumentException("El payload de la evidencia no puede estar vacío.", nameof(payload));
+        if (questionIndex is < 0)
+            throw new ArgumentOutOfRangeException(nameof(questionIndex), "QuestionIndex no puede ser negativo.");
 
         return new EvidenceSubmission
         {
@@ -72,6 +81,7 @@ public sealed class EvidenceSubmission : Entity
             TeamId = teamId,
             MissionNodeId = missionNodeId,
             Payload = payload.Trim(),
+            QuestionIndex = questionIndex,
             SubmittedAtUtc = DateTime.UtcNow,
             IsValid = null
         };

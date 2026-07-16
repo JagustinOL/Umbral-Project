@@ -16,8 +16,8 @@ export class AuthApiError extends Error {
   }
 }
 
-const missionApiBaseUrl = (
-  process.env.NEXT_PUBLIC_MISSION_API_URL ?? 'http://localhost:5260'
+const userApiBaseUrl = (
+  process.env.NEXT_PUBLIC_USER_API_URL ?? 'http://localhost:5200'
 ).replace(/\/+$/, '')
 
 export async function loginWithCredentials(
@@ -25,7 +25,7 @@ export async function loginWithCredentials(
   password: string,
   signal?: AbortSignal,
 ): Promise<AuthTokenResponse> {
-  const response = await fetch(`${missionApiBaseUrl}/api/v1/auth/token`, {
+  const response = await fetch(`${userApiBaseUrl}/api/v1/auth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -45,7 +45,7 @@ export async function setupOperatorPassword(
   payload: SetupOperatorPasswordPayload,
   signal?: AbortSignal,
 ): Promise<AuthTokenResponse> {
-  const response = await fetch(`${missionApiBaseUrl}/api/v1/auth/operator/setup-password`, {
+  const response = await fetch(`${userApiBaseUrl}/api/v1/auth/operator/setup-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

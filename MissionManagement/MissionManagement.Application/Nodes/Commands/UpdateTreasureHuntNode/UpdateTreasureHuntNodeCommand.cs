@@ -8,6 +8,6 @@ public sealed record UpdateTreasureHuntNodeCommand(
     Guid NodeId,
     string Instructions,
     string SecretCode,
-    GpsCoordinate Destination
+    GpsCoordinate Destination,
+    int BaseScore
 ) : IRequest;
-

@@ -2,7 +2,7 @@ using MissionManagement.Application.Dtos;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Domain.Aggregates;
 using MissionManagement.Domain.Repositories;
-using Umbral.Shared.Auth;
+using MissionManagement.Application.Common.Interfaces;
 
 namespace MissionManagement.Application.Hints;
 
@@ -32,6 +32,11 @@ public sealed class DraftOnlyHintProxy : IHintAccessService
         CancellationToken cancellationToken = default)
     {
         if (_currentUser.IsInRole("admin") || _currentUser.IsInRole("operator"))
+            return await _inner.GetHintsForNodeAsync(missionId, nodeId, cancellationToken);
+
+        // Llamadas service-to-service (p. ej. SessionManagement → operator-board / proxy jugador)
+        // llegan sin principal autenticado. El filtrado de pistas liberadas ocurre en SessionManagement.
+        if (!_currentUser.IsAuthenticated)
             return await _inner.GetHintsForNodeAsync(missionId, nodeId, cancellationToken);
 
         var mission = await _repository.GetByIdAsync(missionId, cancellationToken);

@@ -3,16 +3,11 @@ namespace ScoringAudit.Domain.Services;
 /// <summary>
 /// Estrategia de cálculo para nodos de tipo Trivia.
 ///
-/// Lógica:
-///   puntaje = baseScore × difficultyMultiplier × bonificaciónVelocidad
+/// Lógica (RN-08 / RN-09):
+///   puntaje = baseScore × difficultyMultiplier
 ///
-/// BonificaciónVelocidad:
-///   — Menos de 30s  → ×1.20 (respuesta muy rápida)
-///   — Menos de 60s  → ×1.10
-///   — Menos de 120s → ×1.00 (sin bonificación)
-///   — Más de 120s   → ×0.90 (penalización por lentitud)
-///
-/// La bonificación incentiva el conocimiento ágil en trivias.
+/// El tiempo NO modifica el puntaje: RN-09 lo usa solo como
+/// criterio de desempate en el ranking (RankingManagerService).
 /// </summary>
 public sealed class TriviaScoreStrategy : IScoreCalculationStrategy
 {
@@ -27,15 +22,10 @@ public sealed class TriviaScoreStrategy : IScoreCalculationStrategy
             throw new ArgumentOutOfRangeException(nameof(difficultyMultiplier),
                 "El multiplicador de dificultad debe ser mayor que cero.");
 
-        decimal speedBonus = elapsedSeconds switch
-        {
-            < 30  => 1.20m,
-            < 60  => 1.10m,
-            < 120 => 1.00m,
-            _     => 0.90m
-        };
+        // elapsedSeconds se recibe por contrato Strategy, pero RN-09 lo reserva al ranking.
+        _ = elapsedSeconds;
 
-        var raw = baseScore * difficultyMultiplier * speedBonus;
+        var raw = baseScore * difficultyMultiplier;
         return (int)Math.Round(raw, MidpointRounding.AwayFromZero);
     }
 }

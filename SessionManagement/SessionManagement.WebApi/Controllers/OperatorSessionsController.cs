@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SessionManagement.WebApi.Contracts.OperatorSessions;
 using SessionManagement.WebApi.Contracts.Routes;
 using SessionManagement.WebApi.Mapping;
-using Umbral.Shared.Authorization;
+using SessionManagement.WebApi.Authorization;
 
 namespace SessionManagement.WebApi.Controllers;
 

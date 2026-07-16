@@ -29,6 +29,7 @@ public interface ISessionOperationFacade
         Guid teamId,
         Guid nodeId,
         string answer,
+        int questionIndex,
         CancellationToken cancellationToken = default);
 
     Task<SubmissionResultDto> SubmitTreasureHuntAsync(
@@ -47,6 +48,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
     private readonly ITeamRepository _teamRepository;
     private readonly IMissionIntegrationService _missionIntegration;
     private readonly IDomainEventPublisher _eventPublisher;
+    private readonly ILiveSessionRealtimeNotifier _realtimeNotifier;
     private readonly TriviaEvidenceSubmissionProcessor _triviaProcessor;
     private readonly TreasureHuntEvidenceSubmissionProcessor _treasureHuntProcessor;
 
@@ -55,6 +57,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         ITeamRepository teamRepository,
         IMissionIntegrationService missionIntegration,
         IDomainEventPublisher eventPublisher,
+        ILiveSessionRealtimeNotifier realtimeNotifier,
         TriviaEvidenceSubmissionProcessor triviaProcessor,
         TreasureHuntEvidenceSubmissionProcessor treasureHuntProcessor)
     {
@@ -62,6 +65,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         _teamRepository = teamRepository;
         _missionIntegration = missionIntegration;
         _eventPublisher = eventPublisher;
+        _realtimeNotifier = realtimeNotifier;
         _triviaProcessor = triviaProcessor;
         _treasureHuntProcessor = treasureHuntProcessor;
     }
@@ -83,7 +87,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var difficultyMultiplier = await _missionIntegration.GetMissionDifficultyMultiplierAsync(missionId, cancellationToken);
         var allowedNodes = nodeData
             .OrderBy(x => x.ExecutionOrder)
-            .Select(x => new AllowedNode(x.NodeId, x.NodeType, x.BaseScore))
+            .Select(x => new AllowedNode(x.NodeId, x.NodeType, x.BaseScore, x.Title))
             .ToList();
 
         var session = LiveSession.CreateForMission(
@@ -123,6 +127,13 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var session = await GetOperatorSessionAsync(operatorId, sessionId, cancellationToken);
         await ValidateMissionAssignmentAsync(operatorId, session.MissionRef, cancellationToken);
 
+        // Idempotente: si ya está cerrada, no reintentamos la transición.
+        if (session.Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
+        {
+            await TeamSessionLockService.ReleaseTeamsFromSessionAsync(session, _teamRepository, cancellationToken);
+            return;
+        }
+
         try
         {
             session.Finalize();
@@ -143,7 +154,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
 
         try
         {
-            session.Cancel();
+            session.Cancel("El operador canceló la sesión antes de iniciarla.");
         }
         catch (SessionManagement.Domain.Exceptions.SessionDomainException ex)
         {
@@ -159,12 +170,20 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         Guid teamId,
         Guid nodeId,
         string answer,
+        int questionIndex,
         CancellationToken cancellationToken = default)
     {
         var session = await GetSessionAsync(sessionId, cancellationToken);
         var rules = await BuildRulesAsync(session.MissionRef, cancellationToken);
-        var result = _triviaProcessor.Process(session, new EvidenceSubmissionRequest(teamId, nodeId, answer, rules));
+        var result = _triviaProcessor.Process(
+            session,
+            new EvidenceSubmissionRequest(teamId, nodeId, answer, rules, questionIndex));
         await SaveAndPublishAsync(session, cancellationToken);
+        await ReleaseTeamsIfSessionFinalizedAsync(session, cancellationToken);
+        await _realtimeNotifier.NotifyTriviaAnswerSubmittedAsync(
+            sessionId, teamId, nodeId, result.IsCorrect, result.NodeCompleted, result.AwardedPoints, cancellationToken);
+        await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
+            sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
     }
 
@@ -180,8 +199,44 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var result = _treasureHuntProcessor.Process(
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, foundCode, rules));
+
+        if (result.IsCorrect && result.NodeCompleted)
+            await ReleaseRemainingTreasureHintsAsync(session, teamId, nodeId, cancellationToken);
+
         await SaveAndPublishAsync(session, cancellationToken);
+        await ReleaseTeamsIfSessionFinalizedAsync(session, cancellationToken);
+        await _realtimeNotifier.NotifyHuntLocationReachedAsync(
+            sessionId, teamId, nodeId, result.IsCorrect, cancellationToken);
+        await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
+            sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
+    }
+
+    private async Task ReleaseRemainingTreasureHintsAsync(
+        LiveSession session,
+        Guid teamId,
+        Guid nodeId,
+        CancellationToken cancellationToken)
+    {
+        var catalogHints = await _missionIntegration.GetHintsForNodeAsync(
+            session.MissionRef, nodeId, cancellationToken);
+        if (catalogHints.Count == 0)
+            return;
+
+        session.ReleaseRemainingHintsAutomatically(
+            teamId,
+            nodeId,
+            catalogHints.Select(h => (h.Id, h.Order)).ToList());
+    }
+
+    private async Task ReleaseTeamsIfSessionFinalizedAsync(
+        LiveSession session,
+        CancellationToken cancellationToken)
+    {
+        if (session.Status is not (LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled))
+            return;
+
+        await TeamSessionLockService.ReleaseTeamsFromSessionAsync(session, _teamRepository, cancellationToken);
     }
 
     public async Task SaveAndPublishAsync(LiveSession session, CancellationToken cancellationToken = default)
@@ -234,7 +289,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
                 NodeId: x.NodeId,
                 ExecutionOrder: x.ExecutionOrder,
                 ValidationType: ParseType(x.NodeType),
-                ExpectedValue: x.ExpectedValue))
+                ExpectedAnswers: x.ExpectedAnswers))
             .OrderBy(x => x.ExecutionOrder)
             .ToList();
     }
@@ -251,5 +306,12 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
     }
 
     private static SubmissionResultDto MapResult(SubmissionResult result) =>
-        new(result.IsCorrect, result.CurrentNodeId, result.NextNodeId, result.AwardedPoints);
+        new(
+            result.IsCorrect,
+            result.CurrentNodeId,
+            result.NextNodeId,
+            result.AwardedPoints,
+            result.AnsweredQuestionIndex,
+            result.TotalQuestions,
+            result.NodeCompleted);
 }

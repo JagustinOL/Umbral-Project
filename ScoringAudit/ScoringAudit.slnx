@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="ScoringAudit.Application/ScoringAudit.Application.csproj" />
+  <Project Path="ScoringAudit.Application.Tests/ScoringAudit.Application.Tests.csproj" />
   <Project Path="ScoringAudit.Domain/ScoringAudit.Domain.csproj" />
+  <Project Path="ScoringAudit.Domain.Tests/ScoringAudit.Domain.Tests.csproj" />
   <Project Path="ScoringAudit.Infrastructure/ScoringAudit.Infrastructure.csproj" />
   <Project Path="ScoringAudit.WebApi/ScoringAudit.WebApi.csproj" />
 </Solution>

@@ -84,6 +84,13 @@ export function validateTreasureHuntPayload(payload: {
   return null;
 }
 
+export function validateBaseScore(baseScore: number): string | null {
+  if (!Number.isFinite(baseScore) || !Number.isInteger(baseScore) || baseScore <= 0) {
+    return "El puntaje base del juego debe ser un entero mayor que cero.";
+  }
+  return null;
+}
+
 export function toTriviaGameViewModel(dto: TriviaNodeDto, missionId: string): MissionNode {
   return {
     id: dto.id,

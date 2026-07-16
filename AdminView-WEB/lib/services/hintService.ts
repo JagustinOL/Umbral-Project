@@ -26,6 +26,13 @@ export function validateHintContent(content: string): string | null {
   return null;
 }
 
+export function validateHintPenaltyPoints(penaltyPoints: number): string | null {
+  if (!Number.isFinite(penaltyPoints) || !Number.isInteger(penaltyPoints) || penaltyPoints < 0) {
+    return "La penalización de la pista debe ser un entero mayor o igual a cero.";
+  }
+  return null;
+}
+
 export const hintService = {
   async getHintsByNode(
     missionId: string,
@@ -35,10 +42,15 @@ export const hintService = {
     return apiRequest<HintDto[]>(`/missions/${missionId}/nodes/${nodeId}/hints`, { signal });
   },
 
-  async addHint(missionId: string, nodeId: string, content: string): Promise<AddHintResponse> {
+  async addHint(
+    missionId: string,
+    nodeId: string,
+    content: string,
+    penaltyPoints: number,
+  ): Promise<AddHintResponse> {
     return apiRequest<AddHintResponse>(`/missions/${missionId}/nodes/${nodeId}/hints`, {
       method: "POST",
-      body: { content },
+      body: { content, penaltyPoints },
     });
   },
 

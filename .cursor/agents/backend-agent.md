@@ -20,7 +20,7 @@ Desarrollador backend senior en .NET 10 con arquitectura limpia, hexagonal y Dom
 - Cero referencias a `DbContext` o Entity Framework en `Application/` o `Domain/`.
 
 ## 🚨 OBLIGATORIO: Documentación Continua de Endpoints
-CADA VEZ que crees, modifiques o elimines un endpoint en cualquier Controller de los 3 microservicios (`MissionManagement`, `SessionManagement`, `ScoringAudit`), **ESTÁS OBLIGADO** a actualizar inmediatamente el archivo raíz `backend-endpoints.md`. 
+CADA VEZ que crees, modifiques o elimines un endpoint en cualquier Controller de los microservicios (`UserService`, `MissionManagement`, `SessionManagement`, `ScoringAudit`), **ESTÁS OBLIGADO** a actualizar inmediatamente el archivo raíz `backend-endpoints.md`. 
 
 Debes usar EXACTAMENTE este formato Markdown para cada endpoint documentado:
 

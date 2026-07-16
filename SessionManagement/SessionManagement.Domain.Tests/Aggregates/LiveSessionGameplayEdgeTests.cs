@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
 using Xunit;
@@ -21,8 +22,8 @@ public sealed class LiveSessionGameplayEdgeTests
         session.Start();
         rules =
         [
-            new NodeValidationRule(TriviaId, 1, NodeValidationType.Trivia, "Bogota"),
-            new NodeValidationRule(TreasureId, 2, NodeValidationType.TreasureHunt, "CODE-123")
+            new NodeValidationRule(TriviaId, 1, NodeValidationType.Trivia, ["Bogota"]),
+            new NodeValidationRule(TreasureId, 2, NodeValidationType.TreasureHunt, ["CODE-123"])
         ];
         return session;
     }
@@ -39,18 +40,22 @@ public sealed class LiveSessionGameplayEdgeTests
     public void SubmitTrivia_WhenEmptyPayload_Throws()
     {
         var session = BuildActiveWithRules(out var rules);
-        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaId, "  ", rules);
+        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaId, "  ", 0, rules);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void SubmitTrivia_WhenAllNodesDone_Throws()
+    public void SubmitTrivia_WhenAllNodesDone_MarksTeamCompletedAndRejectsFurtherPlay()
     {
         var session = BuildActiveWithRules(out var rules);
-        session.SubmitTriviaAnswer(TeamId, TriviaId, "Bogota", rules);
+        session.SubmitTriviaAnswer(TeamId, TriviaId, "Bogota", 0, rules);
         session.SubmitTreasureHuntCode(TeamId, TreasureId, "CODE-123", rules);
-        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaId, "Bogota", rules);
-        act.Should().Throw<SessionDomainException>().WithMessage("*completó todos*");
+
+        session.Status.Should().Be(LiveSessionStatus.Active);
+        session.GetTeamParticipationStatus(TeamId).Should().Be(TeamParticipationStatus.Completed);
+
+        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaId, "Bogota", 0, rules);
+        act.Should().Throw<SessionDomainException>().WithMessage("*Completed*");
     }
 
     [Fact]

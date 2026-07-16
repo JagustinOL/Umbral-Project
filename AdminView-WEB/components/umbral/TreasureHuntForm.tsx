@@ -1,9 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MissionNode, GpsCoordinate } from "@/lib/types";
+import { TreasureSecretQrPreview } from "./TreasureSecretQrPreview";
+
+const TreasureDestinationMap = dynamic(
+  () =>
+    import("./TreasureDestinationMap").then((m) => m.TreasureDestinationMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[240px] items-center justify-center rounded-md border border-border bg-muted/30 text-xs text-muted-foreground">
+        Cargando mapa…
+      </div>
+    ),
+  },
+);
 
 interface TreasureHuntFormProps {
   node: MissionNode;
@@ -13,6 +28,10 @@ interface TreasureHuntFormProps {
 
 export function TreasureHuntForm({ node, isImmutable, onChange }: TreasureHuntFormProps) {
   const dest = node.destination ?? { latitude: 0, longitude: 0 };
+
+  const updateDestination = (next: GpsCoordinate) => {
+    onChange({ destination: next });
+  };
 
   return (
     <div className="space-y-3">
@@ -36,18 +55,25 @@ export function TreasureHuntForm({ node, isImmutable, onChange }: TreasureHuntFo
           className="text-xs h-8 font-mono"
           disabled={isImmutable}
         />
+        <div className="pt-1">
+          <TreasureSecretQrPreview secretCode={node.secretCode ?? ""} />
+        </div>
       </div>
       <div className="space-y-1">
         <Label className="text-xs">GPS Destination</Label>
         <div className="flex gap-2">
           <div className="flex-1">
             <Input
-              value={dest.latitude}
+              value={Number.isFinite(dest.latitude) ? dest.latitude : ""}
               type="number"
               step="any"
-              onChange={(e) =>
-                onChange({ destination: { ...dest, latitude: parseFloat(e.target.value) } })
-              }
+              onChange={(e) => {
+                const latitude = parseFloat(e.target.value);
+                updateDestination({
+                  ...dest,
+                  latitude: Number.isFinite(latitude) ? latitude : 0,
+                });
+              }}
               placeholder="Latitude"
               className="text-xs h-8 font-mono"
               disabled={isImmutable}
@@ -55,12 +81,16 @@ export function TreasureHuntForm({ node, isImmutable, onChange }: TreasureHuntFo
           </div>
           <div className="flex-1">
             <Input
-              value={dest.longitude}
+              value={Number.isFinite(dest.longitude) ? dest.longitude : ""}
               type="number"
               step="any"
-              onChange={(e) =>
-                onChange({ destination: { ...dest, longitude: parseFloat(e.target.value) } })
-              }
+              onChange={(e) => {
+                const longitude = parseFloat(e.target.value);
+                updateDestination({
+                  ...dest,
+                  longitude: Number.isFinite(longitude) ? longitude : 0,
+                });
+              }}
               placeholder="Longitude"
               className="text-xs h-8 font-mono"
               disabled={isImmutable}
@@ -70,6 +100,11 @@ export function TreasureHuntForm({ node, isImmutable, onChange }: TreasureHuntFo
         <p className="text-xs text-muted-foreground">
           Lat: {dest.latitude.toFixed(4)}, Lng: {dest.longitude.toFixed(4)}
         </p>
+        <TreasureDestinationMap
+          destination={dest}
+          disabled={isImmutable}
+          onChange={updateDestination}
+        />
       </div>
     </div>
   );

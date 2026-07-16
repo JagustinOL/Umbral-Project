@@ -4,17 +4,19 @@ Documentación alineada con los controladores WebApi tras el refactor **Route + 
 
 ## URLs base
 
-| Servicio | Docker (`dotnet`/compose) | Variable Postman |
-|----------|---------------------------|------------------|
-| MissionManagement | `http://localhost:5260` | `{{missionManagementUrl}}` |
-| SessionManagement | `http://localhost:5278` | `{{sessionManagementUrl}}` |
-| ScoringAudit | `http://localhost:5290` | `{{scoringAuditUrl}}` |
+| Servicio | Docker (clientes vía gateway) | Docker (directo / depuración) | Variable Postman |
+|----------|-------------------------------|-------------------------------|------------------|
+| API Gateway | `http://localhost:5200` | — | `{{apiGatewayUrl}}` |
+| UserService | vía gateway `:5200` | `http://localhost:5284` | `{{userServiceUrl}}` |
+| MissionManagement | vía gateway `:5200` | `http://localhost:5260` | `{{missionManagementUrl}}` |
+| SessionManagement | vía gateway `:5200` | `http://localhost:5278` | `{{sessionManagementUrl}}` |
+| ScoringAudit | vía gateway `:5200` | `http://localhost:5290` | `{{scoringAuditUrl}}` |
 
 Prefijo común: `/api/v1`.
 
 ## Autenticación
 
-La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** (`Authorization: Bearer {accessToken}`) emitido por Keycloak vía `POST /api/v1/auth/token`.
+La mayoría de mutaciones y flujos de operador/jugador requieren **JWT Bearer** (`Authorization: Bearer {accessToken}`) obtenido vía `POST /api/v1/auth/token` en **UserService**. Los demás microservicios validan el token contra `POST /api/v1/auth/validate` (UserService) mediante `AddUmbralUserServiceAuthentication`.
 
 | Rol | Uso típico |
 |-----|------------|
@@ -36,20 +38,23 @@ HTTP → Route struct + Body contract → ToCommand() / ToQuery() → MediatR �
 
 | Microservicio | Controlador | Route struct(s) | Mapper |
 |---------------|-------------|-----------------|--------|
-| MissionManagement | `AuthController` | — | `AuthMappings` |
-| MissionManagement | `AdminsController` | — | `AdminMappings` |
+| UserService | `AuthController` | — | `AuthMappings` |
+| UserService | `AdminsController` | — | `AdminMappings` |
+| UserService | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
+| UserService | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
+| UserService | `UserValidationController` | `OperatorRoute` | — |
 | MissionManagement | `MissionsController` | `MissionRoute` (`Id`) | `MissionMappings` |
 | MissionManagement | `NodesController` | `MissionNodesRoute`, `MissionStageRoute`, `MissionNodeRoute` | `NodeMappings` |
 | MissionManagement | `TriviaController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TriviaMappings` |
 | MissionManagement | `TreasureHuntsController` | `MissionParentNodeRoute`, `MissionNodeRoute` | `TreasureHuntMappings` |
 | MissionManagement | `HintsController` | `HintParentRoute`, `HintRoute` | `HintMappings` |
 | MissionManagement | `MissionOperatorsController` | `MissionNodesRoute`, `MissionOperatorRoute` | `MissionOperatorMappings` |
-| MissionManagement | `OperatorsController` | `OperatorRoute` | `OperatorMappings` |
-| MissionManagement | `PlayersController` | `PlayerRoute` | `PlayerMappings` |
 | SessionManagement | `OperatorSessionsController` | `OperatorRoute`, `OperatorMissionRoute`, `OperatorSessionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `OperatorSessionValidationController` | `OperatorRoute`, `OperatorMissionRoute` | `OperatorSessionMappings` |
 | SessionManagement | `LiveSessionsController` | `LiveSessionTeamRoute` | `LiveSessionMappings` |
 | SessionManagement | `PlayerHintsController` | `LiveSessionTeamNodeRoute` | — (servicio `IPlayerHintPanelService`) |
+| SessionManagement | `TeamReleasedHintsController` | — | — (servicio `IPlayerHintPanelService`) |
+| SessionManagement | `OperatorSessionControlController` | — | `GetOperatorSessionBoardQuery`, release/pause/penalties |
 | SessionManagement | `TeamsController` | `TeamRoute`, `TeamActionRoute`, `TeamJoinRequestRoute`, `TeamMemberActionRoute` | `TeamMappings` |
 | SessionManagement | `MissionSessionValidationController` | `MissionRoute` | `MissionSessionValidationMappings` |
 | SessionManagement | `PlayerTeamMembershipController` | `PlayerRoute` | `PlayerTeamMembershipMappings` |
@@ -59,10 +64,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 
 ---
 
-## MissionManagement · Autenticación (Keycloak OIDC)
+## UserService · Autenticación y validación
 
 ### Autenticar Usuario (Login)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/auth/token`
 - **Capa Application:** `AuthenticateUserCommand`
 - **Body / Payload (Request):**
@@ -92,8 +97,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Usuarios admin deben tener el rol realm `admin`; operadores el rol `operator` (creados vía `POST /api/v1/operators`).
   - En desarrollo, el bootstrap crea `admin@umbral.com` / `Admin123!` si `Keycloak:DefaultAdminEmail` está configurado.
 
-### Activar cuenta de Operador (onboarding)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/auth/operator/setup-password`
 - **Capa Application:** `SetupOperatorPasswordCommand`
 - **Autenticación:** `[AllowAnonymous]`
@@ -116,8 +120,29 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Tras éxito: se fija la contraseña, se habilita la cuenta y se eliminan los atributos del código de activación.
   - El operador puede iniciar sesión con `POST /api/v1/auth/token` a partir de entonces.
 
+### Validar token JWT (integración entre microservicios)
+- **Microservicio:** UserService
+- **Método y Ruta:** `POST /api/v1/auth/validate`
+- **Capa Application:** `ValidateTokenQuery`
+- **Autenticación:** `[AllowAnonymous]` (requiere header `Authorization: Bearer {token}`)
+- **Response (200 OK):**
+  ```json
+  {
+    "userId": "Guid",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "role": "string",
+    "status": "string",
+    "roles": ["admin|operator|player"]
+  }
+  ```
+- **Notas:**
+  - Usado por `AddUmbralUserServiceAuthentication` en MissionManagement, SessionManagement y ScoringAudit.
+  - Los roles autoritativos provienen de la base de datos de UserService.
+
 ### Crear Administrador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/admins`
 - **Capa Application:** `CreateAdminCommand`
 - **Body / Payload (Request):**
@@ -486,10 +511,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   { }
   ```
 
-## MissionManagement · Épica 3 (Gestión y Asignación de Operadores)
+## UserService · Gestión de Operadores
 
 ### Crear cuenta de Operador (HU-22)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/operators`
 - **Capa Application:** `CreateOperatorCommand`
 - **Body / Payload (Request):**
@@ -504,7 +529,8 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```json
   {
     "id": "Guid",
-    "setupCode": "string (XXXX-XXXX, mostrado una sola vez)"
+    "email": "string",
+    "activationEmailSent": true
   }
   ```
 - **Errores esperados:**
@@ -513,10 +539,32 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Notas:**
   - Crea el usuario en Keycloak con `Enabled: false`, rol `operator`, **sin contraseña**.
   - El código de activación se almacena hasheado en atributos de Keycloak; TTL por defecto 7 días (`Keycloak:OperatorSetupCodeTtlDays`).
-  - El administrador debe entregar `setupCode` al operador de forma segura; el operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
+  - El código en claro **no se devuelve al administrador**; se envía por SMTP al correo del operador (`Email:*` / MailHog en local: UI `http://localhost:8025`).
+  - Si el SMTP falla, la cuenta queda creada y `activationEmailSent=false`; el admin puede usar reenvío.
+  - Si el correo ya existe como **operador inactivo** (`Enabled=false`), no se crea un usuario nuevo: se regenera el código, se limpia la contraseña previa (si había) y se reenvía el correo. El operador completa el mismo flujo de **Activar cuenta**.
+  - Si el correo pertenece a un **operador activo**, responde `409 Conflict`.
+  - El operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
+
+### Reenviar código de activación de Operador
+- **Microservicio:** UserService
+- **Método y Ruta:** `POST /api/v1/operators/{operatorId}/resend-activation`
+- **Capa Application:** `ResendOperatorActivationCommand`
+- **Response (200 OK):**
+  ```json
+  {
+    "id": "Guid",
+    "email": "string",
+    "activationEmailSent": true
+  }
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si el operador no existe.
+  - `409 Conflict` si la cuenta ya está activada o fue desactivada (tiene password).
+- **Notas:**
+  - Regenera un nuevo código (invalida el anterior), lo guarda hasheado y lo envía al correo del operador. El admin nunca ve el código.
 
 ### Consultar Operadores (HU-23)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/operators`
 - **Capa Application:** `GetOperatorsQuery`
 - **Body / Payload (Request):**
@@ -540,13 +588,15 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - El listado se obtiene desde Keycloak (usuarios con rol `operator`).
 
 ### Desactivar Operador (HU-26)
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/operators/{operatorId}/deactivate`
 - **Capa Application:** `DeactivateOperatorCommand`
 - **Body / Payload (Request):**
   ```json
   { }
   ```
+
+## MissionManagement · Asignación de Operadores a Misiones
 
 ### Asignar Operador a Misión (HU-24)
 - **Microservicio:** MissionManagement
@@ -572,10 +622,10 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   { }
   ```
 
-## MissionManagement · Gestión de Jugadores (TeamMember / Keycloak)
+## UserService · Gestión de Jugadores
 
 ### Crear Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `POST /api/v1/players`
 - **Capa Application:** `CreatePlayerCommand`
 - **Autenticación:** `[AllowAnonymous]`
@@ -601,7 +651,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - Tras crear el usuario en Keycloak se asigna el rol de jugador y se establece la contraseña vía Admin API (`reset-password`).
 
 ### Consultar Jugadores
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/players`
 - **Capa Application:** `GetPlayersQuery`
 - **Body / Payload (Request):**
@@ -622,7 +672,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```
 
 ### Consultar Jugador por Id
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `GET /api/v1/players/{playerId}`
 - **Capa Application:** `GetPlayerByIdQuery`
 - **Body / Payload (Request):**
@@ -643,7 +693,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - `404 NotFound` si el jugador no existe.
 
 ### Modificar Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/players/{playerId}`
 - **Capa Application:** `UpdatePlayerCommand`
 - **Body / Payload (Request):**
@@ -660,7 +710,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   - `409 Conflict` cuando el correo ya existe en Keycloak.
 
 ### Desactivar Jugador
-- **Microservicio:** MissionManagement
+- **Microservicio:** UserService
 - **Método y Ruta:** `PUT /api/v1/players/{playerId}/deactivate`
 - **Capa Application:** `DeactivatePlayerCommand`
 - **Body / Payload (Request):**
@@ -807,7 +857,7 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```
 - **Nota:** Devuelve sesiones en estado `Pending`, `Preparation`, `Active` o `Paused` (no finalizadas ni canceladas). El equipo solo puede registrarse con `POST .../join` cuando la sesión está en `Pending` o `Preparation`.
 
-### Unirse a Sesión por Código (HU-37)
+### Unirse a Sesión por Código (HU-37 / HU-49)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/live-sessions/join`
 - **Capa Application:** `JoinSessionCommand`
@@ -818,9 +868,168 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
     "teamId": "Guid"
   }
   ```
+- **Response (200 OK):**
+  ```json
+  {
+    "sessionId": "Guid",
+    "status": "Pending | Approved",
+    "requestId": "Guid?"
+  }
+  ```
+- **Notas:**
+  - Crea solicitud formal `Pending`. El equipo **no** queda registrado hasta que el operador apruebe (RN-15).
 - **Errores esperados:**
   - `409 Conflict` si el equipo está bloqueado en una sesión en curso (RN-13) o ya vinculado a otra sesión abierta.
   - `404 NotFound` si el código o el equipo no existen.
+
+## SessionManagement · Épica 6 (Operación Live)
+
+### Consultar Solicitudes de Unión a Sesión (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/join-requests`
+- **Capa Application:** `GetSessionJoinRequestsQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+
+### Aprobar o Rechazar Solicitud de Unión (HU-49)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/join-requests/{teamId}/decision`
+- **Capa Application:** `ProcessSessionJoinRequestCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "decision": "Approve | Reject"
+  }
+  ```
+
+### Liberar Pista Manual (HU-54)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/hints/release`
+- **Capa Application:** `ReleaseManualHintCommand`
+- **Validación:** sesión Active; RN-06 (no duplicar); RN-04/RN-07 (solo pistas del nodo actual del equipo).
+- **Body / Payload (Request):**
+  ```json
+  {
+    "hintId": "Guid"
+  }
+  ```
+
+### Tablero operador (progreso + pistas disponibles)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/operator-board`
+- **Capa Application:** `GetOperatorSessionBoardQuery`
+- **Auth:** `operator`, `admin` (RN-16)
+- **Response (200 OK):**
+  ```json
+  {
+    "sessionId": "Guid",
+    "sessionStatus": "Active",
+    "teams": [
+      {
+        "teamId": "Guid",
+        "teamName": "string | null",
+        "participationStatus": "Active",
+        "currentNodeId": "Guid | null",
+        "currentNodeType": "Trivia | TreasureHunt | null",
+        "currentExecutionOrder": 1,
+        "currentGameLabel": "Trivia · Orden 1",
+        "isMissionCompleted": false,
+        "availableHints": [
+          {
+            "hintId": "Guid",
+            "order": 1,
+            "content": "string",
+            "penaltyPoints": 0
+          }
+        ],
+        "releasedHints": []
+      }
+    ]
+  }
+  ```
+
+### Aplicar Penalización Manual (HU-55)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/penalties`
+- **Capa Application:** `ApplyManualPenaltyCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "points": "int",
+    "reason": "string"
+  }
+  ```
+
+### Consultar sanciones del equipo (jugador)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/teams/{teamId}/penalties`
+- **Capa Application:** `GetTeamPenaltiesQuery`
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "entryId": "guid",
+      "penaltyPoints": 10,
+      "reason": "string",
+      "category": "ManualOperator | HintUsage | TimeExpired",
+      "appliedAtUtc": "2026-01-01T00:00:00Z"
+    }
+  ]
+  ```
+
+### Enviar Mensaje de Soporte (HU-56)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/messages`
+- **Capa Application:** `SendSupportMessageCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "message": "string"
+  }
+  ```
+
+### Pausar / Reanudar Sesión (HU-62)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/pause`
+- **Capa Application:** `ToggleSessionPauseCommand`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "reason": "string?"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "status": "Paused | Active"
+  }
+  ```
+
+### Reconciliar scoring de sesión (ranking/ledgers)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/scoring/reconcile`
+- **Capa Application:** `ReconcileSessionScoringCommand`
+- **Descripción:** Reemite `TeamRegistered`, `SessionStarted` y `EvidenceValidated` para reconstruir ledgers/ranking si ScoringAudit estuvo caído.
+- **Response (200 OK):**
+  ```json
+  {
+    "teamsPublished": 0,
+    "evidencesPublished": 0
+  }
+  ```
+
+### Hub SignalR Live Session
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `WS /hubs/live-session`
+- **Capa Application:** `LiveSessionHub` + `ILiveSessionRealtimeNotifier`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "methods": "JoinSession | LeaveSession | JoinOperatorSession | JoinTeamSession"
+  }
+  ```
 
 ### Consultar Etapa Actual del Equipo (HU-38/HU-39/HU-41)
 - **Microservicio:** SessionManagement
@@ -982,13 +1191,34 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   }
   ```
 
-### Consultar pistas liberadas al equipo (jugador)
+### Consultar pistas liberadas al equipo (jugador, sesión completa)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/teams/{teamId}/hints`
+- **WebApi:** `TeamReleasedHintsController` → `IPlayerHintPanelService.GetAllReleasedHintsForTeamAsync`
+- **Auth:** `player`
+- **Body / Payload (Request):** ninguno.
+- **Response (200 OK):** solo pistas liberadas por el operador (proxy `PlayerReleasedHintsProxy`):
+  ```json
+  [
+    {
+      "hintId": "Guid",
+      "missionNodeId": "Guid",
+      "order": 1,
+      "content": "string",
+      "penaltyPoints": 0,
+      "releasedAtUtc": "2026-01-01T00:00:00Z",
+      "wasManualRelease": true
+    }
+  ]
+  ```
+
+### Consultar pistas liberadas al equipo (jugador, por nodo)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `GET /api/v1/live-sessions/{sessionId}/teams/{teamId}/nodes/{nodeId}/hints`
 - **WebApi:** `LiveSessionTeamNodeRoute` → `IPlayerHintPanelService.GetReleasedHintsForTeamAsync`
-- **Auth:** `player`, `operator`, `admin`
+- **Auth:** `player`
 - **Body / Payload (Request):** ninguno.
-- **Response (200 OK):** lista de pistas ya liberadas al equipo (proxy `PlayerReleasedHintsProxy`).
+- **Response (200 OK):** lista de pistas ya liberadas al equipo en ese nodo (proxy `PlayerReleasedHintsProxy`).
 
 ## MissionManagement · Integración y validación
 
@@ -1023,3 +1253,33 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Body / Payload (Request):** ninguno.
 - **Notas:**
   - Requiere que la sesión haya generado entradas en `TeamLedger` (equipos registrados y evidencias procesadas).
+
+## ScoringAudit · Épica 7 (Auditoría)
+
+### Consultar Historial de Sesiones Finalizadas (HU-64)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/audit/sessions`
+- **Capa Application:** `GetHistoricalSessionsQuery`
+- **Body / Payload (Request):**
+  ```json
+  {
+    "startDate": "DateTime?",
+    "endDate": "DateTime?",
+    "page": "int",
+    "pageSize": "int"
+  }
+  ```
+- **Notas:**
+  - Admin: acceso global. Operator: solo sesiones con `OperatorRef` del JWT.
+  - Solo sesiones selladas (`Finished` / `Cancelled`).
+
+### Ver Detalle de Auditoría por Sesión (HU-65)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/audit/sessions/{sessionId}`
+- **Capa Application:** `GetSessionAuditDetailQuery`
+- **Body / Payload (Request):**
+  ```json
+  { }
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si la sesión no existe, no está cerrada o el operador no tiene acceso.

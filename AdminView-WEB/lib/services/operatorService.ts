@@ -1,9 +1,10 @@
 import { CreateOperatorPayload, Operator } from "@/lib/types";
-import { ApiError, apiRequest } from "@/lib/api/client";
+import { ApiError, userApiRequest } from "@/lib/api/client";
 import {
   CreateOperatorRequest,
   CreateOperatorResponse,
   OperatorDto,
+  ResendOperatorActivationResponse,
 } from "@/lib/types/api";
 
 export function toOperatorViewModel(dto: OperatorDto): Operator {
@@ -19,7 +20,7 @@ export function toOperatorViewModel(dto: OperatorDto): Operator {
 
 export const operatorService = {
   async getOperators(signal?: AbortSignal): Promise<OperatorDto[]> {
-    return apiRequest<OperatorDto[]>("/operators", { signal });
+    return userApiRequest<OperatorDto[]>("/operators", { signal });
   },
 
   async createOperator(payload: CreateOperatorPayload): Promise<CreateOperatorResponse> {
@@ -29,14 +30,21 @@ export const operatorService = {
       email: payload.email,
     };
 
-    return apiRequest<CreateOperatorResponse>("/operators", {
+    return userApiRequest<CreateOperatorResponse>("/operators", {
       method: "POST",
       body: request,
     });
   },
 
+  async resendActivation(operatorId: string): Promise<ResendOperatorActivationResponse> {
+    return userApiRequest<ResendOperatorActivationResponse>(
+      `/operators/${operatorId}/resend-activation`,
+      { method: "POST" },
+    );
+  },
+
   async deactivateOperator(operatorId: string): Promise<void> {
-    await apiRequest<void>(`/operators/${operatorId}/deactivate`, {
+    await userApiRequest<void>(`/operators/${operatorId}/deactivate`, {
       method: "PUT",
     });
   },

@@ -10,6 +10,8 @@ public sealed class ScoringAuditDbContext : DbContext
 
     public DbSet<TeamLedger> TeamLedgers => Set<TeamLedger>();
     public DbSet<ScoreEntry> ScoreEntries => Set<ScoreEntry>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<SessionEvent> SessionEvents => Set<SessionEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

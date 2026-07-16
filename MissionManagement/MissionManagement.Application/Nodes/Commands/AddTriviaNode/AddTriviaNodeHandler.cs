@@ -22,7 +22,8 @@ public sealed class AddTriviaNodeHandler : IRequestHandler<AddTriviaNodeCommand,
         var nodeId = mission.AddTriviaNode(
             parentNodeId: request.ParentNodeId,
             questions: request.Questions,
-            executionOrder: request.ExecutionOrder);
+            executionOrder: request.ExecutionOrder,
+            baseScore: request.BaseScore);
 
         await _repository.SaveAsync(mission, cancellationToken);
         return nodeId;

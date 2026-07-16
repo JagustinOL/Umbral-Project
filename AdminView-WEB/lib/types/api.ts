@@ -93,11 +93,13 @@ export interface TriviaQuestionPayload {
 export interface AddTriviaNodeCommand {
   questions: TriviaQuestionPayload[];
   executionOrder: number;
+  baseScore: number;
 }
 
 /** PUT …/nodes/{nodeId}/trivia — UpdateTriviaNodeCommand (HU-11) */
 export interface UpdateTriviaNodeCommand {
   questions: TriviaQuestionPayload[];
+  baseScore: number;
 }
 
 export interface TriviaQuestionDto {
@@ -132,6 +134,7 @@ export interface AddTreasureHuntNodeCommand {
   secretCode: string;
   destination: GpsCoordinateDto;
   executionOrder: number;
+  baseScore: number;
 }
 
 /** PUT …/nodes/{nodeId}/treasure-hunts — UpdateTreasureHuntNodeCommand (HU-15) */
@@ -139,6 +142,7 @@ export interface UpdateTreasureHuntNodeCommand {
   instructions: string;
   secretCode: string;
   destination: GpsCoordinateDto;
+  baseScore: number;
 }
 
 /** GET …/nodes/{nodeId}/treasure-hunts — HU-14 */
@@ -184,7 +188,14 @@ export interface CreateOperatorRequest {
 
 export interface CreateOperatorResponse {
   id: string;
-  setupCode: string;
+  email: string;
+  activationEmailSent: boolean;
+}
+
+export interface ResendOperatorActivationResponse {
+  id: string;
+  email: string;
+  activationEmailSent: boolean;
 }
 
 export interface OperatorDto {

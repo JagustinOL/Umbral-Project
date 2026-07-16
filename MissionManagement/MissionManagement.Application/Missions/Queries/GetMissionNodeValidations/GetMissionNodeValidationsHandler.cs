@@ -40,35 +40,41 @@ public sealed class GetMissionNodeValidationsHandler
                 NodeType: node.NodeType.ToString(),
                 ExecutionOrder: order++,
                 BaseScore: node.BaseScore,
-                ExpectedValue: ResolveExpectedValue(node)));
+                ExpectedAnswers: ResolveExpectedAnswers(node),
+                Title: node.Title));
         }
 
         return result;
     }
 
-    private static string ResolveExpectedValue(MissionNode node)
+    private static IReadOnlyList<string> ResolveExpectedAnswers(MissionNode node)
     {
         if (node.NodeType == MissionNodeType.TreasureHunt)
         {
             if (string.IsNullOrWhiteSpace(node.SecretCode))
                 throw new ConflictException($"El nodo TreasureHunt con Id={node.Id} no tiene SecretCode configurado.");
 
-            return node.SecretCode;
+            return [node.SecretCode];
         }
 
         if (node.NodeType == MissionNodeType.Trivia)
         {
-            var first = node.TriviaQuestions.FirstOrDefault()
-                ?? throw new ConflictException($"El nodo Trivia con Id={node.Id} no tiene preguntas configuradas.");
+            if (node.TriviaQuestions.Count == 0)
+                throw new ConflictException($"El nodo Trivia con Id={node.Id} no tiene preguntas configuradas.");
 
-            if (first.CorrectOptionIndex < 0 || first.CorrectOptionIndex >= first.Options.Count)
-                throw new ConflictException(
-                    $"El nodo Trivia con Id={node.Id} tiene CorrectOptionIndex inválido ({first.CorrectOptionIndex}).");
+            var answers = new List<string>(node.TriviaQuestions.Count);
+            foreach (var question in node.TriviaQuestions)
+            {
+                if (question.CorrectOptionIndex < 0 || question.CorrectOptionIndex >= question.Options.Count)
+                    throw new ConflictException(
+                        $"El nodo Trivia con Id={node.Id} tiene CorrectOptionIndex inválido ({question.CorrectOptionIndex}).");
 
-            return first.Options[first.CorrectOptionIndex];
+                answers.Add(question.Options[question.CorrectOptionIndex]);
+            }
+
+            return answers;
         }
 
         throw new ConflictException($"Tipo de nodo no soportado para validación: {node.NodeType}.");
     }
 }
-

@@ -17,7 +17,7 @@ public sealed class AddHintHandlerEdgeTests
         repo.Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>())).ReturnsAsync(mission);
 
         var handler = new AddHintHandler(repo.Object);
-        var act = () => handler.Handle(new AddHintCommand(mission.Id, Guid.NewGuid(), "H"), CancellationToken.None);
+        var act = () => handler.Handle(new AddHintCommand(mission.Id, Guid.NewGuid(), "H", 10), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>().WithMessage("*nodo*");
     }

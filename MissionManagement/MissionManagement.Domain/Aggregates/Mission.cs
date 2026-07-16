@@ -100,7 +100,12 @@ public sealed class Mission : AggregateRoot
             throw new InvalidOperationException(
                 "Solo se pueden agregar nodos raíz de tipo 'Stage' (etapas) a la misión.");
 
-        bool orderConflict = _nodes.Any(n => n.ExecutionOrder == node.ExecutionOrder);
+        // ExecutionOrder is unique among siblings (root stages), not globally.
+        // Games live in _nodes with MissionId (EF flat collection) and must not
+        // collide with a new stage that reuses the same order among its own siblings.
+        bool orderConflict = _nodes.Any(n =>
+            n.ParentNodeId is null
+            && n.ExecutionOrder == node.ExecutionOrder);
         if (orderConflict)
             throw new InvalidOperationException(
                 $"Ya existe un nodo raíz con ExecutionOrder={node.ExecutionOrder}.");
@@ -141,7 +146,7 @@ public sealed class Mission : AggregateRoot
         Guid parentNodeId,
         IReadOnlyList<TriviaQuestion> questions,
         int executionOrder,
-        int baseScore = 0)
+        int baseScore)
     {
         ThrowIfNotDraft("agregar juegos de trivia");
         var triviaNode = MissionNode.CreateTrivia(
@@ -160,7 +165,7 @@ public sealed class Mission : AggregateRoot
         string secretCode,
         GpsCoordinate destination,
         int executionOrder,
-        int baseScore = 0)
+        int baseScore)
     {
         ThrowIfNotDraft("agregar juegos de busqueda");
         var treasureNode = MissionNode.CreateTreasureHunt(
@@ -214,7 +219,7 @@ public sealed class Mission : AggregateRoot
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
-    public void UpdateTriviaNode(Guid nodeId, IReadOnlyList<TriviaQuestion> questions)
+    public void UpdateTriviaNode(Guid nodeId, IReadOnlyList<TriviaQuestion> questions, int baseScore)
     {
         if (nodeId == Guid.Empty)
             throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
@@ -225,6 +230,7 @@ public sealed class Mission : AggregateRoot
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
         node.UpdateTriviaQuestions(questions);
+        node.UpdateBaseScore(baseScore);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 
@@ -232,7 +238,8 @@ public sealed class Mission : AggregateRoot
         Guid nodeId,
         string instructions,
         string secretCode,
-        GpsCoordinate destination)
+        GpsCoordinate destination,
+        int baseScore)
     {
         if (nodeId == Guid.Empty)
             throw new ArgumentException("El nodeId no puede ser vacio.", nameof(nodeId));
@@ -243,6 +250,7 @@ public sealed class Mission : AggregateRoot
             ?? throw new InvalidOperationException($"No se encontró el nodo con Id={nodeId}.");
 
         node.UpdateTreasureHunt(instructions, secretCode, destination);
+        node.UpdateBaseScore(baseScore);
         LastModifiedAtUtc = DateTime.UtcNow;
     }
 

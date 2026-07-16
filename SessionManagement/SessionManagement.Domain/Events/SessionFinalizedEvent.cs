@@ -18,6 +18,9 @@ public sealed record SessionFinalizedEvent : IDomainEvent
     public DateTime OccurredOnUtc { get; } = DateTime.UtcNow;
 
     public Guid SessionId { get; init; }
+    public Guid MissionRef { get; init; }
+    public Guid OperatorRef { get; init; }
     public DateTime FinalizedAtUtc { get; init; }
     public IReadOnlyList<Guid> ParticipatingTeamIds { get; init; } = [];
+    public string Status { get; init; } = "Finalized";
 }

@@ -12,7 +12,7 @@ public sealed class MissionMutationTests
         var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
         stage = MissionNode.Create("Etapa", "Desc", MissionNodeType.Stage, 1, 10);
         mission.AddRootNode(stage);
-        triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q?", ["A", "B"], 0)], 1);
+        triviaId = mission.AddTriviaNode(stage.Id, [new TriviaQuestion("Q?", ["A", "B"], 0)], 1, baseScore: 100);
         return mission;
     }
 
@@ -28,17 +28,21 @@ public sealed class MissionMutationTests
     public void UpdateTriviaNode_WhenDraft_UpdatesQuestions()
     {
         var mission = BuildDraftWithTrivia(out var stage, out var triviaId);
-        mission.UpdateTriviaNode(triviaId, new List<TriviaQuestion> { new("Nueva", ["X", "Y"], 1) });
-        mission.FindNodeById(triviaId)!.TriviaQuestions[0].Prompt.Should().Be("Nueva");
+        mission.UpdateTriviaNode(triviaId, new List<TriviaQuestion> { new("Nueva", ["X", "Y"], 1) }, baseScore: 120);
+        var trivia = mission.FindNodeById(triviaId)!;
+        trivia.TriviaQuestions[0].Prompt.Should().Be("Nueva");
+        trivia.BaseScore.Should().Be(120);
     }
 
     [Fact]
     public void UpdateTreasureHuntNode_WhenDraft_UpdatesSecretCode()
     {
         var mission = BuildDraftWithTrivia(out var stage, out _);
-        var thId = mission.AddTreasureHuntNode(stage.Id, "Inst", "OLD", new GpsCoordinate(1, 2), 2);
-        mission.UpdateTreasureHuntNode(thId, "Nueva inst", "NEW", new GpsCoordinate(3, 4));
-        mission.FindNodeById(thId)!.SecretCode.Should().Be("NEW");
+        var thId = mission.AddTreasureHuntNode(stage.Id, "Inst", "OLD", new GpsCoordinate(1, 2), 2, baseScore: 80);
+        mission.UpdateTreasureHuntNode(thId, "Nueva inst", "NEW", new GpsCoordinate(3, 4), baseScore: 90);
+        var node = mission.FindNodeById(thId)!;
+        node.SecretCode.Should().Be("NEW");
+        node.BaseScore.Should().Be(90);
     }
 
     [Fact]

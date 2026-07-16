@@ -8,6 +8,7 @@ import {
   XIcon,
   Loader2Icon,
   AlertTriangleIcon,
+  MailIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ interface OperatorManagementProps {
   operators: Operator[];
   missions: Mission[];
   onCreateOperator: (payload: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
+  onResendActivation: (operatorId: string) => Promise<CreateOperatorResponse>;
   onDeactivateOperator: (operatorId: string) => Promise<void>;
   onAssignOperator: (missionId: string, operatorId: string) => Promise<void>;
   onRevokeOperator: (missionId: string, operatorId: string) => Promise<void>;
@@ -82,10 +84,10 @@ interface CreateOperatorModalProps {
   onClose: () => void;
   onSubmit: (data: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
   isSubmitting: boolean;
-  onActivated: (setupCode: string) => void;
+  onCreated: (result: CreateOperatorResponse) => void;
 }
 
-function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivated }: CreateOperatorModalProps) {
+function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onCreated }: CreateOperatorModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -98,7 +100,7 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivate
       setLastName("");
       setEmail("");
       onClose();
-      onActivated(result.setupCode);
+      onCreated(result);
     } catch {
       // Error is handled at page-level and rendered as alert.
     }
@@ -110,7 +112,8 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivate
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Create Operator Account</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Create a pending operator account. Share the activation code so they can set their password at login.
+            Create a pending operator account. The activation code is sent only to their email — you will not see it.
+            If the email already belongs to an inactive operator, a new code is sent so they can activate again.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -129,7 +132,7 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivate
             <Input id="op-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@umbral.ops" required />
           </div>
           <p className="text-xs text-muted-foreground">
-            The account is created inactive in Keycloak. The operator must activate it with the one-time code shown after creation.
+            The account is created inactive in Keycloak. The operator activates it with the one-time code received by email.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
@@ -143,34 +146,28 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onActivate
   );
 }
 
-interface SetupCodeDialogProps {
+interface ActivationEmailDialogProps {
   open: boolean;
-  setupCode: string | null;
+  email: string | null;
+  emailSent: boolean;
   onClose: () => void;
 }
 
-function SetupCodeDialog({ open, setupCode, onClose }: SetupCodeDialogProps) {
-  const handleCopy = async () => {
-    if (!setupCode) return;
-    await navigator.clipboard.writeText(setupCode);
-  };
-
+function ActivationEmailDialog({ open, email, emailSent, onClose }: ActivationEmailDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Activation Code</DialogTitle>
+          <DialogTitle className="text-base font-semibold">
+            {emailSent ? "Activation email sent" : "Operator created"}
+          </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Share this code with the operator. It is shown only once and expires in 7 days.
+            {emailSent
+              ? `The activation code was sent to ${email}. The operator must open Activate account on the login screen.`
+              : `The operator account was created for ${email}, but the email could not be sent. Use Resend activation from the list.`}
           </DialogDescription>
         </DialogHeader>
-        <div className="rounded-md border bg-muted/40 px-4 py-3 text-center font-mono text-lg tracking-widest">
-          {setupCode}
-        </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => void handleCopy()}>
-            Copy Code
-          </Button>
           <Button type="button" onClick={onClose}>Done</Button>
         </DialogFooter>
       </DialogContent>
@@ -373,6 +370,7 @@ export function OperatorManagement({
   operators,
   missions,
   onCreateOperator,
+  onResendActivation,
   onDeactivateOperator,
   onAssignOperator,
   onRevokeOperator,
@@ -389,9 +387,25 @@ export function OperatorManagement({
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Operator | null>(null);
-  const [setupCode, setSetupCode] = useState<string | null>(null);
+  const [activationNotice, setActivationNotice] = useState<{
+    email: string;
+    emailSent: boolean;
+  } | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const handleCreate = async (data: CreateOperatorPayload) => onCreateOperator(data);
+
+  const handleResend = async (operatorId: string) => {
+    setResendingId(operatorId);
+    try {
+      const result = await onResendActivation(operatorId);
+      setActivationNotice({ email: result.email, emailSent: result.activationEmailSent });
+    } catch {
+      // Error is handled at page-level and rendered as alert.
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const handleDeactivate = async () => {
     if (!deactivateTarget) return;
@@ -523,7 +537,20 @@ export function OperatorManagement({
                           Deactivate
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic">Inactive</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => void handleResend(op.id)}
+                          disabled={resendingId === op.id}
+                        >
+                          {resendingId === op.id ? (
+                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <MailIcon className="h-3.5 w-3.5" />
+                          )}
+                          Resend activation
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -539,13 +566,16 @@ export function OperatorManagement({
         onClose={() => setCreateOpen(false)}
         onSubmit={handleCreate}
         isSubmitting={isCreating}
-        onActivated={(code) => setSetupCode(code)}
+        onCreated={(result) =>
+          setActivationNotice({ email: result.email, emailSent: result.activationEmailSent })
+        }
       />
 
-      <SetupCodeDialog
-        open={!!setupCode}
-        setupCode={setupCode}
-        onClose={() => setSetupCode(null)}
+      <ActivationEmailDialog
+        open={!!activationNotice}
+        email={activationNotice?.email ?? null}
+        emailSent={activationNotice?.emailSent ?? false}
+        onClose={() => setActivationNotice(null)}
       />
 
       <AssignOperatorSheet

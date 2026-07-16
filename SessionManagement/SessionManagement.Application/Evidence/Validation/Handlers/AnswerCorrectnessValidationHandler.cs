@@ -10,9 +10,10 @@ public sealed class AnswerCorrectnessValidationHandler : EvidenceValidationHandl
         if (context.CurrentRule is null)
             return;
 
+        var expectedAnswer = context.CurrentRule.ExpectedAnswers[context.ResolvedQuestionIndex];
         context.IsCorrect = string.Equals(
             context.Payload.Trim(),
-            context.CurrentRule.ExpectedValue.Trim(),
+            expectedAnswer.Trim(),
             StringComparison.OrdinalIgnoreCase);
 
         if (!context.IsCorrect)

@@ -11,8 +11,10 @@ public sealed class EvidenceValidationContext
     public required string Payload { get; init; }
     public required NodeValidationType ExpectedType { get; init; }
     public required IReadOnlyList<NodeValidationRule> ValidationRules { get; init; }
+    public int? QuestionIndex { get; init; }
 
     public NodeValidationRule? CurrentRule { get; set; }
+    public int ResolvedQuestionIndex { get; set; }
     public bool IsCorrect { get; set; }
     public string? RejectionReason { get; set; }
 }

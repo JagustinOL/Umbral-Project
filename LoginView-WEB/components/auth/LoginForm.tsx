@@ -123,7 +123,7 @@ export function LoginForm() {
         <CardDescription>
           {mode === 'sign-in'
             ? 'Use your UMBRAL email and password. You will be redirected based on your Keycloak role.'
-            : 'First-time operators: enter the activation code provided by your administrator and choose a password.'}
+            : 'First-time operators: enter the activation code sent to your email and choose a password.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

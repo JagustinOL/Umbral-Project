@@ -16,7 +16,8 @@ public static class TriviaMappings
             Questions: body.Questions
                 .Select(q => new TriviaQuestion(q.Prompt, q.Options, q.CorrectOptionIndex))
                 .ToList(),
-            ExecutionOrder: body.ExecutionOrder);
+            ExecutionOrder: body.ExecutionOrder,
+            BaseScore: body.BaseScore);
 
     public static GetTriviaNodeByIdQuery ToTriviaByIdQuery(this MissionNodeRoute route) =>
         new(route.MissionId, route.NodeId);
@@ -27,5 +28,6 @@ public static class TriviaMappings
             NodeId: route.NodeId,
             Questions: body.Questions
                 .Select(q => new TriviaQuestion(q.Prompt, q.Options, q.CorrectOptionIndex))
-                .ToList());
+                .ToList(),
+            BaseScore: body.BaseScore);
 }

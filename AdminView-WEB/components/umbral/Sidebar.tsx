@@ -7,6 +7,7 @@ import {
   UsersIcon,
   ShieldAlertIcon,
   LogOutIcon,
+  ClipboardListIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +18,7 @@ import {
   type AuthSession,
 } from "@/lib/auth/session";
 
-export type NavSection = "catalog" | "operators";
+export type NavSection = "catalog" | "operators" | "audit";
 
 interface SidebarProps {
   active: NavSection;
@@ -36,6 +37,12 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode; descrip
     label: "Operators",
     icon: <UsersIcon className="h-4 w-4" />,
     description: "Accounts & Assignments",
+  },
+  {
+    id: "audit",
+    label: "Auditoría",
+    icon: <ClipboardListIcon className="h-4 w-4" />,
+    description: "Historial de sesiones",
   },
 ];
 
@@ -61,7 +68,7 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
   const initials = getInitials(username || roleLabel);
 
   return (
-    <aside className="flex flex-col w-56 shrink-0 h-screen bg-sidebar border-r border-sidebar-border sticky top-0">
+    <aside className="flex flex-col w-56 shrink-0 h-screen bg-sidebar border-r border-sidebar-border">
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
         <div className="h-7 w-7 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
           <ShieldAlertIcon className="h-4 w-4 text-sidebar-primary-foreground" />

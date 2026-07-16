@@ -21,6 +21,8 @@ export type TeamDetails = {
   teamCode: string;
   isLocked: boolean;
   currentSessionRef: string | null;
+  /** Sesión con solicitud de unión pendiente del equipo (compartida entre miembros). */
+  pendingSessionJoinRef: string | null;
   isDisbanded: boolean;
   members: TeamMember[];
   pendingRequests: JoinRequest[];

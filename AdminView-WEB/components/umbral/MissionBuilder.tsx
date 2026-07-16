@@ -71,6 +71,7 @@ import {
   toApiTriviaQuestions,
   toTreasureHuntGameViewModel,
   toTriviaGameViewModel,
+  validateBaseScore,
   validateTreasureHuntPayload,
   validateTriviaQuestions,
 } from "@/lib/services/gameService";
@@ -233,7 +234,7 @@ function GameNodeCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card overflow-hidden",
+        "rounded-lg border bg-card",
         isTrivia ? "border-blue-200" : "border-amber-200",
       )}
     >
@@ -241,7 +242,8 @@ function GameNodeCard({
         <CollapsibleTrigger asChild>
           <div
             className={cn(
-              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none",
+              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none rounded-lg",
+              expanded && "rounded-b-none",
               isTrivia ? "bg-blue-50/50" : "bg-amber-50/50",
             )}
           >
@@ -289,6 +291,22 @@ function GameNodeCard({
               Orden {node.executionOrder}
               {node.baseScore !== undefined ? ` · ${node.baseScore} pts` : ""}
             </p>
+            <div className="space-y-1.5 max-w-[12rem]">
+              <Label htmlFor={`base-score-${node.id}`} className="text-xs">
+                Puntaje base
+              </Label>
+              <Input
+                id={`base-score-${node.id}`}
+                type="number"
+                min={1}
+                className="h-8 text-xs"
+                value={node.baseScore ?? 100}
+                disabled={isStructureLocked}
+                onChange={(e) =>
+                  onNodeChange(node.id, { baseScore: parseInt(e.target.value, 10) || 0 })
+                }
+              />
+            </div>
             {isTrivia && (
               <TriviaNodeForm
                 questions={node.questions ?? []}
@@ -397,10 +415,15 @@ function StageNodeCard({
   const children = stage.children ?? [];
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border bg-card">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl",
+              expanded && "rounded-b-none",
+            )}
+          >
             {expanded ? (
               <ChevronDownIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
@@ -743,10 +766,16 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
     stageId: string,
     questions: TriviaQuestion[],
     executionOrder: number,
+    baseScore: number,
   ) => {
     const validationError = validateTriviaQuestions(questions);
     if (validationError) {
       toast.error(validationError);
+      return;
+    }
+    const scoreError = validateBaseScore(baseScore);
+    if (scoreError) {
+      toast.error(scoreError);
       return;
     }
 
@@ -762,6 +791,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       const { id } = await gameService.addTrivia(mission.id, stageId, {
         questions: toApiTriviaQuestions(questions),
         executionOrder,
+        baseScore,
       });
       const detail = await gameService.getTrivia(mission.id, id);
       appendGameToStage(stageId, toTriviaGameViewModel(detail, mission.id));
@@ -783,11 +813,17 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       secretCode: string;
       destination: { latitude: number; longitude: number };
       executionOrder: number;
+      baseScore: number;
     },
   ) => {
     const validationError = validateTreasureHuntPayload(payload);
     if (validationError) {
       toast.error(validationError);
+      return;
+    }
+    const scoreError = validateBaseScore(payload.baseScore);
+    if (scoreError) {
+      toast.error(scoreError);
       return;
     }
 
@@ -821,6 +857,12 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
     const { game } = located;
     setSavingGameId(gameId);
     try {
+      const scoreError = validateBaseScore(game.baseScore ?? 0);
+      if (scoreError) {
+        toast.error(scoreError);
+        return;
+      }
+
       if (game.type === "Trivia") {
         const validationError = validateTriviaQuestions(game.questions ?? []);
         if (validationError) {
@@ -829,6 +871,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         }
         await gameService.updateTrivia(mission.id, gameId, {
           questions: toApiTriviaQuestions(game.questions ?? []),
+          baseScore: game.baseScore ?? 0,
         });
         const detail = await gameService.getTrivia(mission.id, gameId);
         handleNodeChange(gameId, toTriviaGameViewModel(detail, mission.id));
@@ -838,6 +881,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
           instructions: game.instructions ?? "",
           secretCode: game.secretCode ?? "",
           destination: game.destination ?? { latitude: 0, longitude: 0 },
+          baseScore: game.baseScore ?? 0,
         };
         const validationError = validateTreasureHuntPayload(payload);
         if (validationError) {
@@ -880,7 +924,8 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
   };
 
   const addGameStage = addGameStageId ? nodes.find((n) => n.id === addGameStageId) : undefined;
-  const nextGameOrder = (addGameStage?.children?.length ?? 0) + 1;
+  const childOrders = addGameStage?.children?.map((c) => c.executionOrder) ?? [];
+  const nextGameOrder = childOrders.length === 0 ? 1 : Math.max(...childOrders) + 1;
 
   const addStageButton = (
     <Button
@@ -988,7 +1033,11 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         open={addStageOpen}
         onClose={() => setAddStageOpen(false)}
         onAdd={handleAddStage}
-        nextOrder={stages.length + 1}
+        nextOrder={
+          stages.length === 0
+            ? 1
+            : Math.max(...stages.map((s) => s.executionOrder)) + 1
+        }
         isSubmitting={isSubmittingStage}
       />
 

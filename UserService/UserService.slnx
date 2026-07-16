@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="UserService.Application/UserService.Application.csproj" />
+  <Project Path="UserService.Application.Tests/UserService.Application.Tests.csproj" />
+  <Project Path="UserService.Domain/UserService.Domain.csproj" />
+  <Project Path="UserService.Domain.Tests/UserService.Domain.Tests.csproj" />
+  <Project Path="UserService.Infrastructure/UserService.Infrastructure.csproj" />
+  <Project Path="UserService.WebApi/UserService.WebApi.csproj" />
+</Solution>

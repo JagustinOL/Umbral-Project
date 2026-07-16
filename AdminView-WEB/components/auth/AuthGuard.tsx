@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
+import { SessionKeepAliveDialog } from '@/components/auth/SessionKeepAliveDialog'
+import { refreshAuthSession } from '@/lib/api/client'
 import {
   captureAuthFromHash,
   getAuthSession,
@@ -17,15 +19,39 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    captureAuthFromHash()
-    const session = getAuthSession()
+    let cancelled = false
 
-    if (!isAuthSessionValid(session) || !hasRole(session, 'admin')) {
-      redirectToLogin()
-      return
+    const authorize = async () => {
+      captureAuthFromHash()
+      let session = getAuthSession()
+
+      if (!session?.accessToken?.trim() || !hasRole(session, 'admin')) {
+        redirectToLogin()
+        return
+      }
+
+      if (!isAuthSessionValid(session)) {
+        const refreshed = await refreshAuthSession()
+        if (!refreshed) {
+          redirectToLogin()
+          return
+        }
+        session = getAuthSession()
+        if (!isAuthSessionValid(session) || !hasRole(session, 'admin')) {
+          redirectToLogin()
+          return
+        }
+      }
+
+      if (!cancelled) {
+        setIsAuthorized(true)
+      }
     }
 
-    setIsAuthorized(true)
+    void authorize()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   if (!isAuthorized) {
@@ -36,5 +62,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <SessionKeepAliveDialog />
+    </>
+  )
 }

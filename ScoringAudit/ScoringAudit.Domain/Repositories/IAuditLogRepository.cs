@@ -19,13 +19,12 @@ public interface IAuditLogRepository
         Guid sessionRef,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Retorna el historial de eventos paginado para el panel de auditoría.
-    /// </summary>
-    Task<IReadOnlyList<SessionEvent>> GetHistoryBySessionAsync(
-        Guid sessionRef,
-        int skip = 0,
-        int take = 50,
+    Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetClosedPaginatedAsync(
+        DateTime? startDate,
+        DateTime? endDate,
+        Guid? operatorRef,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 
     Task SaveAsync(

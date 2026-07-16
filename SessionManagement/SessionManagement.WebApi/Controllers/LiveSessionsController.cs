@@ -32,8 +32,8 @@ public sealed class LiveSessionsController : ControllerBase
         [FromBody] JoinSessionRequest body,
         CancellationToken cancellationToken)
     {
-        var sessionId = await _mediator.Send(body.ToCommand(), cancellationToken);
-        return Ok(new { sessionId });
+        var result = await _mediator.Send(body.ToCommand(), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{sessionId:guid}/teams/{teamId:guid}/current-stage")]
@@ -42,6 +42,15 @@ public sealed class LiveSessionsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(route.ToQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("{sessionId:guid}/teams/{teamId:guid}/current-node-content")]
+    public async Task<IActionResult> GetTeamCurrentNodeContent(
+        [FromRoute] LiveSessionTeamRoute route,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(route.ToNodeContentQuery(), cancellationToken);
         return Ok(result);
     }
 

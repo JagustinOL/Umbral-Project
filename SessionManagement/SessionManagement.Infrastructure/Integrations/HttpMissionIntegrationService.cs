@@ -85,6 +85,34 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
             .ToList();
     }
 
+    public async Task<PlayerNodeContentData> GetNodePlayerContentAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default)
+    {
+        var content = await _httpClient.GetFromJsonAsync<PlayerNodeContentResponse>(
+            $"api/v1/missions/{missionId}/nodes/{nodeId}/player-content",
+            JsonOptions,
+            cancellationToken);
+
+        if (content is null)
+            throw new InvalidOperationException(
+                $"No se pudo obtener el contenido del nodo {nodeId} desde MissionManagement.");
+
+        return new PlayerNodeContentData(
+            NodeId: content.NodeId,
+            NodeType: content.NodeType,
+            Questions: content.Questions?
+                .Select(q => new PlayerTriviaQuestionData(q.Prompt, q.Options))
+                .ToList(),
+            Instructions: content.Instructions,
+            Destination: content.Destination is null
+                ? null
+                : new GpsCoordinateData(
+                    content.Destination.Latitude,
+                    content.Destination.Longitude));
+    }
+
     private sealed record MissionHintResponse(
         Guid Id,
         int Order,
@@ -113,7 +141,23 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
         string NodeType,
         int ExecutionOrder,
         int BaseScore,
-        string ExpectedValue);
+        IReadOnlyList<string> ExpectedAnswers,
+        string Title = "");
+
+    private sealed record PlayerNodeContentResponse(
+        Guid NodeId,
+        string NodeType,
+        IReadOnlyList<PlayerTriviaQuestionResponse>? Questions,
+        string? Instructions,
+        GpsCoordinateResponse? Destination);
+
+    private sealed record PlayerTriviaQuestionResponse(
+        string Prompt,
+        IReadOnlyList<string> Options);
+
+    private sealed record GpsCoordinateResponse(
+        double Latitude,
+        double Longitude);
 
     private async Task<IReadOnlyList<MissionNodeValidationData>> GetNodeValidationsInternalAsync(
         Guid missionId,
@@ -130,7 +174,8 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
                 NodeType: v.NodeType,
                 ExecutionOrder: v.ExecutionOrder,
                 BaseScore: v.BaseScore,
-                ExpectedValue: v.ExpectedValue))
+                ExpectedAnswers: v.ExpectedAnswers,
+                Title: v.Title ?? string.Empty))
             .ToList();
     }
 }

@@ -8,10 +8,14 @@ namespace SessionManagement.Application.Teams.Queries.GetTeamById;
 public sealed class GetTeamByIdHandler : IRequestHandler<GetTeamByIdQuery, TeamDetailsDto>
 {
     private readonly ITeamRepository _teamRepository;
+    private readonly ILiveSessionRepository _liveSessionRepository;
 
-    public GetTeamByIdHandler(ITeamRepository teamRepository)
+    public GetTeamByIdHandler(
+        ITeamRepository teamRepository,
+        ILiveSessionRepository liveSessionRepository)
     {
         _teamRepository = teamRepository;
+        _liveSessionRepository = liveSessionRepository;
     }
 
     public async Task<TeamDetailsDto> Handle(GetTeamByIdQuery request, CancellationToken cancellationToken)
@@ -19,6 +23,14 @@ public sealed class GetTeamByIdHandler : IRequestHandler<GetTeamByIdQuery, TeamD
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken);
         if (team is null)
             throw new NotFoundException($"No se encontró el equipo con Id={request.TeamId}.");
+
+        // Si ya está asignado a la sesión, la solicitud pendiente dejó de aplicar.
+        Guid? pendingSessionJoinRef = null;
+        if (team.CurrentSessionRef is null)
+        {
+            pendingSessionJoinRef = await _liveSessionRepository
+                .FindOpenSessionIdWithPendingJoinByTeamAsync(team.Id, cancellationToken);
+        }
 
         return new TeamDetailsDto(
             TeamId: team.Id,
@@ -34,6 +46,7 @@ public sealed class GetTeamByIdHandler : IRequestHandler<GetTeamByIdQuery, TeamD
                     DisplayName: x.DisplayName,
                     Role: x.Role.ToString(),
                     JoinedAtUtc: x.JoinedAtUtc))
-                .ToList());
+                .ToList(),
+            PendingSessionJoinRef: pendingSessionJoinRef);
     }
 }

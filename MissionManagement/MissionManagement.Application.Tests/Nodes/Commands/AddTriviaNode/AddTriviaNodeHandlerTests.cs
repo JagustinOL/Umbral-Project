@@ -31,7 +31,8 @@ public sealed class AddTriviaNodeHandlerTests
             [
                 new TriviaQuestion("Pregunta", ["A", "B"], correctOptionIndex: 0)
             ],
-            ExecutionOrder: 1);
+            ExecutionOrder: 1,
+            BaseScore: 100);
 
         // Act
         var action = () => handler.Handle(command, CancellationToken.None);
@@ -61,17 +62,19 @@ public sealed class AddTriviaNodeHandlerTests
             [
                 new TriviaQuestion("Pregunta", ["A", "B"], correctOptionIndex: 0)
             ],
-            ExecutionOrder: 1);
+            ExecutionOrder: 1,
+            BaseScore: 100);
 
         // Act
         var nodeId = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         nodeId.Should().NotBe(Guid.Empty);
-        mission.FindNodeById(nodeId).Should().NotBeNull();
+        var node = mission.FindNodeById(nodeId);
+        node.Should().NotBeNull();
+        node!.BaseScore.Should().Be(100);
         _repositoryMock.Verify(
             r => r.SaveAsync(mission, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }
-

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LightbulbIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -30,6 +32,7 @@ import {
   sortHintsByOrder,
   toHintViewModel,
   validateHintContent,
+  validateHintPenaltyPoints,
 } from "@/lib/services/hintService";
 import { getStructureLockTooltip } from "@/lib/services/nodeService";
 import type { MissionStatus } from "@/lib/types/api";
@@ -65,6 +68,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
   const [isInitialLoading, setIsInitialLoading] = useState(() => (node.hints ?? []).length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newContent, setNewContent] = useState("");
+  const [newPenaltyPoints, setNewPenaltyPoints] = useState(10);
   const [editingHintId, setEditingHintId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Hint | null>(null);
@@ -122,11 +126,17 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       toast.error(contentError);
       return;
     }
+    const penaltyError = validateHintPenaltyPoints(newPenaltyPoints);
+    if (penaltyError) {
+      toast.error(penaltyError);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await hintService.addHint(missionId, nodeId, newContent.trim());
+      await hintService.addHint(missionId, nodeId, newContent.trim(), newPenaltyPoints);
       setNewContent("");
+      setNewPenaltyPoints(10);
       await loadHints(undefined, { silent: true });
       toast.success("Pista creada (HU-17).");
     } catch (error) {
@@ -285,6 +295,20 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
             className="text-xs resize-none"
             disabled={isSubmitting}
           />
+          <div className="space-y-1">
+            <Label htmlFor={`hint-penalty-${nodeId}`} className="text-xs">
+              Penalización (pts)
+            </Label>
+            <Input
+              id={`hint-penalty-${nodeId}`}
+              type="number"
+              min={0}
+              className="h-8 text-xs max-w-[8rem]"
+              value={newPenaltyPoints}
+              disabled={isSubmitting}
+              onChange={(e) => setNewPenaltyPoints(parseInt(e.target.value, 10) || 0)}
+            />
+          </div>
           <Button
             size="sm"
             variant="outline"

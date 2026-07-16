@@ -22,14 +22,14 @@ public sealed class UpdateTreasureHuntNodeHandlerTests
 
         var handler = new UpdateTreasureHuntNodeHandler(_repositoryMock.Object);
         var act = () => handler.Handle(
-            new UpdateTreasureHuntNodeCommand(missionId, Guid.NewGuid(), "Inst", "CODE", new GpsCoordinate(1, 2)),
+            new UpdateTreasureHuntNodeCommand(missionId, Guid.NewGuid(), "Inst", "CODE", new GpsCoordinate(1, 2), 100),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_WhenValid_UpdatesNodeAndSaves()
+    public async Task Handle_WhenValid_UpdatesNodeBaseScoreAndSaves()
     {
         var mission = MissionTestData.CreateMissionWithTreasureHuntGame(out var node);
         _repositoryMock
@@ -38,11 +38,18 @@ public sealed class UpdateTreasureHuntNodeHandlerTests
 
         var handler = new UpdateTreasureHuntNodeHandler(_repositoryMock.Object);
         await handler.Handle(
-            new UpdateTreasureHuntNodeCommand(mission.Id, node.Id, "Nuevas instrucciones", "XYZ", new GpsCoordinate(10, 20)),
+            new UpdateTreasureHuntNodeCommand(
+                mission.Id,
+                node.Id,
+                "Nuevas instrucciones",
+                "XYZ",
+                new GpsCoordinate(10, 20),
+                BaseScore: 200),
             CancellationToken.None);
 
         node.Instructions.Should().Be("Nuevas instrucciones");
         node.SecretCode.Should().Be("XYZ");
+        node.BaseScore.Should().Be(200);
         _repositoryMock.Verify(r => r.SaveAsync(mission, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

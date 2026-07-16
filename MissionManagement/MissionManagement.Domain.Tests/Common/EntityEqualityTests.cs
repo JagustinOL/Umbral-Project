@@ -40,4 +40,21 @@ public sealed class EntityEqualityTests
         (left != right).Should().BeFalse();
         (left == Hint.Create(Guid.NewGuid(), 1, "H", 1)).Should().BeFalse();
     }
+
+    [Fact]
+    public void Equals_WhenSameReference_ReturnsTrue()
+    {
+        var hint = Hint.Create(Guid.NewGuid(), 1, "H", 1);
+        object boxed = hint;
+        hint.Equals(boxed).Should().BeTrue();
+        ReferenceEquals(hint, hint).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Equals_WhenNullObject_ReturnsFalse()
+    {
+        var hint = Hint.Create(Guid.NewGuid(), 1, "H", 1);
+        hint.Equals(null).Should().BeFalse();
+        (hint != null).Should().BeTrue();
+    }
 }

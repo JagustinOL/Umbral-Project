@@ -30,6 +30,9 @@ public sealed class EvidenceSubmissionConfiguration : IEntityTypeConfiguration<E
             .HasMaxLength(2000)
             .IsRequired();
 
+        builder.Property(x => x.QuestionIndex)
+            .HasColumnName("question_index");
+
         builder.Property(x => x.SubmittedAtUtc)
             .HasColumnName("submitted_at_utc")
             .IsRequired();

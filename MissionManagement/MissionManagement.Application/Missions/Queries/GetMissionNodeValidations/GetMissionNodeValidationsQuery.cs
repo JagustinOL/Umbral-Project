@@ -5,4 +5,3 @@ namespace MissionManagement.Application.Missions.Queries.GetMissionNodeValidatio
 
 public sealed record GetMissionNodeValidationsQuery(Guid MissionId)
     : IRequest<IReadOnlyList<MissionNodeValidationDto>>;
-

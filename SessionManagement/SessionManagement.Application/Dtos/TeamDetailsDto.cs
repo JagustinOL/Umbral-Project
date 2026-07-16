@@ -7,5 +7,6 @@ public sealed record TeamDetailsDto(
     bool IsLocked,
     Guid? CurrentSessionRef,
     bool IsDisbanded,
-    IReadOnlyList<TeamMemberDto> Members
+    IReadOnlyList<TeamMemberDto> Members,
+    Guid? PendingSessionJoinRef = null
 );

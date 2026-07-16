@@ -6,11 +6,20 @@ namespace ScoringAudit.Domain.Tests.Services;
 public sealed class TriviaScoreStrategyTests
 {
     [Fact]
-    public void Calculate_AppliesSpeedBonus_ForFastAnswers()
+    public void Calculate_UsesBaseTimesDifficulty_IgnoringElapsedTime()
     {
         var strategy = new TriviaScoreStrategy();
+        // Antes: 100 × 1.5 × 1.2 (speed) = 180 — incorrecto frente a RN-09.
         var score = strategy.Calculate(100, 1.5m, 20);
-        Assert.Equal(180, score);
+        Assert.Equal(150, score);
+    }
+
+    [Fact]
+    public void Calculate_WithBaseScoreFifteen_ReturnsFifteenOnEasyDifficulty()
+    {
+        var strategy = new TriviaScoreStrategy();
+        Assert.Equal(15, strategy.Calculate(15, 1.0m, 5));
+        Assert.Equal(15, strategy.Calculate(15, 1.0m, 500));
     }
 
     [Fact]
@@ -36,6 +45,6 @@ public sealed class TriviaScoreStrategyTests
             1.0m,
             25);
 
-        Assert.Equal(60, origin.ComputedScore);
+        Assert.Equal(50, origin.ComputedScore);
     }
 }

@@ -44,16 +44,22 @@ export function hasRole(session: AuthSession, role: string): boolean {
   return session.roles.some((r) => r.toLowerCase() === normalized)
 }
 
-function isAccessTokenExpired(accessToken: string): boolean {
+export function getAccessTokenExpiresAt(accessToken: string): number | null {
   try {
     const payload = JSON.parse(atob(accessToken.split('.')[1] ?? '')) as { exp?: number }
     if (typeof payload.exp === 'number') {
-      return payload.exp * 1000 < Date.now()
+      return payload.exp * 1000
     }
   } catch {
     // Ignore malformed tokens; API will reject them.
   }
-  return false
+  return null
+}
+
+function isAccessTokenExpired(accessToken: string): boolean {
+  const expiresAt = getAccessTokenExpiresAt(accessToken)
+  if (expiresAt == null) return false
+  return expiresAt < Date.now()
 }
 
 export function isAuthSessionValid(session: AuthSession | null): session is AuthSession {

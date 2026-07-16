@@ -5,6 +5,7 @@ import { Sidebar, NavSection } from "@/components/umbral/Sidebar";
 import { MissionCatalog } from "@/components/umbral/MissionCatalog";
 import { MissionBuilder } from "@/components/umbral/MissionBuilder";
 import { OperatorManagement } from "@/components/umbral/OperatorManagement";
+import { AuditHistory } from "@/components/umbral/AuditHistory";
 import {
   CreateMissionPayload,
   CreateOperatorPayload,
@@ -186,6 +187,16 @@ export default function DashboardPage() {
     }
   };
 
+  const handleResendOperatorActivation = async (operatorId: string) => {
+    setOperatorsError(null);
+    try {
+      return await operatorService.resendActivation(operatorId);
+    } catch (error) {
+      setOperatorsError(getOperatorApiErrorMessage(error));
+      throw error;
+    }
+  };
+
   const handleDeactivateOperator = async (operatorId: string) => {
     setIsDeactivatingOperator(true);
     setOperatorsError(null);
@@ -276,8 +287,8 @@ export default function DashboardPage() {
       <Toaster richColors closeButton position="top-right" />
       <Sidebar active={section} onNavigate={handleNavigate} />
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-8">
+      <main className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain">
+        <div className="max-w-5xl mx-auto w-full px-6 py-8">
           {section === "catalog" && !activeMission && (
             <MissionCatalog
               missions={missions}
@@ -307,6 +318,7 @@ export default function DashboardPage() {
               operators={operators}
               missions={missions}
               onCreateOperator={handleCreateOperator}
+              onResendActivation={handleResendOperatorActivation}
               onDeactivateOperator={handleDeactivateOperator}
               onAssignOperator={handleAssignOperator}
               onRevokeOperator={handleRevokeOperator}
@@ -321,6 +333,8 @@ export default function DashboardPage() {
               onClearAssignmentError={() => setAssignmentError(null)}
             />
           )}
+
+          {section === "audit" && <AuditHistory />}
         </div>
       </main>
     </div>

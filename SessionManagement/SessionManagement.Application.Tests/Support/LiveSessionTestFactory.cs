@@ -41,8 +41,8 @@ internal static class LiveSessionTestFactory
 
     public static IReadOnlyList<MissionNodeValidationData> DefaultValidationData() =>
     [
-        new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, 100, "Bogota"),
-        new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, 150, "CODE-123")
+        new MissionNodeValidationData(TriviaNodeId, "Trivia", 1, 100, ["Bogota"]),
+        new MissionNodeValidationData(TreasureNodeId, "TreasureHunt", 2, 150, ["CODE-123"])
     ];
 
     public static IReadOnlyList<AssignedMissionData> AssignedTo(Guid operatorId, Guid missionId) =>

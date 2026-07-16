@@ -13,6 +13,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangleIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { SessionJoinRequestDto } from '@/lib/types/api';
 
 interface WaitingRoomViewProps {
   operatorId: string;
@@ -21,6 +22,7 @@ interface WaitingRoomViewProps {
   joinCode: string;
   onBack: () => void;
   onStartSession: () => Promise<void>;
+  onCancelled: () => void;
 }
 
 export function WaitingRoomView({
@@ -30,12 +32,17 @@ export function WaitingRoomView({
   joinCode,
   onBack,
   onStartSession,
+  onCancelled,
 }: WaitingRoomViewProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [teamsError, setTeamsError] = useState<string | null>(null);
   const [sessionStarting, setSessionStarting] = useState(false);
+  const [sessionCancelling, setSessionCancelling] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<SessionJoinRequestDto[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(true);
+  const [requestActionTeamId, setRequestActionTeamId] = useState<string | null>(null);
 
   const loadTeams = useCallback(
     async (signal?: AbortSignal) => {
@@ -59,19 +66,47 @@ export function WaitingRoomView({
     [operatorId, sessionId],
   );
 
+  const loadJoinRequests = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        setJoinRequests(await operatorSessionService.getJoinRequests(sessionId, signal));
+      } catch (error) {
+        if (!signal?.aborted) toast.error(getOperatorSessionApiErrorMessage(error));
+      } finally {
+        if (!signal?.aborted) setIsLoadingRequests(false);
+      }
+    },
+    [sessionId],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     void loadTeams(controller.signal);
+    void loadJoinRequests(controller.signal);
 
     const interval = setInterval(() => {
       void loadTeams(controller.signal);
+      void loadJoinRequests(controller.signal);
     }, 5000);
 
     return () => {
       controller.abort();
       clearInterval(interval);
     };
-  }, [loadTeams]);
+  }, [loadJoinRequests, loadTeams]);
+
+  const handleDecision = async (teamId: string, decision: 'Approve' | 'Reject') => {
+    setRequestActionTeamId(teamId);
+    try {
+      await operatorSessionService.decideJoinRequest(sessionId, teamId, decision);
+      toast.success(decision === 'Approve' ? 'Equipo aprobado.' : 'Solicitud rechazada.');
+      await Promise.all([loadJoinRequests(), loadTeams()]);
+    } catch (error) {
+      toast.error(getOperatorSessionApiErrorMessage(error));
+    } finally {
+      setRequestActionTeamId(null);
+    }
+  };
 
   const handleCopyCode = () => {
     void navigator.clipboard.writeText(joinCode);
@@ -87,6 +122,27 @@ export function WaitingRoomView({
       toast.error(getOperatorSessionApiErrorMessage(error));
     } finally {
       setSessionStarting(false);
+    }
+  };
+
+  const handleCancelSession = async () => {
+    if (
+      !window.confirm(
+        '¿Cancelar esta sesión? Los equipos inscritos serán notificados y la misión quedará libre para crear otra sesión.',
+      )
+    ) {
+      return;
+    }
+
+    setSessionCancelling(true);
+    try {
+      await operatorSessionService.cancelSession(operatorId, sessionId);
+      toast.success('Sesión cancelada.');
+      onCancelled();
+    } catch (error) {
+      toast.error(getOperatorSessionApiErrorMessage(error));
+    } finally {
+      setSessionCancelling(false);
     }
   };
 
@@ -123,6 +179,54 @@ export function WaitingRoomView({
 
             <TeamsList teamIds={teamIds} isLoading={isLoadingTeams} />
           </div>
+
+          <div>
+            <h2 className="text-sm font-medium text-foreground mb-3">
+              Solicitudes pendientes
+            </h2>
+            {isLoadingRequests ? (
+              <p className="text-sm text-muted-foreground">Cargando solicitudes…</p>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.filter((request) => request.status.toLowerCase() === 'pending').length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay solicitudes pendientes.</p>
+                ) : (
+                  joinRequests
+                    .filter((request) => request.status.toLowerCase() === 'pending')
+                    .map((request) => (
+                      <div
+                        key={request.requestId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{request.teamName ?? request.teamId}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Solicitada {new Date(request.requestedAtUtc).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            disabled={requestActionTeamId === request.teamId}
+                            onClick={() => void handleDecision(request.teamId, 'Approve')}
+                          >
+                            Aprobar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={requestActionTeamId === request.teamId}
+                            onClick={() => void handleDecision(request.teamId, 'Reject')}
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="lg:col-span-1">
@@ -142,16 +246,29 @@ export function WaitingRoomView({
             </div>
 
             <StartSessionButton
-              disabled={approvedTeamCount === 0}
+              disabled={approvedTeamCount === 0 || sessionCancelling}
               loading={sessionStarting}
               onStart={() => void handleStartSession()}
             />
+
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={sessionStarting || sessionCancelling}
+              onClick={() => void handleCancelSession()}
+            >
+              {sessionCancelling ? 'Cancelando…' : 'Cancelar sesión'}
+            </Button>
 
             {approvedTeamCount === 0 && (
               <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2">
                 Se requiere al menos un equipo registrado para iniciar la sesión.
               </p>
             )}
+
+            <p className="text-xs text-muted-foreground">
+              Puede cancelar la sesión mientras esté pendiente. Los jugadores inscritos serán avisados.
+            </p>
           </div>
         </div>
       </div>

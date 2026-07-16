@@ -34,13 +34,13 @@ public sealed class FakeMissionIntegrationService : IMissionIntegrationService
                 NodeType: "Trivia",
                 ExecutionOrder: 1,
                 BaseScore: 100,
-                ExpectedValue: "Bogota"),
+                ExpectedAnswers: ["Bogota"]),
             new(
                 NodeId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
                 NodeType: "TreasureHunt",
                 ExecutionOrder: 2,
                 BaseScore: 150,
-                ExpectedValue: "CODE-123")
+                ExpectedAnswers: ["CODE-123"])
         ];
 
         return Task.FromResult(result);
@@ -61,4 +61,15 @@ public sealed class FakeMissionIntegrationService : IMissionIntegrationService
         Guid nodeId,
         CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<MissionHintData>>([]);
+
+    public Task<PlayerNodeContentData> GetNodePlayerContentAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new PlayerNodeContentData(
+            nodeId,
+            "Trivia",
+            [new PlayerTriviaQuestionData("Sample question", ["A", "B"])],
+            null,
+            null));
 }

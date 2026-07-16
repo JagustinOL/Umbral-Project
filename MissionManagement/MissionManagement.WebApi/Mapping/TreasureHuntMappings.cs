@@ -18,7 +18,8 @@ public static class TreasureHuntMappings
             Instructions: body.Instructions,
             SecretCode: body.SecretCode,
             Destination: new GpsCoordinate(body.Destination.Latitude, body.Destination.Longitude),
-            ExecutionOrder: body.ExecutionOrder);
+            ExecutionOrder: body.ExecutionOrder,
+            BaseScore: body.BaseScore);
 
     public static GetTreasureHuntNodeByIdQuery ToTreasureHuntByIdQuery(this MissionNodeRoute route) =>
         new(route.MissionId, route.NodeId);
@@ -31,5 +32,6 @@ public static class TreasureHuntMappings
             NodeId: route.NodeId,
             Instructions: body.Instructions,
             SecretCode: body.SecretCode,
-            Destination: new GpsCoordinate(body.Destination.Latitude, body.Destination.Longitude));
+            Destination: new GpsCoordinate(body.Destination.Latitude, body.Destination.Longitude),
+            BaseScore: body.BaseScore);
 }

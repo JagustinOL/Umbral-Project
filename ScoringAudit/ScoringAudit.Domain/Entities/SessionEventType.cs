@@ -16,5 +16,6 @@ public enum SessionEventType
     HintReleased         = 7,
     ManualPenaltyApplied = 8,
     TeamRegistered       = 9,
-    ScoreRecalculated    = 10
+    ScoreRecalculated    = 10,
+    TeamCompletedMission = 11
 }

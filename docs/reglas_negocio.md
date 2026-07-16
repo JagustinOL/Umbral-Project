@@ -18,13 +18,13 @@ A continuación se listan las restricciones del juego que el backend debe valida
 
 - **RN-03 (Estado de Sesión):** Un equipo solo puede enviar respuestas o notificar hallazgos si la sesión tiene estado Activa. Si está Pausada o Finalizada, el sistema debe rechazar cualquier comando de juego. ●
 
-- **RN-04 (Cierre de Etapa):** Una etapa se considera "Cerrada" una vez que los objetivos (Trivias ganadas o Búsquedas completadas) se hayan cumplido. El sistema no debe aceptar acciones para una etapa ya superada. ●
+- **RN-04 (Cierre de Etapa):** Una etapa/juego se considera "Cerrado" cuando queda resuelto: en Trivia, tras el único intento del equipo (correcto o incorrecto); en Búsqueda del Tesoro, cuando el código QR correcto es validado. El sistema no debe aceptar acciones para una etapa ya cerrada. ●
 
 - **RN-05 (Unicidad de Jugador):** Un usuario (Jugador) solo puede estar vinculado a un único Equipo dentro de una misma sesión.
 
 - **RN-06 (No Duplicidad de Pistas):** El sistema debe impedir que un Operador envíe manualmente una pista que el equipo ya haya recibido previamente. ●
 
-- **RN-07 (Liberación de Pistas):** Las pistas sólo se desbloquean en el momento exacto en que la lógica del juego asociado (Búsqueda del Tesoro) se marca como completada exitosamente.
+- **RN-07 (Liberación de Pistas):** Las pistas del catálogo (creadas por el Administrador) solo se muestran al equipo cuando el Operador las libera manualmente durante la sesión. Solo pueden liberarse pistas del juego (nodo) actual del equipo; no se pueden liberar pistas de juegos ya superados ni de juegos futuros. El jugador nunca ve el catálogo completo de pistas de la misión.
 
 - **RN-08 (Cálculo de Puntaje):** El puntaje total de un equipo es la suma de los puntos obtenidos por juegos completados menos el valor acumulado de las penalizaciones manuales aplicadas por el Operador. ●
 
@@ -32,9 +32,9 @@ A continuación se listan las restricciones del juego que el backend debe valida
 
 - **RN-10 (Justificación de Sanción):** Toda penalización aplicada por el Operador debe ir acompañada obligatoriamente de un motivo o descripción. El sistema debe rechazar penalizaciones "en blanco".
 
-- **RN-11 (Progresión Secuencial Estricta):** Los equipos deben superar las etapas en el orden secuencial estricto definido en la plantilla de la Misión. El sistema no permite a un equipo saltarse un juego ni avanzar a la etapa N+1 sin haber cerrado exitosamente la etapa N . ●
+- **RN-11 (Progresión Secuencial Estricta):** Los equipos deben recorrer las etapas en el orden secuencial estricto definido en la plantilla de la Misión. El sistema no permite saltarse un juego: solo se avanza a N+1 tras resolver el juego N. En Trivia, resolver incluye fallar el único intento (0 puntos y avance); en Búsqueda del Tesoro, resolver requiere el código correcto. ●
 
-- **RN-12 (Validación Asimétrica de Juegos):** Existen dos mecanismos de avance excluyentes: ○ En Trivia , la validación es automática por el motor del sistema (comparación de la respuesta seleccionada del equipo contra la respuesta correcta configurada). ○ En Búsqueda del Tesoro , la validación es manual ; el avance solo se produce cuando el equipo envía el código QR correspondiente a ese tesoro.
+- **RN-12 (Validación Asimétrica de Juegos):** Existen dos mecanismos de avance excluyentes: ○ En Trivia, la validación es automática por el motor del sistema (comparación de la respuesta seleccionada del equipo contra la respuesta correcta configurada); el equipo tiene un solo intento por trivia y, si falla, no suma puntaje y avanza. ○ En Búsqueda del Tesoro, la validación es por código QR; el avance solo se produce cuando el equipo envía el código correspondiente a ese tesoro.
 
 - **RN-13 (Bloqueo de Modificación de Equipo en Juego):** Un jugador no puede abandonar un equipo, ni el creador puede disolverlo, si dicho equipo se encuentra actualmente vinculado a una sesión con estado Activa o Pausada. ●
 
