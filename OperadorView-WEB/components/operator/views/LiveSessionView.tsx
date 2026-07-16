@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ApplyPenaltyDialog } from '@/components/operator/ApplyPenaltyDialog';
 import { ApiError } from '@/lib/api/client';
 import { operatorSessionService, getOperatorSessionApiErrorMessage } from '@/lib/services/operatorSessionService';
 import {
@@ -11,7 +12,6 @@ import {
   OperatorTeamBoardEntryDto,
   RankingEntryDto,
 } from '@/lib/types/api';
-
 interface LiveSessionViewProps {
   operatorId: string;
   sessionId: string;
@@ -38,7 +38,12 @@ export function LiveSessionView({
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
   const [releasingHintId, setReleasingHintId] = useState<string | null>(null);
+  const [penaltyTarget, setPenaltyTarget] = useState<{
+    teamId: string;
+    teamName: string;
+  } | null>(null);
   const closedHandledRef = useRef(false);
+  const reconcileAttemptedRef = useRef(false);
 
   const handleSessionClosed = useCallback(() => {
     if (closedHandledRef.current) return;
@@ -49,23 +54,45 @@ export function LiveSessionView({
 
   const loadSession = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [nextBoard, nextRanking] = await Promise.all([
-        operatorSessionService.getOperatorBoard(sessionId, signal),
-        operatorSessionService.getRanking(sessionId, signal),
-      ]);
+      const boardResult = await operatorSessionService.getOperatorBoard(sessionId, signal);
       if (signal?.aborted) return;
 
-      const status = nextBoard.sessionStatus.toLowerCase();
+      const status = boardResult.sessionStatus.toLowerCase();
+      setBoard(boardResult);
+      setIsPaused(status === 'paused');
+
       if (status === 'finalized' || status === 'cancelled') {
-        setBoard(nextBoard);
-        setRanking(nextRanking);
+        try {
+          const nextRanking = await operatorSessionService.getRanking(sessionId, signal);
+          if (!signal?.aborted) setRanking(nextRanking);
+        } catch {
+          /* ranking opcional al cerrar */
+        }
         handleSessionClosed();
         return;
       }
 
-      setBoard(nextBoard);
-      setRanking(nextRanking);
-      setIsPaused(status === 'paused');
+      try {
+        let nextRanking = await operatorSessionService.getRanking(sessionId, signal);
+        if (
+          nextRanking.length === 0 &&
+          boardResult.teams.length > 0 &&
+          !reconcileAttemptedRef.current
+        ) {
+          reconcileAttemptedRef.current = true;
+          try {
+            await operatorSessionService.reconcileScoring(sessionId, signal);
+            await new Promise((r) => setTimeout(r, 800));
+            nextRanking = await operatorSessionService.getRanking(sessionId, signal);
+          } catch {
+            /* reconcile best-effort */
+          }
+        }
+        if (!signal?.aborted) setRanking(nextRanking);
+      } catch (rankingError) {
+        if (signal?.aborted) return;
+        toast.error(getOperatorSessionApiErrorMessage(rankingError));
+      }
     } catch (error) {
       if (signal?.aborted) return;
       if (isSessionAlreadyClosedError(error)) {
@@ -80,6 +107,7 @@ export function LiveSessionView({
 
   useEffect(() => {
     closedHandledRef.current = false;
+    reconcileAttemptedRef.current = false;
     const controller = new AbortController();
     void loadSession(controller.signal);
     const interval = setInterval(() => {
@@ -118,16 +146,23 @@ export function LiveSessionView({
     }
   };
 
-  const applyPenalty = (teamId: string) => {
-    const pointsRaw = window.prompt('Puntos a penalizar:')?.trim();
-    if (!pointsRaw) return;
-    const points = Number(pointsRaw);
-    const reason = window.prompt('Motivo de la penalización:')?.trim();
-    if (!Number.isInteger(points) || points <= 0 || !reason) {
-      toast.error('Indica puntos positivos y un motivo para la penalización.');
-      return;
-    }
-    void runAction(() => operatorSessionService.applyPenalty(sessionId, teamId, points, reason), 'Penalización aplicada.');
+  const openPenaltyDialog = (teamId: string, teamName: string) => {
+    setPenaltyTarget({ teamId, teamName });
+  };
+
+  const submitPenalty = async (points: number, reason: string) => {
+    if (!penaltyTarget) return;
+    const ok = await runAction(
+      () =>
+        operatorSessionService.applyPenalty(
+          sessionId,
+          penaltyTarget.teamId,
+          points,
+          reason,
+        ),
+      'Penalización aplicada.',
+    );
+    if (ok) setPenaltyTarget(null);
   };
 
   const sendMessage = (teamId: string) => {
@@ -222,7 +257,12 @@ export function LiveSessionView({
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" disabled={isActing} onClick={() => applyPenalty(team.teamId)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isActing}
+                        onClick={() => openPenaltyDialog(team.teamId, String(displayName))}
+                      >
                         Aplicar penalización
                       </Button>
                       <Button size="sm" variant="outline" disabled={isActing} onClick={() => sendMessage(team.teamId)}>
@@ -320,6 +360,16 @@ export function LiveSessionView({
           </ol>
         </aside>
       </div>
+
+      <ApplyPenaltyDialog
+        open={penaltyTarget !== null}
+        teamName={penaltyTarget?.teamName ?? 'equipo'}
+        isSubmitting={isActing}
+        onOpenChange={(open) => {
+          if (!open && !isActing) setPenaltyTarget(null);
+        }}
+        onConfirm={submitPenalty}
+      />
     </div>
   );
 }

@@ -10,9 +10,11 @@ using UserService.Domain.Repositories;
 using UserService.Infrastructure.Auth;
 using UserService.Infrastructure.External.Keycloak;
 using UserService.Infrastructure.External.SessionManagement;
+using UserService.Infrastructure.Email;
 using UserService.Infrastructure.Persistence;
 using UserService.Infrastructure.Repositories;
 using UserService.Infrastructure.Sync;
+using UserService.Application.Operators;
 using UserService.WebApi.Hosting;
 using UserService.WebApi;
 
@@ -72,6 +74,10 @@ builder.Services.AddOptions<KeycloakOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services.AddOptions<EmailOptions>()
+    .Bind(builder.Configuration.GetSection(EmailOptions.SectionName))
+    .ValidateOnStart();
+
 builder.Services.AddHttpClient<KeycloakIdentityService>();
 builder.Services.AddHttpClient<KeycloakPlayerIdentityService>();
 builder.Services.AddHttpClient<KeycloakAuthService>();
@@ -81,6 +87,8 @@ builder.Services.AddScoped<UserSyncPlayerIdentityService>();
 builder.Services.AddScoped<IIdentityService>(sp => sp.GetRequiredService<UserSyncIdentityService>());
 builder.Services.AddScoped<IPlayerIdentityService>(sp => sp.GetRequiredService<UserSyncPlayerIdentityService>());
 builder.Services.AddScoped<IAuthService>(sp => sp.GetRequiredService<KeycloakAuthService>());
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IOperatorActivationMailer, OperatorActivationMailer>();
 builder.Services.AddScoped<DefaultAdminDirectorySync>();
 builder.Services.AddHostedService<KeycloakBootstrapHostedService>();
 builder.Services.AddHostedService<DefaultAdminDirectoryBootstrapHostedService>();

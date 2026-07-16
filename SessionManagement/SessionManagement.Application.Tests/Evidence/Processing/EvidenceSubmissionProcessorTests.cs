@@ -109,6 +109,42 @@ public sealed class EvidenceSubmissionProcessorTests
         retry.Should().Throw<SessionDomainException>();
     }
 
+    [Fact]
+    public void Process_WhenTriviaCorrectWithHardMultiplier_AwardsBaseTimesTwo()
+    {
+        var session = LiveSession.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            [new AllowedNode(LiveSessionTestFactory.TriviaNodeId, "Trivia", 100)],
+            2.0m);
+        session.RegisterTeam(LiveSessionTestFactory.DefaultTeamId);
+        session.BeginPreparation();
+        session.Start();
+
+        var rules = new[]
+        {
+            new NodeValidationRule(
+                LiveSessionTestFactory.TriviaNodeId,
+                1,
+                NodeValidationType.Trivia,
+                ["Bogota"])
+        };
+
+        var result = CreateTriviaProcessor().Process(
+            session,
+            new EvidenceSubmissionRequest(
+                LiveSessionTestFactory.DefaultTeamId,
+                LiveSessionTestFactory.TriviaNodeId,
+                "Bogota",
+                rules,
+                0));
+
+        result.IsCorrect.Should().BeTrue();
+        result.NodeCompleted.Should().BeTrue();
+        result.AwardedPoints.Should().Be(200);
+        session.DomainEvents.Should().Contain(e => e.GetType().Name == "EvidenceValidatedEvent");
+    }
+
     private static TriviaEvidenceSubmissionProcessor CreateTriviaProcessor() =>
         new(new EvidenceValidatorService(
             new SessionActiveValidationHandler(),

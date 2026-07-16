@@ -234,7 +234,7 @@ function GameNodeCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card overflow-hidden",
+        "rounded-lg border bg-card",
         isTrivia ? "border-blue-200" : "border-amber-200",
       )}
     >
@@ -242,7 +242,8 @@ function GameNodeCard({
         <CollapsibleTrigger asChild>
           <div
             className={cn(
-              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none",
+              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none rounded-lg",
+              expanded && "rounded-b-none",
               isTrivia ? "bg-blue-50/50" : "bg-amber-50/50",
             )}
           >
@@ -414,10 +415,15 @@ function StageNodeCard({
   const children = stage.children ?? [];
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border bg-card">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl",
+              expanded && "rounded-b-none",
+            )}
+          >
             {expanded ? (
               <ChevronDownIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
@@ -918,7 +924,8 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
   };
 
   const addGameStage = addGameStageId ? nodes.find((n) => n.id === addGameStageId) : undefined;
-  const nextGameOrder = (addGameStage?.children?.length ?? 0) + 1;
+  const childOrders = addGameStage?.children?.map((c) => c.executionOrder) ?? [];
+  const nextGameOrder = childOrders.length === 0 ? 1 : Math.max(...childOrders) + 1;
 
   const addStageButton = (
     <Button
@@ -1026,7 +1033,11 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         open={addStageOpen}
         onClose={() => setAddStageOpen(false)}
         onAdd={handleAddStage}
-        nextOrder={stages.length + 1}
+        nextOrder={
+          stages.length === 0
+            ? 1
+            : Math.max(...stages.map((s) => s.executionOrder)) + 1
+        }
         isSubmitting={isSubmittingStage}
       />
 

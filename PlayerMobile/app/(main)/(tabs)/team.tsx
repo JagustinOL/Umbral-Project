@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -61,12 +61,41 @@ export default function TeamTabScreen() {
 
   const hasTeam = Boolean(session?.teamId);
   const hasPendingJoin = Boolean(session?.pendingTeamId);
+  const hadPendingJoinRef = useRef(hasPendingJoin);
 
+  // Sincroniza membresía y datos del equipo (aprobación/rechazo, nuevas solicitudes)
+  // sin que el jugador tenga que salir y volver a la pestaña.
   useFocusEffect(
     useCallback(() => {
-      void refreshSession();
-    }, [refreshSession]),
+      const syncTeamState = async () => {
+        await refreshSession();
+        await loadTeam();
+      };
+
+      void syncTeamState();
+      const intervalId = setInterval(() => {
+        void syncTeamState();
+      }, 4000);
+
+      return () => clearInterval(intervalId);
+    }, [refreshSession, loadTeam]),
   );
+
+  useEffect(() => {
+    if (hadPendingJoinRef.current && hasTeam && !hasPendingJoin) {
+      showUserAlert(
+        'Solicitud aprobada',
+        'Ya formas parte del equipo. Puedes ver a tus compañeros y entrar a sesiones.',
+      );
+    }
+    if (hadPendingJoinRef.current && !hasTeam && !hasPendingJoin) {
+      showUserAlert(
+        'Solicitud rechazada',
+        'El líder del equipo rechazó tu solicitud de unión.',
+      );
+    }
+    hadPendingJoinRef.current = hasPendingJoin;
+  }, [hasTeam, hasPendingJoin]);
 
   const playerId = session?.player.playerId;
   const isLeader = useMemo(() => {

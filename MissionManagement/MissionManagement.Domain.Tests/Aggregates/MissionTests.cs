@@ -1,3 +1,4 @@
+using System.Reflection;
 using FluentAssertions;
 using MissionManagement.Domain.Aggregates;
 using MissionManagement.Domain.Entities;
@@ -244,6 +245,69 @@ public sealed class MissionTests
         // Assert
         mission.Nodes.Should().HaveCount(1);
         mission.Nodes[0].NodeType.Should().Be(MissionNodeType.Stage);
+    }
+
+    [Fact]
+    public void AddRootNode_WhenChildGameReusesExecutionOrder_AllowsNewRootStage()
+    {
+        // Arrange — simulates EF flat Nodes collection (stages + games share MissionId)
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        var stage1 = MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 0);
+        mission.AddRootNode(stage1);
+        mission.AddTriviaNode(
+            stage1.Id,
+            [new TriviaQuestion("¿Pregunta?", ["A", "B"], correctOptionIndex: 0)],
+            executionOrder: 1,
+            baseScore: 100);
+        mission.AddTreasureHuntNode(
+            stage1.Id,
+            instructions: "Busca el código",
+            secretCode: "ABC123",
+            destination: new GpsCoordinate(4.711, -74.0721),
+            executionOrder: 2,
+            baseScore: 100);
+        SimulateEfFlatNodesCollection(mission, stage1);
+
+        var stage2 = MissionNode.Create("Etapa 2", "Desc", MissionNodeType.Stage, executionOrder: 2, baseScore: 0);
+
+        // Act
+        var act = () => mission.AddRootNode(stage2);
+
+        // Assert
+        act.Should().NotThrow();
+        mission.Nodes.Count(n => n.ParentNodeId is null).Should().Be(2);
+    }
+
+    [Fact]
+    public void AddRootNode_WhenAnotherRootHasSameExecutionOrder_Throws()
+    {
+        // Arrange
+        var mission = Mission.Create("Misión", "Descripción", DifficultyLevel.Medium);
+        mission.AddRootNode(
+            MissionNode.Create("Etapa 1", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 0));
+        var duplicate = MissionNode.Create("Etapa X", "Desc", MissionNodeType.Stage, executionOrder: 1, baseScore: 0);
+
+        // Act
+        var act = () => mission.AddRootNode(duplicate);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ExecutionOrder=1*");
+    }
+
+    /// <summary>
+    /// EF maps Nodes by MissionId, so playable games appear flat alongside root stages.
+    /// </summary>
+    private static void SimulateEfFlatNodesCollection(Mission mission, MissionNode stage)
+    {
+        var nodesField = typeof(Mission).GetField("_nodes", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("Campo _nodes no encontrado.");
+        var nodes = (List<MissionNode>)nodesField.GetValue(mission)!;
+        foreach (var child in stage.Children)
+        {
+            if (!nodes.Contains(child))
+                nodes.Add(child);
+        }
     }
 
     [Fact]

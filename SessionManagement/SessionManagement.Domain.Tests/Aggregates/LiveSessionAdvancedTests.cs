@@ -134,4 +134,76 @@ public sealed class LiveSessionAdvancedTests
 
         result.IsCorrect.Should().BeTrue();
     }
+
+    [Fact]
+    public void ReleaseRemainingHintsAutomatically_WhenTreasureCompleted_ReleasesPendingWithoutPenalty()
+    {
+        var treasureId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
+            [new AllowedNode(treasureId, "TreasureHunt", 150)], 1m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+        var rules = new[] { new NodeValidationRule(treasureId, 1, NodeValidationType.TreasureHunt, ["CODE-123"]) };
+        session.SubmitTreasureHuntCode(TeamId, treasureId, "CODE-123", rules);
+
+        var hintA = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var hintB = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        session.ReleaseRemainingHintsAutomatically(
+            TeamId,
+            treasureId,
+            [(hintA, 1), (hintB, 2)]);
+
+        session.ReleasedHints.Should().HaveCount(2);
+        session.ReleasedHints.Should().OnlyContain(r =>
+            !r.WasManualRelease && r.PenaltyPoints == 0);
+        session.DomainEvents.Count(e => e.GetType().Name == "HintReleasedEvent").Should().Be(2);
+    }
+
+    [Fact]
+    public void ReleaseRemainingHintsAutomatically_SkipsAlreadyReleasedHints()
+    {
+        var treasureId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
+            [new AllowedNode(treasureId, "TreasureHunt", 150)], 1m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+        var rules = new[] { new NodeValidationRule(treasureId, 1, NodeValidationType.TreasureHunt, ["CODE-123"]) };
+
+        var hintA = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var hintB = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        session.ReleaseHint(TeamId, hintA, treasureId, 10, rules, wasManualRelease: true, hintOrder: 1);
+        session.SubmitTreasureHuntCode(TeamId, treasureId, "CODE-123", rules);
+
+        session.ReleaseRemainingHintsAutomatically(
+            TeamId,
+            treasureId,
+            [(hintA, 1), (hintB, 2)]);
+
+        session.ReleasedHints.Should().HaveCount(2);
+        session.ReleasedHints.Single(r => r.HintId == hintA).WasManualRelease.Should().BeTrue();
+        session.ReleasedHints.Single(r => r.HintId == hintA).PenaltyPoints.Should().Be(10);
+        session.ReleasedHints.Single(r => r.HintId == hintB).WasManualRelease.Should().BeFalse();
+        session.ReleasedHints.Single(r => r.HintId == hintB).PenaltyPoints.Should().Be(0);
+    }
+
+    [Fact]
+    public void ReleaseRemainingHintsAutomatically_WhenTreasureNotCompleted_Throws()
+    {
+        var treasureId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
+            [new AllowedNode(treasureId, "TreasureHunt", 150)], 1m);
+        session.RegisterTeam(TeamId);
+        session.BeginPreparation();
+        session.Start();
+
+        var act = () => session.ReleaseRemainingHintsAutomatically(
+            TeamId,
+            treasureId,
+            [(Guid.NewGuid(), 1)]);
+
+        act.Should().Throw<SessionDomainException>().WithMessage("*aún no completó*");
+    }
 }

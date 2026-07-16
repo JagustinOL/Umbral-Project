@@ -4,6 +4,7 @@ import {
   CreateOperatorRequest,
   CreateOperatorResponse,
   OperatorDto,
+  ResendOperatorActivationResponse,
 } from "@/lib/types/api";
 
 export function toOperatorViewModel(dto: OperatorDto): Operator {
@@ -33,6 +34,13 @@ export const operatorService = {
       method: "POST",
       body: request,
     });
+  },
+
+  async resendActivation(operatorId: string): Promise<ResendOperatorActivationResponse> {
+    return userApiRequest<ResendOperatorActivationResponse>(
+      `/operators/${operatorId}/resend-activation`,
+      { method: "POST" },
+    );
   },
 
   async deactivateOperator(operatorId: string): Promise<void> {

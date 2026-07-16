@@ -51,8 +51,29 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ScoringAuditDbContext>();
-    db.Database.EnsureCreated();
+    // Shared DB: EnsureCreated() is a no-op when other schemas already exist.
     db.Database.ExecuteSqlRaw("""
+        CREATE TABLE IF NOT EXISTS team_ledgers (
+            "Id" uuid PRIMARY KEY,
+            team_ref uuid NOT NULL,
+            session_ref uuid NOT NULL,
+            team_name character varying(200) NOT NULL,
+            is_closed boolean NOT NULL,
+            created_at_utc timestamp with time zone NOT NULL,
+            completion_elapsed_seconds double precision NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS score_entries (
+            "Id" uuid PRIMARY KEY,
+            points integer NOT NULL,
+            recorded_at_utc timestamp with time zone NOT NULL,
+            entry_type text NOT NULL,
+            source_event_id uuid NOT NULL,
+            team_ledger_id uuid NULL REFERENCES team_ledgers("Id") ON DELETE CASCADE,
+            origin jsonb NULL,
+            penalty_reason jsonb NULL
+        );
+
         ALTER TABLE team_ledgers
             ADD COLUMN IF NOT EXISTS completion_elapsed_seconds double precision NULL;
 

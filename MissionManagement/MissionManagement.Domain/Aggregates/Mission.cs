@@ -100,7 +100,12 @@ public sealed class Mission : AggregateRoot
             throw new InvalidOperationException(
                 "Solo se pueden agregar nodos raíz de tipo 'Stage' (etapas) a la misión.");
 
-        bool orderConflict = _nodes.Any(n => n.ExecutionOrder == node.ExecutionOrder);
+        // ExecutionOrder is unique among siblings (root stages), not globally.
+        // Games live in _nodes with MissionId (EF flat collection) and must not
+        // collide with a new stage that reuses the same order among its own siblings.
+        bool orderConflict = _nodes.Any(n =>
+            n.ParentNodeId is null
+            && n.ExecutionOrder == node.ExecutionOrder);
         if (orderConflict)
             throw new InvalidOperationException(
                 $"Ya existe un nodo raíz con ExecutionOrder={node.ExecutionOrder}.");

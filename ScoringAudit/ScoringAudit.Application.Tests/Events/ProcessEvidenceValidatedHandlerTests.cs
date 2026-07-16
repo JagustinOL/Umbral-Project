@@ -69,6 +69,46 @@ public sealed class ProcessEvidenceValidatedHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenLedgerMissing_CreatesLedgerAndCreditsScore()
+    {
+        var sessionId = Guid.NewGuid();
+        var teamId = Guid.NewGuid();
+
+        var ledgerRepo = new InMemoryTeamLedgerRepository();
+        var auditRepo = new InMemoryAuditLogRepository();
+        var publisher = new CapturingScoreUpdatePublisher();
+
+        var handler = new ProcessEvidenceValidatedHandler(
+            ledgerRepo,
+            auditRepo,
+            new ScoreCalculatorService([new TriviaScoreStrategy(), new TreasureHuntScoreStrategy()]),
+            new RankingManagerService(),
+            publisher);
+
+        var evt = new EvidenceValidatedIntegrationEvent
+        {
+            EventId = Guid.NewGuid(),
+            OccurredOnUtc = DateTime.UtcNow,
+            SessionId = sessionId,
+            EvidenceSubmissionId = Guid.NewGuid(),
+            TeamId = teamId,
+            MissionNodeId = Guid.NewGuid(),
+            NodeType = "TreasureHunt",
+            BaseScore = 100,
+            DifficultyMultiplier = 1.0m,
+            ElapsedSeconds = 80
+        };
+
+        await handler.Handle(new ProcessEvidenceValidatedCommand(evt), CancellationToken.None);
+
+        var ledger = await ledgerRepo.GetByTeamAndSessionAsync(teamId, sessionId);
+        Assert.NotNull(ledger);
+        Assert.Equal(100, ledger!.TotalScore);
+        Assert.NotNull(publisher.Last);
+        Assert.Equal(100, Assert.Single(publisher.Last!.Ranking).TotalScore);
+    }
+
+    [Fact]
     public async Task Handle_WhenBaseScoreIsZero_ThrowsAndDoesNotCredit()
     {
         var sessionId = Guid.NewGuid();

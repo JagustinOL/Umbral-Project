@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeftIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getAuditEventDetail, getAuditEventTypeLabel } from '@/lib/auditDisplay';
 import { getOperatorSessionApiErrorMessage, operatorSessionService } from '@/lib/services/operatorSessionService';
 import { HistoricalSessionDto, SessionAuditDetailDto } from '@/lib/types/api';
 
@@ -37,12 +38,20 @@ export function AuditHistoryView() {
           <section className="lg:col-span-2">
             <h2 className="mb-3 text-sm font-medium text-foreground">Línea de tiempo</h2>
             <div className="space-y-3">
-              {detail.timeline.map((event) => (
-                <div key={event.eventId} className="rounded-lg border border-border bg-card p-4">
-                  <p className="font-medium text-foreground">{event.description}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{event.eventType} · {new Date(event.occurredAtUtc).toLocaleString()}</p>
-                </div>
-              ))}
+              {detail.timeline.map((event) => {
+                const detailLine = getAuditEventDetail(event.metadata, event.missionNodeId);
+                return (
+                  <div key={event.eventId} className="rounded-lg border border-border bg-card p-4">
+                    <p className="font-medium text-foreground">{event.description}</p>
+                    {detailLine && (
+                      <p className="mt-1 text-sm text-muted-foreground">{detailLine}</p>
+                    )}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {getAuditEventTypeLabel(event.eventType)} · {new Date(event.occurredAtUtc).toLocaleString()}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </section>
           <aside className="rounded-lg border border-border bg-card p-5">

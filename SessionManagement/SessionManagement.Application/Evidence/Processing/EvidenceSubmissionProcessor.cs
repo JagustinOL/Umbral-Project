@@ -1,6 +1,7 @@
 using SessionManagement.Application.Evidence;
 using SessionManagement.Application.Evidence.Validation;
 using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Services;
 using SessionManagement.Domain.ValueObjects;
 
 namespace SessionManagement.Application.Evidence.Processing;
@@ -84,12 +85,15 @@ public abstract class EvidenceSubmissionProcessor
     {
         var baseScore = session.AllowedNodes.FirstOrDefault(x => x.NodeId == request.NodeId)?.BaseScore ?? 0;
         var totalQuestions = context.CurrentRule?.ExpectedAnswers.Count ?? 1;
+        var awardedPoints = context.IsCorrect && nodeCompleted
+            ? ScoreAwardCalculator.Compute(baseScore, session.DifficultyMultiplier)
+            : 0;
 
         return new SubmissionResult(
             IsCorrect: context.IsCorrect,
             CurrentNodeId: request.NodeId,
             NextNodeId: nodeCompleted ? nextRule?.NodeId : request.NodeId,
-            AwardedPoints: context.IsCorrect && nodeCompleted ? baseScore : 0,
+            AwardedPoints: awardedPoints,
             AnsweredQuestionIndex: context.ResolvedQuestionIndex,
             TotalQuestions: totalQuestions,
             NodeCompleted: nodeCompleted);

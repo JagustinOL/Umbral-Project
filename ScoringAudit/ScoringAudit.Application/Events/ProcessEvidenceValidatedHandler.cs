@@ -3,6 +3,7 @@ using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
 using ScoringAudit.Domain.ValueObjects;
 using ScoringAudit.Application.Messaging;
+using ScoringAudit.Domain.Aggregates;
 using ScoringAudit.Domain.Entities;
 
 namespace ScoringAudit.Application.Events;
@@ -34,9 +35,15 @@ public sealed class ProcessEvidenceValidatedHandler : IRequestHandler<ProcessEvi
     public async Task Handle(ProcessEvidenceValidatedCommand request, CancellationToken cancellationToken)
     {
         var evt = request.Event;
-        var ledger = await _ledgerRepository.GetByTeamAndSessionAsync(evt.TeamId, evt.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException(
-                $"No existe TeamLedger para equipo {evt.TeamId} en sesión {evt.SessionId}.");
+        var ledger = await _ledgerRepository.GetByTeamAndSessionAsync(evt.TeamId, evt.SessionId, cancellationToken);
+        if (ledger is null)
+        {
+            // Tolerancia: TeamRegistered pudo haberse perdido si ScoringAudit estaba caído.
+            ledger = TeamLedger.Create(
+                evt.TeamId,
+                evt.SessionId,
+                $"Team-{evt.TeamId:N}"[..12]);
+        }
 
         var finalScore = _scoreCalculator.Calculate(
             evt.NodeType,
@@ -52,19 +59,35 @@ public sealed class ProcessEvidenceValidatedHandler : IRequestHandler<ProcessEvi
             evt.ElapsedSeconds,
             finalScore);
 
-        ledger.AddEvidenceScore(origin, evt.EventId);
-        await _ledgerRepository.SaveAsync(ledger, cancellationToken);
+        var alreadyRewarded = ledger.Entries.Any(e =>
+            e.EntryType == ScoreEntryType.EvidenceRewarded
+            && e.Origin?.MissionNodeId == evt.MissionNodeId);
 
-        var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException($"No existe AuditLog para sesión {evt.SessionId}.");
-        auditLog.RecordEvent(
-            SessionEventType.EvidenceValidated,
-            evt.EventId,
-            "Evidencia validada y puntaje acreditado.",
-            evt.TeamId,
-            evt.MissionNodeId,
-            $"{{\"score\":{finalScore},\"elapsedSeconds\":{evt.ElapsedSeconds}}}");
-        await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
+        if (!alreadyRewarded)
+        {
+            ledger.AddEvidenceScore(origin, evt.EventId);
+            await _ledgerRepository.SaveAsync(ledger, cancellationToken);
+
+            var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken);
+            if (auditLog is not null)
+            {
+                var (description, metadata) = AuditEventDisplay.EvidenceValidated(
+                    ledger.TeamName,
+                    evt.NodeType,
+                    evt.NodeTitle,
+                    evt.MissionNodeId,
+                    finalScore,
+                    evt.ElapsedSeconds);
+                auditLog.RecordEvent(
+                    SessionEventType.EvidenceValidated,
+                    evt.EventId,
+                    description,
+                    evt.TeamId,
+                    evt.MissionNodeId,
+                    metadata);
+                await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
+            }
+        }
 
         var ledgers = await _ledgerRepository.GetBySessionAsync(evt.SessionId, cancellationToken);
         await _scoreUpdatePublisher.PublishAsync(

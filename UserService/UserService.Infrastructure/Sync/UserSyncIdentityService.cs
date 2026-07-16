@@ -18,7 +18,7 @@ public sealed class UserSyncIdentityService : IIdentityService
         _userRepository = userRepository;
     }
 
-    public async Task<CreateOperatorResult> CreateOperatorAsync(
+    public async Task<OperatorSetupCredentials> CreateOperatorAsync(
         string firstName,
         string lastName,
         string email,
@@ -26,10 +26,12 @@ public sealed class UserSyncIdentityService : IIdentityService
     {
         var result = await _inner.CreateOperatorAsync(firstName, lastName, email, cancellationToken);
 
+        // Alta nueva o reactivación de inactivo: deja el directorio local en Inactive
+        // hasta que complete setup-password.
         await _userRepository.SaveAsync(
             User.Create(
                 result.OperatorId,
-                email,
+                result.Email,
                 firstName,
                 lastName,
                 UserRole.Operator,
@@ -54,6 +56,11 @@ public sealed class UserSyncIdentityService : IIdentityService
             await _userRepository.SaveAsync(user, cancellationToken);
         }
     }
+
+    public Task<OperatorSetupCredentials> RegenerateOperatorSetupCodeAsync(
+        Guid operatorId,
+        CancellationToken cancellationToken = default) =>
+        _inner.RegenerateOperatorSetupCodeAsync(operatorId, cancellationToken);
 
     public async Task<Guid> CreateAdminAsync(
         string firstName,

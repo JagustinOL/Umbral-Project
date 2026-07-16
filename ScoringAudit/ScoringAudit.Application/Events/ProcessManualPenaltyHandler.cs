@@ -1,6 +1,6 @@
-using System.Text.Json;
 using MediatR;
 using ScoringAudit.Application.Messaging;
+using ScoringAudit.Domain.Aggregates;
 using ScoringAudit.Domain.Entities;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
@@ -32,8 +32,14 @@ public sealed class ProcessManualPenaltyHandler : IRequestHandler<ProcessManualP
     public async Task Handle(ProcessManualPenaltyCommand request, CancellationToken cancellationToken)
     {
         var evt = request.Event;
-        var ledger = await _ledgerRepository.GetByTeamAndSessionAsync(evt.TeamId, evt.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException($"No existe TeamLedger para equipo {evt.TeamId} en sesión {evt.SessionId}.");
+        var ledger = await _ledgerRepository.GetByTeamAndSessionAsync(evt.TeamId, evt.SessionId, cancellationToken);
+        if (ledger is null)
+        {
+            ledger = TeamLedger.Create(
+                evt.TeamId,
+                evt.SessionId,
+                $"Team-{evt.TeamId:N}"[..12]);
+        }
 
         ledger.ApplyPenalty(
             evt.PenaltyPoints,
@@ -42,15 +48,22 @@ public sealed class ProcessManualPenaltyHandler : IRequestHandler<ProcessManualP
             evt.EventId);
         await _ledgerRepository.SaveAsync(ledger, cancellationToken);
 
-        var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken)
-            ?? throw new InvalidOperationException($"No existe AuditLog para sesión {evt.SessionId}.");
-        auditLog.RecordEvent(
-            SessionEventType.ManualPenaltyApplied,
-            evt.EventId,
-            "El operador aplicó una penalización manual.",
-            evt.TeamId,
-            metadata: JsonSerializer.Serialize(new { evt.OperatorRef, evt.PenaltyPoints, evt.Reason }));
-        await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
+        var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken);
+        if (auditLog is not null)
+        {
+            var (description, metadata) = AuditEventDisplay.ManualPenalty(
+                ledger.TeamName,
+                evt.PenaltyPoints,
+                evt.Reason,
+                evt.OperatorRef);
+            auditLog.RecordEvent(
+                SessionEventType.ManualPenaltyApplied,
+                evt.EventId,
+                description,
+                evt.TeamId,
+                metadata: metadata);
+            await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
+        }
 
         var ledgers = await _ledgerRepository.GetBySessionAsync(evt.SessionId, cancellationToken);
         await _scoreUpdatePublisher.PublishAsync(

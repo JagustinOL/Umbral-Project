@@ -100,7 +100,8 @@ Pistas (HU-17): `POST …/hints` usa **JSON** `{ "content": "..." }` (sin adjunt
 - `IHintAccessService`: Puerto de acceso a pistas (sujeto del patrón **Proxy**).
 - `MissionHintService`: Implementación real del acceso a pistas del repositorio de misiones.
 - `DraftOnlyHintProxy`: **Proxy** que restringe consulta de pistas según rol y estado de la misión (RN borrador / admin-operador).
-- `IIdentityService`: Puerto para gestionar operadores contra Keycloak (Patrón: Integration Port / ACL). Alta sin contraseña (`CreateOperatorAsync` → código de activación) y onboarding (`SetupOperatorPasswordAsync`).
+- `IIdentityService`: Puerto para gestionar operadores contra Keycloak (Patrón: Integration Port / ACL). Alta sin contraseña (`CreateOperatorAsync` → código de activación) y onboarding (`SetupOperatorPasswordAsync`). El código se envía por correo (`IEmailSender` / SMTP + MailHog) y no se expone al administrador; existe reenvío (`RegenerateOperatorSetupCodeAsync`).
+- `IEmailSender` / `IOperatorActivationMailer`: Puerto de notificación por correo para códigos de activación de operadores.
 - `ISessionValidationService`: Puerto para validar si un operador tiene sesiones activas antes de cambios críticos (Patrón: Integration Port / ACL).
 - `IDomainEventPublisher`: Puerto de publicación de eventos de dominio.
 - `NotFoundException`, `ConflictException`, `UnauthorizedException`: Excepciones de aplicación (Patrón: Application Exception).

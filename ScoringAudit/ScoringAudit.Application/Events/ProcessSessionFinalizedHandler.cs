@@ -1,7 +1,7 @@
 using MediatR;
-using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Entities;
+using ScoringAudit.Domain.Repositories;
 
 namespace ScoringAudit.Application.Events;
 
@@ -33,13 +33,14 @@ public sealed class ProcessSessionFinalizedHandler : IRequestHandler<ProcessSess
         if (auditLog is null || auditLog.IsClosed)
             return;
 
-        var status = string.Equals(request.Event.Status, "Cancelled", StringComparison.OrdinalIgnoreCase)
-            ? "Cancelled"
-            : "Finished";
+        var cancelled = string.Equals(request.Event.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+        var status = cancelled ? "Cancelled" : "Finished";
+        var (description, metadata) = AuditEventDisplay.SessionClosed(cancelled, request.Event.FinalizedAtUtc);
         auditLog.RecordEvent(
-            status == "Cancelled" ? SessionEventType.SessionCancelled : SessionEventType.SessionFinalized,
+            cancelled ? SessionEventType.SessionCancelled : SessionEventType.SessionFinalized,
             request.Event.EventId,
-            status == "Cancelled" ? "La sesión fue cancelada." : "La sesión fue finalizada.");
+            description,
+            metadata: metadata);
         auditLog.Close(status, request.Event.FinalizedAtUtc);
         await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
     }

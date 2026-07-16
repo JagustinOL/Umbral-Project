@@ -29,6 +29,16 @@ public sealed class AuthController : ControllerBase
         return Ok(ToTokenResponse(result));
     }
 
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh(
+        [FromBody] RefreshTokenRequest body,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(body.ToCommand(), cancellationToken);
+        return Ok(ToTokenResponse(result));
+    }
+
     [HttpPost("operator/setup-password")]
     [AllowAnonymous]
     public async Task<IActionResult> SetupOperatorPassword(

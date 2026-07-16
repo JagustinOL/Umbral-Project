@@ -20,7 +20,6 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-</Project>
   <ItemGroup>
     <ProjectReference Include="..\UserService.Infrastructure\UserService.Infrastructure.csproj" />
   </ItemGroup>

@@ -529,7 +529,8 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```json
   {
     "id": "Guid",
-    "setupCode": "string (XXXX-XXXX, mostrado una sola vez)"
+    "email": "string",
+    "activationEmailSent": true
   }
   ```
 - **Errores esperados:**
@@ -538,7 +539,29 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
 - **Notas:**
   - Crea el usuario en Keycloak con `Enabled: false`, rol `operator`, **sin contraseña**.
   - El código de activación se almacena hasheado en atributos de Keycloak; TTL por defecto 7 días (`Keycloak:OperatorSetupCodeTtlDays`).
-  - El administrador debe entregar `setupCode` al operador de forma segura; el operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
+  - El código en claro **no se devuelve al administrador**; se envía por SMTP al correo del operador (`Email:*` / MailHog en local: UI `http://localhost:8025`).
+  - Si el SMTP falla, la cuenta queda creada y `activationEmailSent=false`; el admin puede usar reenvío.
+  - Si el correo ya existe como **operador inactivo** (`Enabled=false`), no se crea un usuario nuevo: se regenera el código, se limpia la contraseña previa (si había) y se reenvía el correo. El operador completa el mismo flujo de **Activar cuenta**.
+  - Si el correo pertenece a un **operador activo**, responde `409 Conflict`.
+  - El operador completa el onboarding vía `POST /api/v1/auth/operator/setup-password` o la pestaña **Activar cuenta** en LoginView-WEB.
+
+### Reenviar código de activación de Operador
+- **Microservicio:** UserService
+- **Método y Ruta:** `POST /api/v1/operators/{operatorId}/resend-activation`
+- **Capa Application:** `ResendOperatorActivationCommand`
+- **Response (200 OK):**
+  ```json
+  {
+    "id": "Guid",
+    "email": "string",
+    "activationEmailSent": true
+  }
+  ```
+- **Errores esperados:**
+  - `404 NotFound` si el operador no existe.
+  - `409 Conflict` si la cuenta ya está activada o fue desactivada (tiene password).
+- **Notas:**
+  - Regenera un nuevo código (invalida el anterior), lo guarda hasheado y lo envía al correo del operador. El admin nunca ve el código.
 
 ### Consultar Operadores (HU-23)
 - **Microservicio:** UserService
@@ -939,6 +962,23 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   }
   ```
 
+### Consultar sanciones del equipo (jugador)
+- **Microservicio:** ScoringAudit
+- **Método y Ruta:** `GET /api/v1/sessions/{sessionId}/teams/{teamId}/penalties`
+- **Capa Application:** `GetTeamPenaltiesQuery`
+- **Response (200 OK):**
+  ```json
+  [
+    {
+      "entryId": "guid",
+      "penaltyPoints": 10,
+      "reason": "string",
+      "category": "ManualOperator | HintUsage | TimeExpired",
+      "appliedAtUtc": "2026-01-01T00:00:00Z"
+    }
+  ]
+  ```
+
 ### Enviar Mensaje de Soporte (HU-56)
 - **Microservicio:** SessionManagement
 - **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/teams/{teamId}/messages`
@@ -964,6 +1004,19 @@ En cada endpoint siguiente, **Capa Application** indica el Command/Query MediatR
   ```json
   {
     "status": "Paused | Active"
+  }
+  ```
+
+### Reconciliar scoring de sesión (ranking/ledgers)
+- **Microservicio:** SessionManagement
+- **Método y Ruta:** `POST /api/v1/sessions/{sessionId}/scoring/reconcile`
+- **Capa Application:** `ReconcileSessionScoringCommand`
+- **Descripción:** Reemite `TeamRegistered`, `SessionStarted` y `EvidenceValidated` para reconstruir ledgers/ranking si ScoringAudit estuvo caído.
+- **Response (200 OK):**
+  ```json
+  {
+    "teamsPublished": 0,
+    "evidencesPublished": 0
   }
   ```
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UserService.Application.Operators.Commands.ResendOperatorActivation;
 using UserService.Application.Operators.Queries.GetOperators;
 using UserService.WebApi.Contracts.Operators;
 using UserService.WebApi.Contracts.Routes;
@@ -26,7 +27,15 @@ public sealed class OperatorsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(body.ToCommand(), cancellationToken);
-        return CreatedAtAction(nameof(GetAll), new { }, new { id = result.OperatorId, setupCode = result.SetupCode });
+        return CreatedAtAction(
+            nameof(GetAll),
+            new { },
+            new
+            {
+                id = result.OperatorId,
+                email = result.Email,
+                activationEmailSent = result.ActivationEmailSent
+            });
     }
 
     [HttpGet]
@@ -34,6 +43,22 @@ public sealed class OperatorsController : ControllerBase
     {
         var result = await _mediator.Send(new GetOperatorsQuery(), cancellationToken);
         return Ok(result);
+    }
+
+    [HttpPost("{operatorId:guid}/resend-activation")]
+    public async Task<IActionResult> ResendActivation(
+        [FromRoute] OperatorRoute route,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new ResendOperatorActivationCommand(route.OperatorId),
+            cancellationToken);
+        return Ok(new
+        {
+            id = result.OperatorId,
+            email = result.Email,
+            activationEmailSent = result.ActivationEmailSent
+        });
     }
 
     [HttpPut("{operatorId:guid}/deactivate")]

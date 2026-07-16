@@ -2,6 +2,7 @@ using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Events;
 using SessionManagement.Domain.Exceptions;
+using SessionManagement.Domain.Services;
 using SessionManagement.Domain.ValueObjects;
 using System.Security.Cryptography;
 
@@ -566,6 +567,7 @@ public sealed class LiveSession : AggregateRoot
             TeamId = evidence.TeamId,
             MissionNodeId = evidence.MissionNodeId,
             NodeType = node.NodeType,
+            NodeTitle = node.Title,
             BaseScore = node.BaseScore,
             DifficultyMultiplier = DifficultyMultiplier,
             ElapsedSeconds = elapsedSeconds
@@ -649,7 +651,8 @@ public sealed class LiveSession : AggregateRoot
         Guid missionNodeId,
         int penaltyPoints,
         IReadOnlyList<NodeValidationRule> validationRules,
-        bool wasManualRelease = true)
+        bool wasManualRelease = true,
+        int hintOrder = 0)
     {
         // RB-03
         if (Status != LiveSessionStatus.Active)
@@ -666,8 +669,8 @@ public sealed class LiveSession : AggregateRoot
             throw new ArgumentException(
                 "Las reglas de validación no pueden estar vacías.", nameof(validationRules));
 
-        if (!_allowedNodes.Any(n => n.NodeId == missionNodeId))
-            throw new SessionDomainException(
+        var node = _allowedNodes.FirstOrDefault(n => n.NodeId == missionNodeId)
+            ?? throw new SessionDomainException(
                 $"El nodo {missionNodeId} no pertenece a esta sesión.");
 
         var currentNodeId = GetCurrentNodeForTeam(teamId, validationRules);
@@ -698,9 +701,83 @@ public sealed class LiveSession : AggregateRoot
             TeamId = teamId,
             HintId = hintId,
             MissionNodeId = missionNodeId,
+            NodeType = node.NodeType,
+            NodeTitle = node.Title,
+            HintOrder = hintOrder,
             PenaltyPoints = penaltyPoints,
             WasManualRelease = wasManualRelease
         });
+    }
+
+    /// <summary>
+    /// Al completar una Búsqueda del Tesoro, libera automáticamente todas las pistas
+    /// del nodo que el equipo aún no haya recibido.
+    ///
+    /// No aplica penalización (0 pts): solo revela el catálogo pendiente tras el hallazgo.
+    /// Puede ejecutarse aunque el nodo ya no sea el actual o el equipo esté Completed.
+    /// </summary>
+    public void ReleaseRemainingHintsAutomatically(
+        Guid teamId,
+        Guid missionNodeId,
+        IReadOnlyList<(Guid HintId, int Order)> catalogHints)
+    {
+        if (Status != LiveSessionStatus.Active)
+            throw new SessionDomainException(
+                $"No se pueden liberar pistas en una sesión con estado '{Status}'.");
+
+        if (!_registeredTeamIds.Contains(teamId))
+            throw new SessionDomainException(
+                $"El equipo {teamId} no está registrado en la sesión {Id}.");
+
+        var participationStatus = GetTeamParticipationStatus(teamId);
+        if (participationStatus == TeamParticipationStatus.Expelled)
+            throw new SessionDomainException(
+                $"El equipo {teamId} no puede recibir pistas porque su estado es '{participationStatus}'.");
+
+        var node = _allowedNodes.FirstOrDefault(n => n.NodeId == missionNodeId)
+            ?? throw new SessionDomainException(
+                $"El nodo {missionNodeId} no pertenece a esta sesión.");
+
+        if (!string.Equals(node.NodeType, "TreasureHunt", StringComparison.OrdinalIgnoreCase))
+            throw new SessionDomainException(
+                "La liberación automática de pistas pendientes solo aplica a Búsqueda del Tesoro.");
+
+        var treasureCompleted = _evidenceSubmissions.Any(e =>
+            e.TeamId == teamId &&
+            e.MissionNodeId == missionNodeId &&
+            e.IsValid == true);
+        if (!treasureCompleted)
+            throw new SessionDomainException(
+                $"El equipo {teamId} aún no completó la búsqueda del nodo {missionNodeId}.");
+
+        if (catalogHints is null || catalogHints.Count == 0)
+            return;
+
+        foreach (var (hintId, order) in catalogHints.OrderBy(h => h.Order))
+        {
+            if (hintId == Guid.Empty)
+                continue;
+
+            if (_releasedHints.Any(r => r.TeamId == teamId && r.HintId == hintId))
+                continue;
+
+            var released = ReleasedHint.Create(
+                teamId, hintId, missionNodeId, penaltyPoints: 0, wasManualRelease: false);
+            _releasedHints.Add(released);
+
+            RaiseDomainEvent(new HintReleasedEvent
+            {
+                SessionId = Id,
+                TeamId = teamId,
+                HintId = hintId,
+                MissionNodeId = missionNodeId,
+                NodeType = node.NodeType,
+                NodeTitle = node.Title,
+                HintOrder = order,
+                PenaltyPoints = 0,
+                WasManualRelease = false
+            });
+        }
     }
 
     /// <summary>
@@ -878,6 +955,9 @@ public sealed class LiveSession : AggregateRoot
 
         var nextRule = ResolveCurrentRule(teamId, orderedRules);
         var baseScore = _allowedNodes.FirstOrDefault(x => x.NodeId == nodeId)?.BaseScore ?? 0;
+        var awardedPoints = isCorrect && nodeCompleted
+            ? ScoreAwardCalculator.Compute(baseScore, DifficultyMultiplier)
+            : 0;
 
         if (nodeCompleted && nextRule is null)
             MarkTeamCompleted(teamId);
@@ -886,7 +966,7 @@ public sealed class LiveSession : AggregateRoot
             IsCorrect: isCorrect,
             CurrentNodeId: nodeId,
             NextNodeId: nodeCompleted ? nextRule?.NodeId : nodeId,
-            AwardedPoints: isCorrect && nodeCompleted ? baseScore : 0,
+            AwardedPoints: awardedPoints,
             AnsweredQuestionIndex: resolvedQuestionIndex,
             TotalQuestions: currentRule.ExpectedAnswers.Count,
             NodeCompleted: nodeCompleted);

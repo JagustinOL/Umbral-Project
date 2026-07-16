@@ -97,12 +97,12 @@ export function TreasureDestinationMap({
   );
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
+    <div className="rounded-md border border-border isolate">
       <MapContainer
         center={center}
         zoom={DEFAULT_ZOOM}
         className="z-0 h-[240px] w-full"
-        scrollWheelZoom={!disabled}
+        scrollWheelZoom={false}
         dragging={!disabled}
         doubleClickZoom={!disabled}
         zoomControl={!disabled}
@@ -135,8 +135,8 @@ export function TreasureDestinationMap({
         {disabled
           ? "Mapa en solo lectura."
           : hasMarker
-            ? "Haz clic en el mapa o arrastra el marcador. Las coordenadas se actualizan solas."
-            : "Haz clic en el mapa para fijar el destino GPS."}
+            ? "Haz clic en el mapa o arrastra el marcador. Usa los controles +/- para zoom."
+            : "Haz clic en el mapa para fijar el destino GPS. Usa los controles +/- para zoom."}
       </p>
     </div>
   );

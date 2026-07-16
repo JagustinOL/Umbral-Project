@@ -1,4 +1,3 @@
-using System.Text.Json;
 using MediatR;
 using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Entities;
@@ -31,12 +30,16 @@ public sealed class ProcessTeamCompletedHandler : IRequestHandler<ProcessTeamCom
 
         var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken)
             ?? throw new InvalidOperationException($"No existe AuditLog para sesión {evt.SessionId}.");
+        var (description, metadata) = AuditEventDisplay.TeamCompleted(
+            ledger.TeamName,
+            evt.ElapsedSeconds,
+            evt.CompletedAtUtc);
         auditLog.RecordEvent(
             SessionEventType.TeamCompletedMission,
             evt.EventId,
-            "El equipo completó la misión.",
+            description,
             evt.TeamId,
-            metadata: JsonSerializer.Serialize(new { evt.ElapsedSeconds, evt.CompletedAtUtc }));
+            metadata: metadata);
         await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
     }
 }

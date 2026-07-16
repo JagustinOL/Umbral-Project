@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SessionManagement.Application.OperatorSessions.Commands.ApplyManualPenalty;
+using SessionManagement.Application.OperatorSessions.Commands.ReconcileSessionScoring;
 using SessionManagement.Application.OperatorSessions.Commands.ReleaseManualHint;
 using SessionManagement.Application.OperatorSessions.Commands.SendSupportMessage;
 using SessionManagement.Application.OperatorSessions.Commands.ToggleSessionPause;
@@ -90,6 +91,18 @@ public sealed class OperatorSessionControlController : ControllerBase
             new ToggleSessionPauseCommand(operatorId, sessionId, body?.Reason),
             cancellationToken);
         return Ok(new { status });
+    }
+
+    [HttpPost("scoring/reconcile")]
+    public async Task<IActionResult> ReconcileScoring(
+        [FromRoute] Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var operatorId = RequireOperatorId();
+        var result = await _mediator.Send(
+            new ReconcileSessionScoringCommand(operatorId, sessionId),
+            cancellationToken);
+        return Ok(result);
     }
 
     private Guid RequireOperatorId()

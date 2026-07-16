@@ -20,13 +20,20 @@ import {
   type SupportMessagePayload,
   type TriviaAnswerSubmittedPayload,
 } from '../services/signalRService';
+import type { StageAdvanceSummary } from '../components/gameplay/StageCompletePanel';
 import { feedbackFromTriviaResult, type TriviaFeedback } from '../utils/triviaFeedback';
+import {
+  buildRankingEvents,
+  type RankingEvent,
+} from '../utils/rankingEvents';
 
 type UseLiveSessionGameplayOptions = {
   sessionId: string;
   teamId: string;
   enabled?: boolean;
 };
+
+const MAX_RANKING_EVENTS = 12;
 
 export function useLiveSessionGameplay({
   sessionId,
@@ -39,25 +46,57 @@ export function useLiveSessionGameplay({
   >('disconnected');
   const [stage, setStage] = useState<TeamCurrentStage | null>(null);
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
+  const [rankingEvents, setRankingEvents] = useState<RankingEvent[]>([]);
   const [hints, setHints] = useState<TeamHint[]>([]);
   const [penalties, setPenalties] = useState<TeamPenalty[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastPenaltyAlert, setLastPenaltyAlert] = useState<string | null>(null);
   const [supportMessage, setSupportMessage] = useState<string | null>(null);
   const [triviaFeedback, setTriviaFeedback] = useState<TriviaFeedback | null>(null);
+  const [stageAdvance, setStageAdvance] = useState<StageAdvanceSummary | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rankingRef = useRef<RankingEntry[]>([]);
+  const stageRef = useRef<TeamCurrentStage | null>(null);
+
+  const applyRanking = useCallback(
+    (next: RankingEntry[]) => {
+      const previous = rankingRef.current;
+      rankingRef.current = next;
+      setRanking(next);
+
+      // Primera carga: no generar ruido de "entra al ranking".
+      if (previous.length === 0) {
+        return;
+      }
+
+      const events = buildRankingEvents(previous, next, teamId);
+      if (events.length > 0) {
+        setRankingEvents((prev) => [...events, ...prev].slice(0, MAX_RANKING_EVENTS));
+        const ownMoved = events.some(
+          (event) =>
+            event.teamId.toLowerCase() === teamId.toLowerCase() &&
+            (event.tone === 'up' || event.tone === 'down'),
+        );
+        if (ownMoved) {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }
+    },
+    [teamId],
+  );
 
   const refreshStage = useCallback(async () => {
     const next = await gameplayService.getTeamCurrentStage(sessionId, teamId);
+    stageRef.current = next;
     setStage(next);
     return next;
   }, [sessionId, teamId]);
 
   const refreshRanking = useCallback(async () => {
     const next = await gameplayService.getSessionRanking(sessionId);
-    setRanking(next);
+    applyRanking(next);
     return next;
-  }, [sessionId]);
+  }, [sessionId, applyRanking]);
 
   const refreshHints = useCallback(async () => {
     const next = await gameplayService.getTeamHints(sessionId, teamId);
@@ -122,9 +161,20 @@ export function useLiveSessionGameplay({
       }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setLastPenaltyAlert(
-        `Penalty −${payload.penaltyPoints}: ${payload.reason}`,
+        `Sanción −${payload.penaltyPoints} pts: ${payload.reason}`,
       );
-      void refreshPenalties();
+      void refreshPenalties().catch(() => {
+        setPenalties((prev) => [
+          {
+            entryId: `live-${payload.penaltyPoints}-${Date.now()}`,
+            penaltyPoints: payload.penaltyPoints,
+            reason: payload.reason,
+            category: 'ManualOperator',
+            appliedAtUtc: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      });
       void refreshRanking();
     },
     [teamId, refreshPenalties, refreshRanking],
@@ -137,6 +187,39 @@ export function useLiveSessionGameplay({
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setSupportMessage(payload.message);
   }, [teamId]);
+
+  const openStageAdvance = useCallback(
+    (input: {
+      awardedPoints: number;
+      title?: string;
+      message?: string;
+      missionCompleted?: boolean;
+    }) => {
+      const previousOrder = stageRef.current?.currentExecutionOrder ?? null;
+      setStageAdvance((prev) => {
+        // Si ya hay resumen con puntos (trivia), no lo pisar con un evento genérico de progreso.
+        if (prev && prev.awardedPoints > 0 && input.awardedPoints === 0) {
+          return {
+            ...prev,
+            missionCompleted: Boolean(input.missionCompleted) || prev.missionCompleted,
+          };
+        }
+
+        return {
+          title: input.title ?? '¡Etapa completada!',
+          message:
+            input.message ??
+            (input.missionCompleted
+              ? 'Completaste todas las etapas de la misión.'
+              : 'Revisa el resumen y continúa cuando estés listo.'),
+          awardedPoints: input.awardedPoints,
+          completedExecutionOrder: prev?.completedExecutionOrder ?? previousOrder,
+          missionCompleted: Boolean(input.missionCompleted),
+        };
+      });
+    },
+    [],
+  );
 
   const handleTriviaAnswerSubmitted = useCallback(
     (payload: TriviaAnswerSubmittedPayload) => {
@@ -151,13 +234,21 @@ export function useLiveSessionGameplay({
       });
       setTriviaFeedback(feedback);
 
+      if (payload.nodeCompleted) {
+        openStageAdvance({
+          awardedPoints: payload.awardedPoints ?? 0,
+          title: feedback.title,
+          message: feedback.message,
+        });
+      }
+
       if (payload.isCorrect) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     },
-    [teamId],
+    [teamId, openStageAdvance],
   );
 
   useEffect(() => {
@@ -187,7 +278,7 @@ export function useLiveSessionGameplay({
         }
       },
       onScoreUpdate: (payload) => {
-        setRanking(payload.ranking ?? []);
+        applyRanking(payload.ranking ?? []);
       },
       onManualPenalty: handlePenalty,
       onHintReleased: (payload) => {
@@ -198,9 +289,35 @@ export function useLiveSessionGameplay({
       onSupportMessage: handleSupportMessage,
       onTriviaAnswerSubmitted: handleTriviaAnswerSubmitted,
       onTeamProgressUpdated: (payload) => {
-        if (payload.teamId.toLowerCase() === teamId.toLowerCase()) {
-          void refreshStage();
+        if (payload.teamId.toLowerCase() !== teamId.toLowerCase()) {
+          return;
         }
+        if (payload.nodeCompleted) {
+          // Trivia ya abre el resumen vía TriviaAnswerSubmitted; solo cubrir tesoro/otros.
+          setStageAdvance((prev) => {
+            if (prev) {
+              return payload.nextNodeId
+                ? prev
+                : { ...prev, missionCompleted: true };
+            }
+            return {
+              title: '¡Etapa superada!',
+              message: payload.nextNodeId
+                ? 'Tu equipo avanzó. Continúa cuando estés listo para la siguiente etapa.'
+                : 'Tu equipo completó todas las etapas.',
+              awardedPoints: 0,
+              completedExecutionOrder: stageRef.current?.currentExecutionOrder ?? null,
+              missionCompleted: !payload.nextNodeId,
+            };
+          });
+        }
+        void refreshStage().then((next) => {
+          if (payload.nodeCompleted && next.isCompleted) {
+            setStageAdvance((prev) =>
+              prev ? { ...prev, missionCompleted: true } : prev,
+            );
+          }
+        });
       },
       onReconnecting: () => setConnectionState('reconnecting'),
       onReconnected: () => {
@@ -213,6 +330,7 @@ export function useLiveSessionGameplay({
 
     pollRef.current = setInterval(() => {
       void refreshStage();
+      void refreshRanking();
       void syncSessionStatus();
     }, 15000);
 
@@ -228,11 +346,14 @@ export function useLiveSessionGameplay({
     teamId,
     refreshAll,
     refreshStage,
+    refreshRanking,
     syncSessionStatus,
     handlePenalty,
     handleSupportMessage,
     handleTriviaAnswerSubmitted,
     refreshHints,
+    applyRanking,
+    openStageAdvance,
   ]);
 
   return {
@@ -240,6 +361,8 @@ export function useLiveSessionGameplay({
     connectionState,
     stage,
     ranking,
+    rankingEvents,
+    stageAdvance,
     hints,
     penalties,
     isLoading,
@@ -254,6 +377,11 @@ export function useLiveSessionGameplay({
     refreshRanking,
     refreshHints,
     refreshPenalties,
+    openStageAdvance,
+    confirmStageAdvance: () => {
+      setStageAdvance(null);
+      setTriviaFeedback(null);
+    },
     clearPenaltyAlert: () => setLastPenaltyAlert(null),
     clearSupportMessage: () => setSupportMessage(null),
     clearTriviaFeedback: () => setTriviaFeedback(null),

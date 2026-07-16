@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ApiError, scoringApiRequest } from "@/lib/api/client";
+import { getAuditEventDetail, getAuditEventTypeLabel } from "@/lib/auditDisplay";
 
 type HistoricalSession = {
   sessionId: string;
@@ -19,7 +20,15 @@ type AuditDetail = {
   status: string;
   startedAtUtc: string;
   endedAtUtc: string | null;
-  timeline: { eventId: string; eventType: string; occurredAtUtc: string; description: string }[];
+  timeline: {
+    eventId: string;
+    eventType: string | number;
+    occurredAtUtc: string;
+    description: string;
+    teamId?: string | null;
+    missionNodeId?: string | null;
+    metadata?: string | null;
+  }[];
   ranking: {
     position?: number;
     teamId: string;
@@ -69,14 +78,21 @@ export function AuditHistory() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <section className="space-y-3 lg:col-span-2">
             <h2 className="text-sm font-medium text-foreground">Línea de tiempo</h2>
-            {detail.timeline.map((event) => (
-              <div key={event.eventId} className="rounded-lg border border-border bg-card p-4">
-                <p className="font-medium text-foreground">{event.description}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {event.eventType} · {new Date(event.occurredAtUtc).toLocaleString()}
-                </p>
-              </div>
-            ))}
+            {detail.timeline.map((event) => {
+              const detailLine = getAuditEventDetail(event.metadata, event.missionNodeId);
+              return (
+                <div key={event.eventId} className="rounded-lg border border-border bg-card p-4">
+                  <p className="font-medium text-foreground">{event.description}</p>
+                  {detailLine && (
+                    <p className="mt-1 text-sm text-muted-foreground">{detailLine}</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {getAuditEventTypeLabel(event.eventType)} ·{" "}
+                    {new Date(event.occurredAtUtc).toLocaleString()}
+                  </p>
+                </div>
+              );
+            })}
           </section>
           <aside className="rounded-lg border border-border bg-card p-5">
             <h2 className="mb-3 text-sm font-medium text-foreground">Ranking final</h2>

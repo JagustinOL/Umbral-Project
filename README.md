@@ -194,6 +194,7 @@ Tras `-v`, el primer `up` de Keycloak vuelve a tardar ~2–3 min; reinicia `user
 | AdminView *(perfil frontend/full)* | http://localhost:3000 |
 | OperadorView *(perfil frontend/full)* | http://localhost:3001 |
 | LoginView *(perfil frontend/full)* | http://localhost:3002 |
+| MailHog (SMTP UI — códigos de activación) | http://localhost:8025 |
 | PlayerMobile web *(perfil player/full)* | http://localhost:19000 |
 
 > **API Gateway (YARP):** AdminView, OperadorView, LoginView y PlayerMobile deben apuntar todas sus variables `*_API_URL` a `http://localhost:5200`. El gateway enruta por path hacia UserService, MissionManagement, SessionManagement y ScoringAudit. Los microservicios se comunican entre sí por red interna de Docker (sin pasar por el gateway).
@@ -296,6 +297,13 @@ Mide la cobertura de **líneas** sobre los ensamblados `*.Domain` y `*.Applicati
 
 No incluye integración, E2E, WebApi ni Infrastructure. El proyecto `SessionManagement.Infrastructure.Tests` se ejecuta aparte y **no** cuenta para esta métrica.
 
+### Herramientas globales requeridas
+
+```powershell
+dotnet tool install --global dotnet-reportgenerator-globaltool
+dotnet tool install --global coverlet.console
+```
+
 ### Generar informe
 
 Desde la raíz del repositorio (PowerShell):
@@ -303,6 +311,8 @@ Desde la raíz del repositorio (PowerShell):
 ```powershell
 .\scripts\run-coverage.ps1
 ```
+
+El script compila, copia los ensamblados a `%TEMP%` (mitiga bloqueos de Windows Application Control sobre DLLs recién compiladas) y genera Cobertura con `coverlet.console`.
 
 Abre `coverage-report/index.html` para ver el detalle por ensamblado, clase y línea.
 
@@ -312,7 +322,7 @@ Abre `coverage-report/index.html` para ver el detalle por ensamblado, clase y l�
 .\scripts\check-coverage-threshold.ps1
 ```
 
-Con la batería actual, el script debe terminar con `OK` y **90,0%** de líneas cubribles en Domain + Application (p. ej. 2699/2996 según `coverage-report/Summary.txt`).
+Con la batería actual, el script debe terminar con `OK` y **≥ 90%** de líneas cubribles **en total y en cada ensamblado** Domain/Application de MissionManagement y SessionManagement (p. ej. total **92,1%** / 3931/4265 según `coverage-report/Summary.txt`).
 
 Para regenerar tests e informe en un solo paso:
 

@@ -56,7 +56,8 @@ public sealed class ReleaseManualHintHandler : IRequestHandler<ReleaseManualHint
                 currentNodeId.Value,
                 hintData.PenaltyPoints,
                 rules,
-                wasManualRelease: true);
+                wasManualRelease: true,
+                hintOrder: hintData.Order);
 
             await _sessionRepository.SaveAsync(session, cancellationToken);
             var events = session.DomainEvents.ToList();

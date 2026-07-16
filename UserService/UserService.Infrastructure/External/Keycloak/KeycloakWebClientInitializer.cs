@@ -99,6 +99,7 @@ public sealed class KeycloakWebClientInitializer
             ?? [];
 
         string userId;
+        var created = false;
         if (users.Count == 0)
         {
             var userPayload = new CreateUserRequest(
@@ -124,6 +125,7 @@ public sealed class KeycloakWebClientInitializer
                 ?? throw new InvalidOperationException("Keycloak no devolvió la cabecera Location al crear el admin.");
 
             userId = location.TrimEnd('/').Split('/').Last();
+            created = true;
             logger.LogInformation("Created default admin user '{Email}'.", email);
         }
         else
@@ -133,13 +135,19 @@ public sealed class KeycloakWebClientInitializer
         }
 
         await AssignRealmRoleAsync(httpClient, options, adminToken, userId, options.AdminRole, cancellationToken);
-        await KeycloakPasswordHelper.SetUserPasswordAsync(
-            httpClient,
-            GetAdminRealmUrl(options),
-            adminToken,
-            userId,
-            options.DefaultAdminPassword,
-            cancellationToken);
+
+        // Solo fijar contraseña al CREAR el admin. Reasignarla en cada ciclo de bootstrap
+        // invalida las sesiones SSO / refresh tokens de Keycloak y fuerza logout en el Admin.
+        if (created)
+        {
+            await KeycloakPasswordHelper.SetUserPasswordAsync(
+                httpClient,
+                GetAdminRealmUrl(options),
+                adminToken,
+                userId,
+                options.DefaultAdminPassword,
+                cancellationToken);
+        }
     }
 
     private static async Task AssignRealmRoleAsync(

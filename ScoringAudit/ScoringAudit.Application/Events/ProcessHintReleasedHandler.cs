@@ -1,4 +1,3 @@
-using System.Text.Json;
 using MediatR;
 using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Entities;
@@ -48,15 +47,22 @@ public sealed class ProcessHintReleasedHandler : IRequestHandler<ProcessHintRele
 
         var auditLog = await _auditLogRepository.GetBySessionAsync(evt.SessionId, cancellationToken)
             ?? throw new InvalidOperationException($"No existe AuditLog para sesión {evt.SessionId}.");
+        var (description, metadata) = AuditEventDisplay.HintReleased(
+            ledger.TeamName,
+            evt.NodeType,
+            evt.NodeTitle,
+            evt.MissionNodeId,
+            evt.HintId,
+            evt.HintOrder,
+            evt.PenaltyPoints,
+            evt.WasManualRelease);
         auditLog.RecordEvent(
             SessionEventType.HintReleased,
             evt.EventId,
-            penaltyApplied
-                ? "Se liberó una pista y se aplicó su penalización."
-                : "Se liberó una pista sin penalización de puntaje.",
+            description,
             evt.TeamId,
             evt.MissionNodeId,
-            JsonSerializer.Serialize(new { evt.HintId, evt.PenaltyPoints }));
+            metadata);
         await _auditLogRepository.SaveAsync(auditLog, cancellationToken);
 
         if (penaltyApplied)

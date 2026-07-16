@@ -4,7 +4,7 @@ namespace UserService.Application.Common.Interfaces;
 
 public interface IIdentityService
 {
-    Task<CreateOperatorResult> CreateOperatorAsync(
+    Task<OperatorSetupCredentials> CreateOperatorAsync(
         string firstName,
         string lastName,
         string email,
@@ -14,6 +14,10 @@ public interface IIdentityService
         string email,
         string setupCode,
         string password,
+        CancellationToken cancellationToken = default);
+
+    Task<OperatorSetupCredentials> RegenerateOperatorSetupCodeAsync(
+        Guid operatorId,
         CancellationToken cancellationToken = default);
 
     Task<Guid> CreateAdminAsync(

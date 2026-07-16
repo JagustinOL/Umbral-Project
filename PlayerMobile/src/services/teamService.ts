@@ -14,6 +14,7 @@ type TeamDetailsApiDto = {
   teamCode: string;
   isLocked: boolean;
   currentSessionRef?: string | null;
+  pendingSessionJoinRef?: string | null;
   isDisbanded: boolean;
   members: TeamMember[];
 };
@@ -73,6 +74,7 @@ function mapTeam(dto: TeamDetailsApiDto): TeamDetails {
     teamCode: dto.teamCode,
     isLocked: dto.isLocked,
     currentSessionRef: dto.currentSessionRef ?? null,
+    pendingSessionJoinRef: dto.pendingSessionJoinRef ?? null,
     isDisbanded: dto.isDisbanded,
     members: dto.members,
     pendingRequests: [],

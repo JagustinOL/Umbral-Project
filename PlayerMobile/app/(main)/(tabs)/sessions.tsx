@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,9 +47,11 @@ export default function SessionsTabScreen() {
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [joinStage, setJoinStage] = useState<JoinStage>('idle');
   const [joinCodeQuery, setJoinCodeQuery] = useState('');
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const teamId = session?.teamId;
   const currentSessionRef = team?.currentSessionRef ?? null;
+  const pendingSessionJoinRef = team?.pendingSessionJoinRef ?? null;
   const isLocked = team?.isLocked ?? false;
 
   const liveSession = useMemo(() => {
@@ -121,18 +123,26 @@ export default function SessionsTabScreen() {
     );
   }, [availableSessions, joinCodeQuery]);
 
-  const loadSessions = useCallback(async () => {
-    setIsLoading(true);
+  const loadSessions = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const next = await liveSessionService.getActiveSessions();
       setSessions(next);
+      setLastSyncedAt(new Date());
     } catch (error) {
-      showUserAlert(
-        'Could not load sessions',
-        error instanceof Error ? error.message : 'Request failed.',
-      );
+      if (!silent) {
+        showUserAlert(
+          'Could not load sessions',
+          error instanceof Error ? error.message : 'Request failed.',
+        );
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -143,7 +153,23 @@ export default function SessionsTabScreen() {
     void loadSessions();
   }, [teamId, loadSessions]);
 
-  // Recuperar estado tras refresh: si el equipo ya está asignado y la sesión no arrancó.
+  // Actualizar sesiones y equipo automáticamente sin pedirle al jugador recargar.
+  useFocusEffect(
+    useCallback(() => {
+      if (!teamId) {
+        return undefined;
+      }
+
+      void Promise.all([loadTeam(), loadSessions()]);
+      const intervalId = setInterval(() => {
+        void Promise.all([loadTeam(), loadSessions({ silent: true })]);
+      }, 2500);
+
+      return () => clearInterval(intervalId);
+    }, [teamId, loadTeam, loadSessions]),
+  );
+
+  // Recuperar estado tras refresh / para otros miembros del equipo.
   useEffect(() => {
     if (canEnterMission) {
       setJoinStage('idle');
@@ -158,8 +184,26 @@ export default function SessionsTabScreen() {
           ? current
           : [...current, currentSessionRef],
       );
+      return;
     }
-  }, [canEnterMission, currentSessionRef, isLocked]);
+    // Cualquier miembro del equipo ve la solicitud pendiente (no solo quien la envió).
+    if (pendingSessionJoinRef && !currentSessionRef) {
+      setJoinStage('pending');
+      setPendingSessionId(pendingSessionJoinRef);
+      setRequestedSessionIds((current) =>
+        current.some((id) => sameSessionId(id, pendingSessionJoinRef))
+          ? current
+          : [...current, pendingSessionJoinRef],
+      );
+      return;
+    }
+
+    // Solicitud rechazada/cancelada: el servidor ya no reporta pendiente.
+    if (!currentSessionRef && !pendingSessionJoinRef) {
+      setJoinStage((current) => (current === 'pending' ? 'idle' : current));
+      setPendingSessionId((current) => (current ? null : current));
+    }
+  }, [canEnterMission, currentSessionRef, isLocked, pendingSessionJoinRef]);
 
   useEffect(() => {
     const awaitingSessionId =
@@ -262,6 +306,7 @@ export default function SessionsTabScreen() {
     const normalizedTargetId = normalizeGuid(target.sessionId).toLowerCase();
     if (
       joiningSessionId ||
+      pendingSessionJoinRef ||
       requestedSessionIds.some(
         (id) => normalizeGuid(id).toLowerCase() === normalizedTargetId,
       )
@@ -348,6 +393,12 @@ export default function SessionsTabScreen() {
         <Text style={styles.screenTitle}>Sesiones</Text>
         <Text style={styles.subtitle}>
           Únete a una misión activa o entra al tablero en vivo de tu equipo.
+        </Text>
+        <Text style={styles.liveSync}>
+          Actualización automática
+          {lastSyncedAt
+            ? ` · ${lastSyncedAt.toLocaleTimeString()}`
+            : ' · sincronizando…'}
         </Text>
 
         {canEnterMission ? (
@@ -456,6 +507,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.body,
     lineHeight: 22,
+    marginBottom: 8,
+  },
+  liveSync: {
+    color: colors.accent,
+    fontSize: typography.caption,
+    fontWeight: '600',
     marginBottom: 24,
   },
   liveCard: {

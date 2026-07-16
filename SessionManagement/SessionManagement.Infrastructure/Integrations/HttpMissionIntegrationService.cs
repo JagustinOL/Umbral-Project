@@ -141,7 +141,8 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
         string NodeType,
         int ExecutionOrder,
         int BaseScore,
-        IReadOnlyList<string> ExpectedAnswers);
+        IReadOnlyList<string> ExpectedAnswers,
+        string Title = "");
 
     private sealed record PlayerNodeContentResponse(
         Guid NodeId,
@@ -173,7 +174,8 @@ public sealed class HttpMissionIntegrationService : IMissionIntegrationService
                 NodeType: v.NodeType,
                 ExecutionOrder: v.ExecutionOrder,
                 BaseScore: v.BaseScore,
-                ExpectedAnswers: v.ExpectedAnswers))
+                ExpectedAnswers: v.ExpectedAnswers,
+                Title: v.Title ?? string.Empty))
             .ToList();
     }
 }

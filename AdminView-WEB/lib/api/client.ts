@@ -2,6 +2,8 @@ import {
   captureAuthFromHash,
   getAuthSession,
   redirectToLogin,
+  saveAuthSession,
+  type AuthSession,
 } from "@/lib/auth/session";
 
 const missionApiBaseUrl = (
@@ -34,6 +36,8 @@ interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
   signal?: AbortSignal;
+  /** Internal: skip refresh retry to avoid loops. */
+  skipAuthRefresh?: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -89,6 +93,57 @@ const getErrorMessage = (status: number, payload: unknown): string => {
   return `Request failed with status ${status}.`;
 };
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+export async function refreshAuthSession(): Promise<boolean> {
+  return tryRefreshSession()
+}
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const session = getAuthSession();
+    if (!session?.refreshToken) return false;
+
+    try {
+      const response = await fetch(`${USER_API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+
+      if (!response.ok) return false;
+
+      const payload = (await response.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+        expiresIn?: number;
+        userId?: string;
+        roles?: string[];
+      };
+
+      if (!payload.accessToken) return false;
+
+      const nextSession: AuthSession = {
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken ?? session.refreshToken,
+        expiresIn: payload.expiresIn ?? session.expiresIn,
+        userId: payload.userId ?? session.userId,
+        roles: payload.roles?.length ? payload.roles : session.roles,
+      };
+      saveAuthSession(nextSession);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
 export async function userApiRequest<T>(
   endpoint: string,
   { method = "GET", body, signal }: RequestOptions = {},
@@ -113,7 +168,7 @@ export async function scoringApiRequest<T>(
 async function requestWithBaseUrl<T>(
   baseUrl: string,
   endpoint: string,
-  { method = "GET", body, signal }: RequestOptions = {},
+  { method = "GET", body, signal, skipAuthRefresh = false }: RequestOptions = {},
 ): Promise<T> {
   captureAuthFromHash();
   const session = getAuthSession();
@@ -131,6 +186,19 @@ async function requestWithBaseUrl<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
+
+  if (response.status === 401 && !skipAuthRefresh) {
+    const refreshed = await tryRefreshSession();
+    if (refreshed) {
+      return requestWithBaseUrl<T>(baseUrl, endpoint, {
+        method,
+        body,
+        signal,
+        skipAuthRefresh: true,
+      });
+    }
+    redirectToLogin();
+  }
 
   return parseResponse<T>(response);
 }

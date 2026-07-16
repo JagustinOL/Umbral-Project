@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { FormTextField } from '../FormTextField';
 import { PrimaryButton } from '../PrimaryButton';
 import { GameplayFeedbackBanner } from './GameplayFeedbackBanner';
+import { QrCodeScannerModal } from './QrCodeScannerModal';
+import {
+  StageCompletePanel,
+  type StageAdvanceSummary,
+} from './StageCompletePanel';
 import { TriviaQuestionPanel } from './TriviaQuestionPanel';
 import { TreasureAreaMap } from './TreasureAreaMap';
 import { colors, typography } from '../../constants/theme';
@@ -23,6 +28,13 @@ type PlayPanelProps = {
   canSubmit: boolean;
   onSubmitted: () => void | Promise<unknown>;
   sharedTriviaFeedback?: TriviaFeedback | null;
+  stageAdvance?: StageAdvanceSummary | null;
+  onConfirmStageAdvance?: () => void;
+  onStageCompleted?: (summary: {
+    awardedPoints: number;
+    title: string;
+    message: string;
+  }) => void;
 };
 
 type FeedbackState = {
@@ -38,6 +50,9 @@ export function PlayPanel({
   canSubmit,
   onSubmitted,
   sharedTriviaFeedback = null,
+  stageAdvance = null,
+  onConfirmStageAdvance,
+  onStageCompleted,
 }: PlayPanelProps) {
   const [nodeContent, setNodeContent] = useState<TeamCurrentNodeContent | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
@@ -45,12 +60,14 @@ export function PlayPanel({
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const submitLockRef = useRef(false);
 
   const nodeId = stage?.currentNodeId;
   const nodeType = stage?.currentNodeType?.toLowerCase() ?? '';
 
   const loadNodeContent = useCallback(async () => {
-    if (!nodeId || stage?.isCompleted) {
+    if (!nodeId || stage?.isCompleted || stageAdvance) {
       setNodeContent(null);
       return;
     }
@@ -72,7 +89,7 @@ export function PlayPanel({
     } finally {
       setContentLoading(false);
     }
-  }, [nodeId, sessionId, stage?.isCompleted, teamId]);
+  }, [nodeId, sessionId, stage?.isCompleted, stageAdvance, teamId]);
 
   useEffect(() => {
     void loadNodeContent();
@@ -82,7 +99,6 @@ export function PlayPanel({
     if (!sharedTriviaFeedback) {
       return;
     }
-    // El banner compartido se muestra a nivel de sesión; aquí solo ocultamos el nodo cerrado.
     if (sharedTriviaFeedback.nodeCompleted) {
       setNodeContent(null);
     }
@@ -121,12 +137,16 @@ export function PlayPanel({
       });
 
       const nextFeedback = feedbackFromTriviaResult(result);
-      // Banner compartido llega por SignalR a todo el equipo; alerta local solo al que respondió.
       showUserAlert(nextFeedback.title, nextFeedback.message);
 
       setSelectedOption(null);
       if (result.nodeCompleted) {
         setNodeContent(null);
+        onStageCompleted?.({
+          awardedPoints: result.awardedPoints,
+          title: nextFeedback.title,
+          message: nextFeedback.message,
+        });
       }
       await onSubmitted();
       if (!result.nodeCompleted) {
@@ -142,29 +162,33 @@ export function PlayPanel({
     }
   };
 
-  const handleTreasure = async () => {
-    if (!nodeId || !code.trim()) {
+  const handleTreasure = async (rawCode?: string) => {
+    const foundCode = (rawCode ?? code).trim();
+    if (!nodeId || !foundCode || submitLockRef.current) {
       return;
     }
+
+    submitLockRef.current = true;
     setLoading(true);
+    setScannerOpen(false);
     try {
       const result = await gameplayService.submitTreasureHuntCode({
         sessionId,
         teamId,
         nodeId,
-        foundCode: code,
+        foundCode,
       });
 
       if (result.isCorrect) {
-        setFeedback({
-          tone: 'success',
-          title: '¡Tesoro encontrado!',
-          message: `Búsqueda completada. +${result.awardedPoints} pts.`,
+        const title = '¡Tesoro encontrado!';
+        const message = `Búsqueda completada. +${result.awardedPoints} pts.`;
+        setFeedback({ tone: 'success', title, message });
+        setNodeContent(null);
+        onStageCompleted?.({
+          awardedPoints: result.awardedPoints,
+          title,
+          message,
         });
-        showUserAlert(
-          '¡Tesoro encontrado!',
-          `Búsqueda completada. +${result.awardedPoints} pts.`,
-        );
       } else {
         setFeedback({
           tone: 'error',
@@ -178,9 +202,6 @@ export function PlayPanel({
       }
 
       setCode('');
-      if (result.isCorrect) {
-        setNodeContent(null);
-      }
       await onSubmitted();
       if (!result.isCorrect) {
         await loadNodeContent();
@@ -191,12 +212,31 @@ export function PlayPanel({
         error instanceof Error ? error.message : 'Request failed.',
       );
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   };
 
+  const handleQrScanned = (value: string) => {
+    if (!canSubmit || submitLockRef.current) {
+      return;
+    }
+    setCode(value.trim());
+    void handleTreasure(value);
+  };
+
+  const handleContinue = () => {
+    onConfirmStageAdvance?.();
+  };
+
   if (!stage) {
     return <Text style={styles.muted}>Cargando etapa actual…</Text>;
+  }
+
+  if (stageAdvance) {
+    return (
+      <StageCompletePanel summary={stageAdvance} onContinue={handleContinue} />
+    );
   }
 
   if (stage.isCompleted) {
@@ -259,12 +299,18 @@ export function PlayPanel({
             {nodeContent?.instructions ? (
               <Text style={styles.instructions}>{nodeContent.instructions}</Text>
             ) : null}
+            <PrimaryButton
+              label="Escanear código QR"
+              locked={!canSubmit}
+              disabled={loading}
+              onPress={() => setScannerOpen(true)}
+            />
             <FormTextField
-              label="Código QR / tesoro"
+              label="O ingresa el código manualmente"
               value={code}
               onChangeText={setCode}
               autoCapitalize="characters"
-              editable={canSubmit}
+              editable={canSubmit && !loading}
             />
             {nodeContent?.destination ? (
               <TreasureAreaMap
@@ -276,7 +322,13 @@ export function PlayPanel({
               label="Enviar código"
               loading={loading}
               locked={!canSubmit}
-              onPress={handleTreasure}
+              onPress={() => void handleTreasure()}
+            />
+            <QrCodeScannerModal
+              visible={scannerOpen}
+              locked={loading}
+              onClose={() => setScannerOpen(false)}
+              onScanned={handleQrScanned}
             />
           </View>
         ) : null}
@@ -315,6 +367,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   section: {
+    gap: 12,
     marginTop: 16,
   },
   sectionTitle: {

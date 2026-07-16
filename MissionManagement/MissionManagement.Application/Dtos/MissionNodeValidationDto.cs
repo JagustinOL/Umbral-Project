@@ -5,5 +5,6 @@ public sealed record MissionNodeValidationDto(
     string NodeType,
     int ExecutionOrder,
     int BaseScore,
-    IReadOnlyList<string> ExpectedAnswers
+    IReadOnlyList<string> ExpectedAnswers,
+    string Title = ""
 );

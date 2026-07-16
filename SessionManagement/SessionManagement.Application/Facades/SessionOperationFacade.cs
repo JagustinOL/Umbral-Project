@@ -87,7 +87,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var difficultyMultiplier = await _missionIntegration.GetMissionDifficultyMultiplierAsync(missionId, cancellationToken);
         var allowedNodes = nodeData
             .OrderBy(x => x.ExecutionOrder)
-            .Select(x => new AllowedNode(x.NodeId, x.NodeType, x.BaseScore))
+            .Select(x => new AllowedNode(x.NodeId, x.NodeType, x.BaseScore, x.Title))
             .ToList();
 
         var session = LiveSession.CreateForMission(
@@ -199,6 +199,10 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var result = _treasureHuntProcessor.Process(
             session,
             new EvidenceSubmissionRequest(teamId, nodeId, foundCode, rules));
+
+        if (result.IsCorrect && result.NodeCompleted)
+            await ReleaseRemainingTreasureHintsAsync(session, teamId, nodeId, cancellationToken);
+
         await SaveAndPublishAsync(session, cancellationToken);
         await ReleaseTeamsIfSessionFinalizedAsync(session, cancellationToken);
         await _realtimeNotifier.NotifyHuntLocationReachedAsync(
@@ -206,6 +210,23 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         await _realtimeNotifier.NotifyTeamProgressUpdatedAsync(
             sessionId, teamId, result.CurrentNodeId, result.NextNodeId, result.NodeCompleted, cancellationToken);
         return MapResult(result);
+    }
+
+    private async Task ReleaseRemainingTreasureHintsAsync(
+        LiveSession session,
+        Guid teamId,
+        Guid nodeId,
+        CancellationToken cancellationToken)
+    {
+        var catalogHints = await _missionIntegration.GetHintsForNodeAsync(
+            session.MissionRef, nodeId, cancellationToken);
+        if (catalogHints.Count == 0)
+            return;
+
+        session.ReleaseRemainingHintsAutomatically(
+            teamId,
+            nodeId,
+            catalogHints.Select(h => (h.Id, h.Order)).ToList());
     }
 
     private async Task ReleaseTeamsIfSessionFinalizedAsync(

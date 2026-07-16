@@ -81,11 +81,19 @@ export default function LiveSessionScreen() {
             message={gameplay.supportMessage}
           />
         ) : null}
-        {gameplay.triviaFeedback ? (
+        {gameplay.triviaFeedback && !gameplay.stageAdvance ? (
           <GameplayFeedbackBanner
             tone={gameplay.triviaFeedback.tone}
             title={gameplay.triviaFeedback.title}
             message={gameplay.triviaFeedback.message}
+          />
+        ) : null}
+
+        {gameplay.rankingEvents[0] && activeTab !== 'ranking' ? (
+          <GameplayFeedbackBanner
+            tone="info"
+            title="Cambio en el ranking"
+            message={gameplay.rankingEvents[0].message}
           />
         ) : null}
 
@@ -105,14 +113,27 @@ export default function LiveSessionScreen() {
             teamId={teamId}
             stage={gameplay.stage}
             canSubmit={gameplay.isPlayable}
-            onSubmitted={gameplay.refreshStage}
+            onSubmitted={async () => {
+              await gameplay.refreshStage();
+              await gameplay.refreshRanking();
+            }}
             sharedTriviaFeedback={gameplay.triviaFeedback}
+            stageAdvance={gameplay.stageAdvance}
+            onConfirmStageAdvance={() => {
+              gameplay.confirmStageAdvance();
+            }}
+            onStageCompleted={(summary) => {
+              gameplay.openStageAdvance(summary);
+            }}
           />
         ) : null}
 
         {activeTab === 'hints' ? <HintsPanel hints={gameplay.hints} /> : null}
         {activeTab === 'ranking' ? (
-          <RankingPanel ranking={gameplay.ranking} />
+          <RankingPanel
+            ranking={gameplay.ranking}
+            events={gameplay.rankingEvents}
+          />
         ) : null}
         {activeTab === 'penalties' ? (
           <PenaltiesPanel

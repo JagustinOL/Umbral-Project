@@ -44,6 +44,13 @@ services:
       retries: 10
       start_period: 40s
 
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: umbral-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   # ==========================================
   # --- 2. SEGURIDAD (Keycloak) ---
   # ==========================================
@@ -168,6 +175,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     ports:
       - "5284:8080"
     environment:
@@ -190,6 +199,12 @@ services:
       Keycloak__DefaultAdminFirstName: UMBRAL
       Keycloak__DefaultAdminLastName: Admin
       SessionManagement__BaseUrl: http://session-management-service:8080
+      Email__Enabled: "true"
+      Email__SmtpHost: mailhog
+      Email__SmtpPort: "1025"
+      Email__FromAddress: noreply@umbral.local
+      Email__FromName: UMBRAL
+      Email__UseSsl: "false"
 
   # ==========================================
   # --- 4. FRONTEND (Next.js + Player web) â€” perfiles "frontend" | "player" | "full" ---

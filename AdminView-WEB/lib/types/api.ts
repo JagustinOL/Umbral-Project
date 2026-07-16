@@ -188,7 +188,14 @@ export interface CreateOperatorRequest {
 
 export interface CreateOperatorResponse {
   id: string;
-  setupCode: string;
+  email: string;
+  activationEmailSent: boolean;
+}
+
+export interface ResendOperatorActivationResponse {
+  id: string;
+  email: string;
+  activationEmailSent: boolean;
 }
 
 export interface OperatorDto {

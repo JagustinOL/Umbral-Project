@@ -41,6 +41,7 @@ public sealed class RabbitMqDomainEventPublisher : IDomainEventPublisher
                             TeamId = evidence.TeamId,
                             MissionNodeId = evidence.MissionNodeId,
                             NodeType = evidence.NodeType,
+                            NodeTitle = evidence.NodeTitle,
                             BaseScore = evidence.BaseScore,
                             DifficultyMultiplier = evidence.DifficultyMultiplier,
                             ElapsedSeconds = evidence.ElapsedSeconds
@@ -104,6 +105,9 @@ public sealed class RabbitMqDomainEventPublisher : IDomainEventPublisher
                             TeamId = hint.TeamId,
                             HintId = hint.HintId,
                             MissionNodeId = hint.MissionNodeId,
+                            NodeType = hint.NodeType,
+                            NodeTitle = hint.NodeTitle,
+                            HintOrder = hint.HintOrder,
                             PenaltyPoints = hint.PenaltyPoints,
                             WasManualRelease = hint.WasManualRelease
                         },

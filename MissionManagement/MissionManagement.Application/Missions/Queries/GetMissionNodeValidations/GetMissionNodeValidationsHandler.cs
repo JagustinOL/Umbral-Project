@@ -40,7 +40,8 @@ public sealed class GetMissionNodeValidationsHandler
                 NodeType: node.NodeType.ToString(),
                 ExecutionOrder: order++,
                 BaseScore: node.BaseScore,
-                ExpectedAnswers: ResolveExpectedAnswers(node)));
+                ExpectedAnswers: ResolveExpectedAnswers(node),
+                Title: node.Title));
         }
 
         return result;

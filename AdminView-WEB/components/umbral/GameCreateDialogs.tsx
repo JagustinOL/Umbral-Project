@@ -184,11 +184,11 @@ export function CreateTreasureHuntDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Nueva búsqueda (HU-13)</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Instrucciones, código secreto y coordenadas GPS son obligatorios.
+            Instrucciones, código secreto y coordenadas GPS son obligatorios. El QR se genera al escribir el código.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-2">

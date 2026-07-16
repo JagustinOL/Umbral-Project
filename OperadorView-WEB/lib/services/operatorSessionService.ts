@@ -147,6 +147,16 @@ export const operatorSessionService = {
     return scoringApiRequest<RankingEntryDto[]>(`/sessions/${sessionId}/ranking`, { signal });
   },
 
+  async reconcileScoring(
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<{ teamsPublished: number; evidencesPublished: number }> {
+    return sessionApiRequest<{ teamsPublished: number; evidencesPublished: number }>(
+      `/sessions/${sessionId}/scoring/reconcile`,
+      { method: "POST", signal },
+    );
+  },
+
   async getHistoricalSessions(signal?: AbortSignal): Promise<HistoricalSessionsPageDto> {
     return scoringApiRequest<HistoricalSessionsPageDto>("/audit/sessions", { signal });
   },

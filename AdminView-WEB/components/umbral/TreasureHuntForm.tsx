@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MissionNode, GpsCoordinate } from "@/lib/types";
+import { TreasureSecretQrPreview } from "./TreasureSecretQrPreview";
 
 const TreasureDestinationMap = dynamic(
   () =>
@@ -54,6 +55,9 @@ export function TreasureHuntForm({ node, isImmutable, onChange }: TreasureHuntFo
           className="text-xs h-8 font-mono"
           disabled={isImmutable}
         />
+        <div className="pt-1">
+          <TreasureSecretQrPreview secretCode={node.secretCode ?? ""} />
+        </div>
       </div>
       <div className="space-y-1">
         <Label className="text-xs">GPS Destination</Label>

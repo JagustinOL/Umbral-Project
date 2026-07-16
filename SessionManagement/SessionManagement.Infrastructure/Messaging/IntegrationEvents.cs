@@ -9,6 +9,7 @@ public sealed record EvidenceValidatedIntegrationEvent
     public Guid TeamId { get; init; }
     public Guid MissionNodeId { get; init; }
     public string NodeType { get; init; } = string.Empty;
+    public string NodeTitle { get; init; } = string.Empty;
     public int BaseScore { get; init; }
     public decimal DifficultyMultiplier { get; init; }
     public double ElapsedSeconds { get; init; }
@@ -50,6 +51,9 @@ public sealed record HintReleasedIntegrationEvent
     public Guid TeamId { get; init; }
     public Guid HintId { get; init; }
     public Guid MissionNodeId { get; init; }
+    public string NodeType { get; init; } = string.Empty;
+    public string NodeTitle { get; init; } = string.Empty;
+    public int HintOrder { get; init; }
     public int PenaltyPoints { get; init; }
     public bool WasManualRelease { get; init; }
 }

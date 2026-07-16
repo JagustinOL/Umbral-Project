@@ -31,6 +31,14 @@ public interface ILiveSessionRepository
     Task<IReadOnlyList<LiveSession>> GetActiveSessionsAsync(
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sesión abierta (Pending/Preparation) con solicitud de unión Pending del equipo.
+    /// Permite que todos los miembros del equipo vean el estado de espera (RN-15).
+    /// </summary>
+    Task<Guid?> FindOpenSessionIdWithPendingJoinByTeamAsync(
+        Guid teamId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasOpenSessionsByOperatorAsync(
         Guid operatorId,
         CancellationToken cancellationToken = default);
