@@ -89,6 +89,24 @@ public sealed class LiveSessionConfiguration : IEntityTypeConfiguration<LiveSess
             .HasForeignKey("LiveSessionId")
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.Metadata
+            .FindNavigation(nameof(LiveSession.JoinRequests))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(x => x.JoinRequests)
+            .WithOne()
+            .HasForeignKey("LiveSessionId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata
+            .FindNavigation(nameof(LiveSession.TeamParticipations))!
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(x => x.TeamParticipations)
+            .WithOne()
+            .HasForeignKey("LiveSessionId")
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(x => x.JoinCode).IsUnique();
     }
 }

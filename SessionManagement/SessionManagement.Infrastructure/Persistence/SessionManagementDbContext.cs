@@ -16,6 +16,8 @@ public sealed class SessionManagementDbContext : DbContext
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<EvidenceSubmission> EvidenceSubmissions => Set<EvidenceSubmission>();
     public DbSet<ReleasedHint> ReleasedHints => Set<ReleasedHint>();
+    public DbSet<SessionJoinRequest> SessionJoinRequests => Set<SessionJoinRequest>();
+    public DbSet<TeamParticipation> TeamParticipations => Set<TeamParticipation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

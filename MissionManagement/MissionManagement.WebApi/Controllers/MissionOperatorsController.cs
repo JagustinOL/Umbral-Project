@@ -1,13 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Missions.Commands.AssignOperatorToMission;
-using MissionManagement.Application.Missions.Commands.RevokeOperatorFromMission;
-using MissionManagement.WebApi.Contracts.Operators;
+using MissionManagement.WebApi.Contracts.MissionOperators;
+using MissionManagement.WebApi.Contracts.Routes;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/missions/{missionId:guid}/operators")]
+[Authorize(Roles = "admin")]
 public sealed class MissionOperatorsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -19,27 +21,20 @@ public sealed class MissionOperatorsController : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> Assign(
-        [FromRoute] Guid missionId,
-        [FromBody] AssignOperatorToMissionRequest request,
+        [FromRoute] MissionNodesRoute route,
+        [FromBody] AssignOperatorToMissionRequest body,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new AssignOperatorToMissionCommand(
-            MissionId: missionId,
-            OperatorId: request.OperatorId), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{operatorId:guid}")]
     public async Task<IActionResult> Revoke(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid operatorId,
+        [FromRoute] MissionOperatorRoute route,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new RevokeOperatorFromMissionCommand(
-            MissionId: missionId,
-            OperatorId: operatorId), cancellationToken);
-
+        await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();
     }
 }

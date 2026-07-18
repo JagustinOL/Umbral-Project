@@ -1,10 +1,16 @@
-import { ApiError, sessionApiRequest } from "@/lib/api/client";
+import { ApiError, scoringApiRequest, sessionApiRequest } from "@/lib/api/client";
 import {
   CreatedLiveSessionDto,
   CreateLiveSessionRequest,
+  AuditDashboardDto,
+  HistoricalSessionsPageDto,
   MissionHasOpenSessionsResponse,
   OperatorAssignedMissionDto,
   OperatorOpenSessionDto,
+  OperatorSessionBoardDto,
+  RankingEntryDto,
+  SessionAuditDetailDto,
+  SessionJoinRequestDto,
   SessionTeamsDto,
 } from "@/lib/types/api";
 
@@ -73,6 +79,95 @@ export const operatorSessionService = {
       `/operators/${operatorId}/sessions/open`,
       { signal },
     );
+  },
+
+  async getJoinRequests(sessionId: string, signal?: AbortSignal): Promise<SessionJoinRequestDto[]> {
+    return sessionApiRequest<SessionJoinRequestDto[]>(`/sessions/${sessionId}/join-requests`, { signal });
+  },
+
+  async decideJoinRequest(
+    sessionId: string,
+    teamId: string,
+    decision: "Approve" | "Reject",
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await sessionApiRequest<void>(`/sessions/${sessionId}/join-requests/${teamId}/decision`, {
+      method: "POST",
+      body: { decision },
+      signal,
+    });
+  },
+
+  async getOperatorBoard(
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<OperatorSessionBoardDto> {
+    return sessionApiRequest<OperatorSessionBoardDto>(`/sessions/${sessionId}/operator-board`, {
+      signal,
+    });
+  },
+
+  async releaseHint(sessionId: string, teamId: string, hintId: string): Promise<void> {
+    await sessionApiRequest<void>(`/sessions/${sessionId}/teams/${teamId}/hints/release`, {
+      method: "POST",
+      body: { hintId },
+    });
+  },
+
+  async applyPenalty(sessionId: string, teamId: string, points: number, reason: string): Promise<void> {
+    await sessionApiRequest<void>(`/sessions/${sessionId}/teams/${teamId}/penalties`, {
+      method: "POST",
+      body: { points, reason },
+    });
+  },
+
+  async sendMessage(sessionId: string, teamId: string, message: string): Promise<void> {
+    await sessionApiRequest<void>(`/sessions/${sessionId}/teams/${teamId}/messages`, {
+      method: "POST",
+      body: { message },
+    });
+  },
+
+  async togglePause(sessionId: string): Promise<{ status: string }> {
+    return sessionApiRequest<{ status: string }>(`/sessions/${sessionId}/pause`, { method: "POST" });
+  },
+
+  async finalizeSession(operatorId: string, sessionId: string): Promise<void> {
+    await sessionApiRequest<void>(`/operators/${operatorId}/sessions/${sessionId}/finalize`, {
+      method: "PUT",
+    });
+  },
+
+  async cancelSession(operatorId: string, sessionId: string): Promise<void> {
+    await sessionApiRequest<void>(`/operators/${operatorId}/sessions/${sessionId}/cancel`, {
+      method: "PUT",
+    });
+  },
+
+  async getRanking(sessionId: string, signal?: AbortSignal): Promise<RankingEntryDto[]> {
+    return scoringApiRequest<RankingEntryDto[]>(`/sessions/${sessionId}/ranking`, { signal });
+  },
+
+  async reconcileScoring(
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<{ teamsPublished: number; evidencesPublished: number }> {
+    return sessionApiRequest<{ teamsPublished: number; evidencesPublished: number }>(
+      `/sessions/${sessionId}/scoring/reconcile`,
+      { method: "POST", signal },
+    );
+  },
+
+  async getHistoricalSessions(signal?: AbortSignal): Promise<HistoricalSessionsPageDto> {
+    return scoringApiRequest<HistoricalSessionsPageDto>("/audit/sessions", { signal });
+  },
+
+  async getSessionAuditDetail(sessionId: string, signal?: AbortSignal): Promise<SessionAuditDetailDto> {
+    return scoringApiRequest<SessionAuditDetailDto>(`/audit/sessions/${sessionId}`, { signal });
+  },
+
+  async getAuditDashboard(signal?: AbortSignal): Promise<AuditDashboardDto> {
+    return scoringApiRequest<AuditDashboardDto>("/audit/dashboard", { signal });
   },
 };
 

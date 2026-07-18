@@ -1,14 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   MapIcon,
   UsersIcon,
-  LayoutDashboardIcon,
   ShieldAlertIcon,
+  LogOutIcon,
+  ClipboardListIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  getAuthSession,
+  getSessionRoleLabel,
+  getSessionUsername,
+  redirectToLogin,
+  type AuthSession,
+} from "@/lib/auth/session";
 
-export type NavSection = "catalog" | "operators";
+export type NavSection = "catalog" | "operators" | "audit";
 
 interface SidebarProps {
   active: NavSection;
@@ -28,12 +38,37 @@ const NAV_ITEMS: { id: NavSection; label: string; icon: React.ReactNode; descrip
     icon: <UsersIcon className="h-4 w-4" />,
     description: "Accounts & Assignments",
   },
+  {
+    id: "audit",
+    label: "Auditoría",
+    icon: <ClipboardListIcon className="h-4 w-4" />,
+    description: "Historial de sesiones",
+  },
 ];
 
+function getInitials(label: string): string {
+  return label
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export function Sidebar({ active, onNavigate }: SidebarProps) {
+  const [session, setSession] = useState<AuthSession | null>(null);
+
+  useEffect(() => {
+    setSession(getAuthSession());
+  }, []);
+
+  const roleLabel = session ? getSessionRoleLabel(session) : "Administrator";
+  const username = session ? getSessionUsername(session) : "";
+  const initials = getInitials(username || roleLabel);
+
   return (
-    <aside className="flex flex-col w-56 shrink-0 h-screen bg-sidebar border-r border-sidebar-border sticky top-0">
-      {/* Logo / Brand */}
+    <aside className="flex flex-col w-56 shrink-0 h-screen bg-sidebar border-r border-sidebar-border">
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
         <div className="h-7 w-7 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
           <ShieldAlertIcon className="h-4 w-4 text-sidebar-primary-foreground" />
@@ -44,12 +79,10 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav label */}
       <div className="px-5 pt-5 pb-2">
         <p className="text-xs font-medium text-sidebar-foreground/40 uppercase tracking-wider">Navigation</p>
       </div>
 
-      {/* Nav items */}
       <nav className="flex-1 px-3 space-y-0.5">
         {NAV_ITEMS.map((item) => (
           <button
@@ -79,17 +112,28 @@ export function Sidebar({ active, onNavigate }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-sidebar-border">
+      <div className="px-5 py-4 border-t border-sidebar-border space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold text-sidebar-accent-foreground">AD</span>
+            <span className="text-xs font-semibold text-sidebar-accent-foreground">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-sidebar-foreground leading-none">Administrator</p>
-            <p className="text-xs text-sidebar-foreground/40 truncate mt-0.5">admin@umbral.ops</p>
+            <p className="text-xs font-medium text-sidebar-foreground leading-none">{roleLabel}</p>
+            {username && (
+              <p className="text-xs text-sidebar-foreground/40 truncate mt-0.5">{username}</p>
+            )}
           </div>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          onClick={() => redirectToLogin()}
+        >
+          <LogOutIcon className="h-4 w-4" />
+          Sign out
+        </Button>
       </div>
     </aside>
   );

@@ -1,11 +1,14 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SessionManagement.Application.Teams.Queries.GetPlayerTeamMembership;
+using SessionManagement.WebApi.Contracts.Routes;
+using SessionManagement.WebApi.Mapping;
 
 namespace SessionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/players")]
+[Authorize(Roles = "player")]
 public sealed class PlayerTeamMembershipController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -17,13 +20,10 @@ public sealed class PlayerTeamMembershipController : ControllerBase
 
     [HttpGet("{playerId:guid}/team-membership")]
     public async Task<IActionResult> GetTeamMembership(
-        [FromRoute] Guid playerId,
+        [FromRoute] PlayerRoute route,
         CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(
-            new GetPlayerTeamMembershipQuery(playerId),
-            cancellationToken);
-
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 }

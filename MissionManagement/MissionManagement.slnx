@@ -5,4 +5,5 @@
   <Project Path="MissionManagement.Domain.Tests/MissionManagement.Domain.Tests.csproj" />
   <Project Path="MissionManagement.Infrastructure/MissionManagement.Infrastructure.csproj" />
   <Project Path="MissionManagement.WebApi/MissionManagement.WebApi.csproj" />
+  <Project Path="MissionManagement.WebApi.Tests/MissionManagement.WebApi.Tests.csproj" />
 </Solution>

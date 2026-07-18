@@ -84,6 +84,13 @@ export function validateTreasureHuntPayload(payload: {
   return null;
 }
 
+export function validateBaseScore(baseScore: number): string | null {
+  if (!Number.isFinite(baseScore) || !Number.isInteger(baseScore) || baseScore <= 0) {
+    return "El puntaje base del juego debe ser un entero mayor que cero.";
+  }
+  return null;
+}
+
 export function toTriviaGameViewModel(dto: TriviaNodeDto, missionId: string): MissionNode {
   return {
     id: dto.id,
@@ -220,19 +227,42 @@ export function getGameApiErrorMessage(error: unknown): string {
     return "Error inesperado al comunicarse con la API de juegos.";
   }
 
+  if (error.status === 401) {
+    return "Sesión expirada o no autorizada. Vuelve a iniciar sesión en Login (puerto 3002).";
+  }
+
   if (isRecord(error.details)) {
+    const errors = error.details.errors;
+    if (isRecord(errors)) {
+      const messages = Object.entries(errors).flatMap(([field, value]) => {
+        if (Array.isArray(value)) {
+          return value
+            .filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+            .map((entry) => (field === "$" ? entry : `${field}: ${entry}`));
+        }
+        return [];
+      });
+      if (messages.length > 0) {
+        return messages.join(" ");
+      }
+    }
+
     const detail = error.details.detail;
     if (typeof detail === "string" && detail.length > 0) {
       return detail;
     }
     const title = error.details.title;
-    if (typeof title === "string" && title.length > 0) {
+    if (
+      typeof title === "string" &&
+      title.length > 0 &&
+      title !== "One or more validation errors occurred."
+    ) {
       return title;
     }
   }
 
   if (error.status === 409) {
-    return "Operación bloqueada por RN-01: la misión no está en borrador.";
+    return "Operación bloqueada: la misión no está en borrador.";
   }
 
   if (error.status === 400) {

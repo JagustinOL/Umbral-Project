@@ -19,16 +19,17 @@ export function getSessionJoinBlockReason(input: {
   targetSessionId: string;
 }): string | null {
   if (input.teamIsLocked) {
-    return 'Your team is already playing in a live session (RN-13). You cannot join another until it ends.';
+    return 'Tu equipo ya está jugando en una sesión en vivo. No puedes unirte a otra hasta que termine.';
   }
 
   const currentRef = input.teamCurrentSessionRef?.trim();
   if (currentRef) {
     const sameSession =
       currentRef.toLowerCase() === input.targetSessionId.trim().toLowerCase();
-    if (!sameSession) {
-      return 'Your team is already registered in another session. Wait for it to finish before joining a different one.';
+    if (sameSession) {
+      return 'Tu equipo ya está registrado en esta sesión.';
     }
+    return 'Tu equipo ya está registrado en otra sesión. Espera a que finalice antes de unirte a otra distinta.';
   }
 
   if (!canRequestSessionJoin(input.sessionStatus)) {

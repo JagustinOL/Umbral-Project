@@ -23,7 +23,8 @@ public sealed class UpdateTreasureHuntNodeHandler : IRequestHandler<UpdateTreasu
             nodeId: request.NodeId,
             instructions: request.Instructions,
             secretCode: request.SecretCode,
-            destination: request.Destination);
+            destination: request.Destination,
+            baseScore: request.BaseScore);
 
         await _repository.SaveAsync(mission, cancellationToken);
     }

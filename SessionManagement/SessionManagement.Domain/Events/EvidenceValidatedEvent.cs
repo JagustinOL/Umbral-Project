@@ -32,6 +32,9 @@ public sealed record EvidenceValidatedEvent : IDomainEvent
     /// </summary>
     public string NodeType { get; init; } = string.Empty;
 
+    /// <summary>Título del nodo (snapshot) para auditoría legible.</summary>
+    public string NodeTitle { get; init; } = string.Empty;
+
     /// <summary>Puntaje base del nodo copiado desde AllowedNode snapshot.</summary>
     public int BaseScore { get; init; }
 

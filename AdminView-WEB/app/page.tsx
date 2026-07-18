@@ -5,6 +5,7 @@ import { Sidebar, NavSection } from "@/components/umbral/Sidebar";
 import { MissionCatalog } from "@/components/umbral/MissionCatalog";
 import { MissionBuilder } from "@/components/umbral/MissionBuilder";
 import { OperatorManagement } from "@/components/umbral/OperatorManagement";
+import { AuditHistory } from "@/components/umbral/AuditHistory";
 import {
   CreateMissionPayload,
   CreateOperatorPayload,
@@ -154,7 +155,7 @@ export default function DashboardPage() {
 
       if (hasOpenSessions) {
         setMissionsError(
-          "Mission deactivation blocked by RN-01: there are active or open sessions linked to this mission.",
+          "No se puede desactivar la misión: hay sesiones activas o abiertas vinculadas.",
         );
         throw new Error("Mission has open sessions.");
       }
@@ -175,13 +176,24 @@ export default function DashboardPage() {
     setIsCreatingOperator(true);
     setOperatorsError(null);
     try {
-      await operatorService.createOperator(payload);
+      const result = await operatorService.createOperator(payload);
       await loadOperators();
+      return result;
     } catch (error) {
       setOperatorsError(getOperatorApiErrorMessage(error));
       throw error;
     } finally {
       setIsCreatingOperator(false);
+    }
+  };
+
+  const handleResendOperatorActivation = async (operatorId: string) => {
+    setOperatorsError(null);
+    try {
+      return await operatorService.resendActivation(operatorId);
+    } catch (error) {
+      setOperatorsError(getOperatorApiErrorMessage(error));
+      throw error;
     }
   };
 
@@ -212,12 +224,15 @@ export default function DashboardPage() {
       const hasOpenSessions = await missionService.missionHasOpenSessions(missionId);
       if (hasOpenSessions) {
         const message =
-          "RN-01: No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.";
+          "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.";
         setAssignmentError(message);
         throw new Error(message);
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes("RN-01")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+      ) {
         throw error;
       }
       console.warn("Mission session precheck unavailable, continuing with API enforcement:", error);
@@ -231,15 +246,24 @@ export default function DashboardPage() {
       await ensureMissionAllowsOperatorRosterChange(missionId);
       await missionService.assignOperatorToMission(missionId, operatorId);
       await loadMissions();
-      toast.success("Operador asignado a la misión (HU-24).");
+      toast.success("Operador asignado a la misión.");
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes("RN-01"))) {
+      if (
+        !(
+          error instanceof Error &&
+          error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+        )
+      ) {
         logMissionOperatorApiProblem(error);
         const message = getMissionOperatorAssignmentErrorMessage(error);
         setAssignmentError(message);
         toast.error(message);
       } else {
-        toast.error(error instanceof Error ? error.message : "RN-01");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.",
+        );
       }
       throw error;
     } finally {
@@ -254,15 +278,24 @@ export default function DashboardPage() {
       await ensureMissionAllowsOperatorRosterChange(missionId);
       await missionService.revokeOperatorFromMission(missionId, operatorId);
       await loadMissions();
-      toast.success("Operador revocado de la misión (HU-25).");
+      toast.success("Operador revocado de la misión.");
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes("RN-01"))) {
+      if (
+        !(
+          error instanceof Error &&
+          error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+        )
+      ) {
         logMissionOperatorApiProblem(error);
         const message = getMissionOperatorAssignmentErrorMessage(error);
         setAssignmentError(message);
         toast.error(message);
       } else {
-        toast.error(error instanceof Error ? error.message : "RN-01");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.",
+        );
       }
       throw error;
     } finally {
@@ -275,8 +308,8 @@ export default function DashboardPage() {
       <Toaster richColors closeButton position="top-right" />
       <Sidebar active={section} onNavigate={handleNavigate} />
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-8">
+      <main className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain">
+        <div className="max-w-5xl mx-auto w-full px-6 py-8">
           {section === "catalog" && !activeMission && (
             <MissionCatalog
               missions={missions}
@@ -306,6 +339,7 @@ export default function DashboardPage() {
               operators={operators}
               missions={missions}
               onCreateOperator={handleCreateOperator}
+              onResendActivation={handleResendOperatorActivation}
               onDeactivateOperator={handleDeactivateOperator}
               onAssignOperator={handleAssignOperator}
               onRevokeOperator={handleRevokeOperator}
@@ -320,6 +354,8 @@ export default function DashboardPage() {
               onClearAssignmentError={() => setAssignmentError(null)}
             />
           )}
+
+          {section === "audit" && <AuditHistory />}
         </div>
       </main>
     </div>

@@ -5,7 +5,21 @@ export type JwtPayload = {
   given_name?: string;
   family_name?: string;
   exp?: number;
+  realm_access?: {
+    roles?: string[];
+  };
 };
+
+export function getRealmRoles(token: string): string[] {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.realm_access?.roles) {
+    return [];
+  }
+
+  return payload.realm_access.roles
+    .map((role) => role.trim().toLowerCase())
+    .filter((role) => role.length > 0);
+}
 
 export function decodeJwtPayload(token: string): JwtPayload | null {
   const parts = token.split('.');

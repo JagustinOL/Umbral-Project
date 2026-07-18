@@ -36,7 +36,7 @@ public sealed class RankingManagerService
             // RB-08: orden primario = mayor puntaje primero
             .OrderByDescending(l => l.TotalScore)
             // RB-08: criterio de desempate = menor tiempo (más rápido)
-            .ThenBy(l => l.LastPositiveEntryElapsedSeconds)
+            .ThenBy(l => l.TotalElapsedSeconds)
             .ToList();
 
         return sorted
@@ -45,7 +45,7 @@ public sealed class RankingManagerService
                 TeamId: ledger.TeamRef,
                 TeamName: ledger.TeamName,
                 TotalScore: ledger.TotalScore,
-                TotalElapsedSeconds: ledger.LastPositiveEntryElapsedSeconds,
+                TotalElapsedSeconds: ledger.TotalElapsedSeconds,
                 CompletedNodes: ledger.CompletedNodesCount,
                 PenaltiesApplied: ledger.PenaltiesCount
             ))

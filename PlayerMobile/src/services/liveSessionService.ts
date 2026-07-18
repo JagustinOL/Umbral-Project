@@ -55,8 +55,8 @@ export async function getActiveSessions(): Promise<LiveSessionSummary[]> {
 export async function requestSessionJoin(input: {
   joinCode: string;
   teamId: string;
-}): Promise<string> {
-  const response = await apiRequest<{ sessionId: string }>(
+}): Promise<{ sessionId: string; status: string; requestId: string | null }> {
+  const response = await apiRequest<{ sessionId: string; status: string; requestId: string | null }>(
     API_PATHS.liveSessionsJoin,
     {
       method: 'POST',
@@ -68,5 +68,5 @@ export async function requestSessionJoin(input: {
     },
   );
 
-  return response.sessionId;
+  return response;
 }

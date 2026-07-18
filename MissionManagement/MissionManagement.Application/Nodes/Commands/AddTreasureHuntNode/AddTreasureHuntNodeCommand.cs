@@ -9,6 +9,6 @@ public sealed record AddTreasureHuntNodeCommand(
     string Instructions,
     string SecretCode,
     GpsCoordinate Destination,
-    int ExecutionOrder
+    int ExecutionOrder,
+    int BaseScore
 ) : IRequest<Guid>;
-

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Repositories;
 using SessionManagement.Infrastructure.Persistence;
 
@@ -22,6 +23,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.Id == sessionId, cancellationToken);
     }
 
@@ -35,6 +38,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.JoinCode == normalized, cancellationToken);
     }
 
@@ -51,6 +56,8 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
         return await _dbContext.LiveSessions
             .Include(x => x.EvidenceSubmissions)
             .Include(x => x.ReleasedHints)
+            .Include(x => x.JoinRequests)
+            .Include(x => x.TeamParticipations)
             .FirstOrDefaultAsync(x => x.Id == sessionId && x.OperatorRef == operatorId, cancellationToken);
     }
 
@@ -80,6 +87,26 @@ public sealed class LiveSessionRepository : ILiveSessionRepository
                 || x.Status == LiveSessionStatus.Paused)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Guid?> FindOpenSessionIdWithPendingJoinByTeamAsync(
+        Guid teamId,
+        CancellationToken cancellationToken = default)
+    {
+        if (teamId == Guid.Empty)
+            throw new ArgumentException("TeamId no puede ser vacío.", nameof(teamId));
+
+        return await (
+            from joinRequest in _dbContext.SessionJoinRequests.AsNoTracking()
+            where joinRequest.TeamId == teamId
+                  && joinRequest.Status == JoinRequestStatus.Pending
+            let liveSessionId = EF.Property<Guid>(joinRequest, "LiveSessionId")
+            join session in _dbContext.LiveSessions.AsNoTracking()
+                on liveSessionId equals session.Id
+            where session.Status == LiveSessionStatus.Pending
+                  || session.Status == LiveSessionStatus.Preparation
+            select (Guid?)session.Id
+        ).FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<bool> HasOpenSessionsByOperatorAsync(

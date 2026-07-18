@@ -1,15 +1,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY MissionManagement.WebApi/*.csproj ./MissionManagement.WebApi/
-COPY MissionManagement.Application/*.csproj ./MissionManagement.Application/
-COPY MissionManagement.Domain/*.csproj ./MissionManagement.Domain/
-COPY MissionManagement.Infrastructure/*.csproj ./MissionManagement.Infrastructure/
+COPY MissionManagement/MissionManagement.WebApi/*.csproj ./MissionManagement/MissionManagement.WebApi/
+COPY MissionManagement/MissionManagement.Application/*.csproj ./MissionManagement/MissionManagement.Application/
+COPY MissionManagement/MissionManagement.Domain/*.csproj ./MissionManagement/MissionManagement.Domain/
+COPY MissionManagement/MissionManagement.Infrastructure/*.csproj ./MissionManagement/MissionManagement.Infrastructure/
 
-RUN cd MissionManagement.WebApi && dotnet restore
+RUN cd MissionManagement/MissionManagement.WebApi && dotnet restore
 
-COPY . .
-WORKDIR "/src/MissionManagement.WebApi"
+COPY MissionManagement ./MissionManagement
+WORKDIR /src/MissionManagement/MissionManagement.WebApi
 RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

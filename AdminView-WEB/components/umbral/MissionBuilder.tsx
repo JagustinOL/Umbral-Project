@@ -71,6 +71,7 @@ import {
   toApiTriviaQuestions,
   toTreasureHuntGameViewModel,
   toTriviaGameViewModel,
+  validateBaseScore,
   validateTreasureHuntPayload,
   validateTriviaQuestions,
 } from "@/lib/services/gameService";
@@ -144,7 +145,7 @@ function AddStageDialog({ open, onClose, onAdd, nextOrder, isSubmitting }: AddSt
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Añadir etapa</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Define una nueva etapa y su orden de ejecución (HU-05).
+            Define una nueva etapa y su orden de ejecución.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-2">
@@ -233,7 +234,7 @@ function GameNodeCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card overflow-hidden",
+        "rounded-lg border bg-card",
         isTrivia ? "border-blue-200" : "border-amber-200",
       )}
     >
@@ -241,7 +242,8 @@ function GameNodeCard({
         <CollapsibleTrigger asChild>
           <div
             className={cn(
-              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none",
+              "flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none rounded-lg",
+              expanded && "rounded-b-none",
               isTrivia ? "bg-blue-50/50" : "bg-amber-50/50",
             )}
           >
@@ -289,6 +291,22 @@ function GameNodeCard({
               Orden {node.executionOrder}
               {node.baseScore !== undefined ? ` · ${node.baseScore} pts` : ""}
             </p>
+            <div className="space-y-1.5 max-w-[12rem]">
+              <Label htmlFor={`base-score-${node.id}`} className="text-xs">
+                Puntaje base
+              </Label>
+              <Input
+                id={`base-score-${node.id}`}
+                type="number"
+                min={1}
+                className="h-8 text-xs"
+                value={node.baseScore ?? 100}
+                disabled={isStructureLocked}
+                onChange={(e) =>
+                  onNodeChange(node.id, { baseScore: parseInt(e.target.value, 10) || 0 })
+                }
+              />
+            </div>
             {isTrivia && (
               <TriviaNodeForm
                 questions={node.questions ?? []}
@@ -311,7 +329,7 @@ function GameNodeCard({
                 disabled={isSaving}
                 onClick={() => void onSave(node.id)}
               >
-                {isSaving ? "Guardando…" : isTrivia ? "Guardar trivia (HU-11)" : "Guardar búsqueda (HU-15)"}
+                {isSaving ? "Guardando…" : isTrivia ? "Guardar trivia" : "Guardar búsqueda"}
               </Button>
             )}
             <HintPanel
@@ -328,8 +346,8 @@ function GameNodeCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar juego</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará este {isTrivia ? "reto de trivia" : "reto de búsqueda"} (
-              {isTrivia ? "HU-12" : "HU-16"}). Esta acción no se puede deshacer.
+              Se eliminará este {isTrivia ? "reto de trivia" : "reto de búsqueda"}. Esta acción no se
+              puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -397,10 +415,15 @@ function StageNodeCard({
   const children = stage.children ?? [];
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border bg-card">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors">
+          <div
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-muted/40 hover:bg-muted/60 transition-colors rounded-xl",
+              expanded && "rounded-b-none",
+            )}
+          >
             {expanded ? (
               <ChevronDownIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
@@ -469,7 +492,7 @@ function StageNodeCard({
                     disabled={isSaving}
                     onClick={() => void onSaveStage(stage.id)}
                   >
-                    {isSaving ? "Guardando…" : "Guardar etapa (HU-07)"}
+                    {isSaving ? "Guardando…" : "Guardar etapa"}
                   </Button>
                 </div>
               </div>
@@ -516,7 +539,7 @@ function StageNodeCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar etapa</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará la etapa &ldquo;{stage.title}&rdquo; y su estructura asociada (HU-08). Esta acción
+              Se eliminará la etapa &ldquo;{stage.title}&rdquo; y su estructura asociada. Esta acción
               no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -743,10 +766,16 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
     stageId: string,
     questions: TriviaQuestion[],
     executionOrder: number,
+    baseScore: number,
   ) => {
     const validationError = validateTriviaQuestions(questions);
     if (validationError) {
       toast.error(validationError);
+      return;
+    }
+    const scoreError = validateBaseScore(baseScore);
+    if (scoreError) {
+      toast.error(scoreError);
       return;
     }
 
@@ -762,12 +791,13 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       const { id } = await gameService.addTrivia(mission.id, stageId, {
         questions: toApiTriviaQuestions(questions),
         executionOrder,
+        baseScore,
       });
       const detail = await gameService.getTrivia(mission.id, id);
       appendGameToStage(stageId, toTriviaGameViewModel(detail, mission.id));
       setPendingGameType(null);
       setAddGameStageId(null);
-      toast.success("Trivia creada (HU-09).");
+      toast.success("Trivia creada.");
     } catch (error) {
       logGameApiProblem(error);
       toast.error(getGameApiErrorMessage(error));
@@ -783,11 +813,17 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       secretCode: string;
       destination: { latitude: number; longitude: number };
       executionOrder: number;
+      baseScore: number;
     },
   ) => {
     const validationError = validateTreasureHuntPayload(payload);
     if (validationError) {
       toast.error(validationError);
+      return;
+    }
+    const scoreError = validateBaseScore(payload.baseScore);
+    if (scoreError) {
+      toast.error(scoreError);
       return;
     }
 
@@ -805,7 +841,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       appendGameToStage(stageId, toTreasureHuntGameViewModel(detail, mission.id));
       setPendingGameType(null);
       setAddGameStageId(null);
-      toast.success("Búsqueda del tesoro creada (HU-13).");
+      toast.success("Búsqueda del tesoro creada.");
     } catch (error) {
       logGameApiProblem(error);
       toast.error(getGameApiErrorMessage(error));
@@ -821,6 +857,12 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
     const { game } = located;
     setSavingGameId(gameId);
     try {
+      const scoreError = validateBaseScore(game.baseScore ?? 0);
+      if (scoreError) {
+        toast.error(scoreError);
+        return;
+      }
+
       if (game.type === "Trivia") {
         const validationError = validateTriviaQuestions(game.questions ?? []);
         if (validationError) {
@@ -829,15 +871,17 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         }
         await gameService.updateTrivia(mission.id, gameId, {
           questions: toApiTriviaQuestions(game.questions ?? []),
+          baseScore: game.baseScore ?? 0,
         });
         const detail = await gameService.getTrivia(mission.id, gameId);
         handleNodeChange(gameId, toTriviaGameViewModel(detail, mission.id));
-        toast.success("Trivia actualizada (HU-11).");
+        toast.success("Trivia actualizada.");
       } else {
         const payload = {
           instructions: game.instructions ?? "",
           secretCode: game.secretCode ?? "",
           destination: game.destination ?? { latitude: 0, longitude: 0 },
+          baseScore: game.baseScore ?? 0,
         };
         const validationError = validateTreasureHuntPayload(payload);
         if (validationError) {
@@ -847,7 +891,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         await gameService.updateTreasureHunt(mission.id, gameId, payload);
         const detail = await gameService.getTreasureHunt(mission.id, gameId);
         handleNodeChange(gameId, toTreasureHuntGameViewModel(detail, mission.id));
-        toast.success("Búsqueda actualizada (HU-15).");
+        toast.success("Búsqueda actualizada.");
       }
     } catch (error) {
       logGameApiProblem(error);
@@ -880,7 +924,8 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
   };
 
   const addGameStage = addGameStageId ? nodes.find((n) => n.id === addGameStageId) : undefined;
-  const nextGameOrder = (addGameStage?.children?.length ?? 0) + 1;
+  const childOrders = addGameStage?.children?.map((c) => c.executionOrder) ?? [];
+  const nextGameOrder = childOrders.length === 0 ? 1 : Math.max(...childOrders) + 1;
 
   const addStageButton = (
     <Button
@@ -907,7 +952,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
             <StatusBadge status={mission.status} />
             {isStructureLocked && (
               <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 font-medium">
-                RN-01: Solo lectura
+                Solo lectura
               </span>
             )}
           </div>
@@ -943,7 +988,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       ) : stages.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 py-16 flex flex-col items-center gap-3">
           <Layers3Icon className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Aún no hay etapas (HU-06).</p>
+          <p className="text-sm text-muted-foreground">Aún no hay etapas.</p>
           <LockedAction locked={isStructureLocked} tooltip={structureLockTooltip}>
             <Button
               size="sm"
@@ -988,7 +1033,11 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         open={addStageOpen}
         onClose={() => setAddStageOpen(false)}
         onAdd={handleAddStage}
-        nextOrder={stages.length + 1}
+        nextOrder={
+          stages.length === 0
+            ? 1
+            : Math.max(...stages.map((s) => s.executionOrder)) + 1
+        }
         isSubmitting={isSubmittingStage}
       />
 

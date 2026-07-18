@@ -1,5 +1,4 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Application.Hints.Commands.AddHint;
 using MissionManagement.Application.Tests.Support;
@@ -18,23 +17,8 @@ public sealed class AddHintHandlerEdgeTests
         repo.Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>())).ReturnsAsync(mission);
 
         var handler = new AddHintHandler(repo.Object);
-        var act = () => handler.Handle(new AddHintCommand(mission.Id, Guid.NewGuid(), "H", null), CancellationToken.None);
+        var act = () => handler.Handle(new AddHintCommand(mission.Id, Guid.NewGuid(), "H", 10), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>().WithMessage("*nodo*");
-    }
-
-    [Fact]
-    public async Task Handle_WhenEmptyAttachment_ThrowsConflict()
-    {
-        var mission = MissionTestData.CreateMissionWithTriviaGame(out var node);
-        var repo = new Mock<IMissionRepository>();
-        repo.Setup(r => r.GetByIdForUpdateAsync(mission.Id, It.IsAny<CancellationToken>())).ReturnsAsync(mission);
-        var file = new Mock<IFormFile>();
-        file.SetupGet(f => f.Length).Returns(0);
-
-        var handler = new AddHintHandler(repo.Object);
-        var act = () => handler.Handle(new AddHintCommand(mission.Id, node.Id, "H", file.Object), CancellationToken.None);
-
-        await act.Should().ThrowAsync<ConflictException>().WithMessage("*vacío*");
     }
 }

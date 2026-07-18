@@ -31,7 +31,6 @@ export interface Hint {
   content: string;
   order: number;
   penaltyPoints: number;
-  attachmentUrl?: string;
 }
 
 export interface MissionNode {
@@ -106,6 +105,7 @@ export interface UpdateNodePayload {
 export interface AddTriviaNodePayload {
   questions: TriviaQuestion[];
   executionOrder: number;
+  baseScore: number;
 }
 
 export interface AddTreasureHuntPayload {
@@ -113,18 +113,13 @@ export interface AddTreasureHuntPayload {
   secretCode: string;
   destination: GpsCoordinate;
   executionOrder: number;
-}
-
-export interface AddHintPayload {
-  content: string;
-  attachment?: File;
+  baseScore: number;
 }
 
 export interface CreateOperatorPayload {
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
 }
 
 export interface AssignOperatorPayload {

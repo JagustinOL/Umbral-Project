@@ -10,6 +10,5 @@ public sealed record NodeValidationRule(
     Guid NodeId,
     int ExecutionOrder,
     NodeValidationType ValidationType,
-    string ExpectedValue
+    IReadOnlyList<string> ExpectedAnswers
 );
-

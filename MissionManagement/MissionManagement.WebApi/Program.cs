@@ -1,19 +1,27 @@
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using MissionManagement.Application.Common.Interfaces;
+using MissionManagement.Application.Hints;
 using MissionManagement.Application.Missions.Commands.CreateMission;
 using MissionManagement.Domain.Repositories;
-using MissionManagement.Infrastructure.External.Keycloak;
 using MissionManagement.Infrastructure.External.SessionManagement;
+using MissionManagement.Infrastructure.External.UserService;
 using MissionManagement.Infrastructure.Messaging;
 using MissionManagement.Infrastructure.Persistence;
 using MissionManagement.Infrastructure.Repositories;
-using MissionManagement.WebApi.Hosting;
+using MissionManagement.WebApi;
+using MissionManagement.WebApi.Auth;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceSerilog("MissionManagement");
 var frontendCorsPolicy = "FrontendDevPolicy";
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddServiceControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendCorsPolicy, policy =>
@@ -43,10 +51,11 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddUserServiceAuthentication(builder.Configuration);
+builder.Services.AddServiceCrossCutting(typeof(CreateMissionCommand));
+
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateMissionCommand).Assembly));
-
-builder.Services.AddScoped<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
 
 builder.Services.AddDbContext<MissionManagementDbContext>(options =>
 {
@@ -54,8 +63,20 @@ builder.Services.AddDbContext<MissionManagementDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+builder.Services.AddOptions<RabbitMqOptions>()
+    .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddScoped<IDomainEventPublisher, RabbitMqDomainEventPublisher>();
+
 builder.Services.AddScoped<IMissionRepository, MissionRepository>();
-builder.Services.AddScoped<IDomainEventPublisher, LoggingDomainEventPublisher>();
+builder.Services.AddScoped<MissionHintService>();
+builder.Services.AddScoped<IHintAccessService>(sp => new DraftOnlyHintProxy(
+    sp.GetRequiredService<MissionHintService>(),
+    sp.GetRequiredService<IMissionRepository>(),
+    sp.GetRequiredService<ICurrentUser>()));
 
 var sessionManagementBaseUrl = builder.Configuration["SessionManagement:BaseUrl"];
 if (string.IsNullOrWhiteSpace(sessionManagementBaseUrl))
@@ -66,33 +87,38 @@ builder.Services.AddHttpClient<ISessionValidationService, HttpSessionValidationS
     client.BaseAddress = new Uri(sessionManagementBaseUrl, UriKind.Absolute);
 });
 
-builder.Services.AddOptions<KeycloakOptions>()
-    .Bind(builder.Configuration.GetSection(KeycloakOptions.SectionName))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+var userServiceBaseUrl = builder.Configuration["UserService:BaseUrl"];
+if (string.IsNullOrWhiteSpace(userServiceBaseUrl))
+    throw new InvalidOperationException("No se encontró UserService:BaseUrl para validar operadores.");
 
-builder.Services.AddHttpClient<IIdentityService, KeycloakIdentityService>();
-builder.Services.AddHttpClient<IPlayerIdentityService, KeycloakPlayerIdentityService>();
-builder.Services.AddHttpClient<IAuthService, KeycloakAuthService>();
-builder.Services.AddHttpClient(nameof(KeycloakWebClientInitializer));
-builder.Services.AddHostedService<KeycloakBootstrapHostedService>();
+builder.Services.AddHttpClient<IOperatorValidationService, HttpOperatorValidationService>(client =>
+{
+    client.BaseAddress = new Uri(userServiceBaseUrl, UriKind.Absolute);
+});
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MissionManagementDbContext>();
-    dbContext.Database.EnsureCreated();
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("SELECT 1 FROM missions LIMIT 1");
+    }
+    catch (PostgresException ex) when (ex.SqlState == "42P01")
+    {
+        var databaseCreator = dbContext.GetService<IRelationalDatabaseCreator>();
+        databaseCreator.CreateTables();
+    }
 }
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 app.UseCors(frontendCorsPolicy);
 app.UseHttpsRedirection();
-app.UseMiddleware<MissionManagement.WebApi.Middleware.ExceptionHandlingMiddleware>();
+app.UseServiceCrossCutting();
 app.MapControllers();
+app.MapGet("/health", [AllowAnonymous] () => Results.Ok("MissionManagement Service is running"));
 
 app.Run();

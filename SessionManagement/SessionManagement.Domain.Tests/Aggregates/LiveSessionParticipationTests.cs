@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -20,11 +20,11 @@ public sealed class LiveSessionParticipationTests
         var rules = BuildRules();
 
         // Act
-        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", rules);
+        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", 0, rules);
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RB-03*");
+            .WithMessage("*debe estar Active*");
     }
 
     [Fact]
@@ -34,14 +34,14 @@ public sealed class LiveSessionParticipationTests
         var session = BuildSession(started: true);
         var rules = BuildRules();
 
-        session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", rules);
+        session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", 0, rules);
 
         // Act
-        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", rules);
+        var act = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", 0, rules);
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RN-04*");
+            .WithMessage("*ya está cerrada*");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class LiveSessionParticipationTests
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RN-11*");
+            .WithMessage("*Progresión secuencial*");
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class LiveSessionParticipationTests
         var rules = BuildRules();
 
         // Act
-        var triviaResult = session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", rules);
+        var triviaResult = session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Bogota", 0, rules);
         var treasureResult = session.SubmitTreasureHuntCode(TeamId, TreasureNodeId, "bad-code", rules);
 
         // Assert
@@ -101,8 +101,8 @@ public sealed class LiveSessionParticipationTests
 
     private static IReadOnlyList<NodeValidationRule> BuildRules() =>
     [
-        new NodeValidationRule(TriviaNodeId, 1, NodeValidationType.Trivia, "Bogota"),
-        new NodeValidationRule(TreasureNodeId, 2, NodeValidationType.TreasureHunt, "CODE-123")
+        new NodeValidationRule(TriviaNodeId, 1, NodeValidationType.Trivia, ["Bogota"]),
+        new NodeValidationRule(TreasureNodeId, 2, NodeValidationType.TreasureHunt, ["CODE-123"])
     ];
 }
 

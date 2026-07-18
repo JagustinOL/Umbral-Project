@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -56,12 +56,12 @@ public sealed class LiveSessionFullCoverageTests
             [new AllowedNode(NodeA, "Trivia", 10)], 1m);
         session.RegisterTeam(TeamId);
         var notActive = () => session.AcceptEvidence(TeamId, NodeA, "x");
-        notActive.Should().Throw<SessionDomainException>().WithMessage("*RB-03*");
+        notActive.Should().Throw<SessionDomainException>().WithMessage("*debe estar Active*");
 
         session.BeginPreparation();
         session.Start();
         var badNode = () => session.AcceptEvidence(TeamId, Guid.NewGuid(), "x");
-        badNode.Should().Throw<SessionDomainException>().WithMessage("*RB-05*");
+        badNode.Should().Throw<SessionDomainException>().WithMessage("*nodos permitidos*");
 
         var unregistered = () => session.AcceptEvidence(Guid.NewGuid(), NodeA, "x");
         unregistered.Should().Throw<SessionDomainException>();
@@ -87,7 +87,7 @@ public sealed class LiveSessionFullCoverageTests
         session.RegisterTeam(TeamId);
         session.BeginPreparation();
         session.Start();
-        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "ok") };
+        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]) };
 
         var unregistered = () => session.GetCurrentNodeForTeam(Guid.NewGuid(), rules);
         unregistered.Should().Throw<SessionDomainException>();
@@ -106,20 +106,21 @@ public sealed class LiveSessionFullCoverageTests
         session.Start();
         var rules = new[]
         {
-            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "Answer"),
-            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, "CODE")
+            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["Answer"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.TreasureHunt, ["CODE"])
         };
 
         var wrongOrder = () => session.SubmitTreasureHuntCode(TeamId, NodeB, "CODE", rules);
-        wrongOrder.Should().Throw<SessionDomainException>().WithMessage("*RN-11*");
+        wrongOrder.Should().Throw<SessionDomainException>().WithMessage("*Progresión secuencial*");
 
-        var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", rules);
+        var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", 0, rules);
         wrongAnswer.IsCorrect.Should().BeFalse();
         wrongAnswer.AwardedPoints.Should().Be(0);
+        wrongAnswer.NodeCompleted.Should().BeTrue();
+        wrongAnswer.NextNodeId.Should().Be(NodeB);
 
-        var correct = session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", rules);
-        correct.IsCorrect.Should().BeTrue();
-        correct.NextNodeId.Should().Be(NodeB);
+        var retry = () => session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", 0, rules);
+        retry.Should().Throw<SessionDomainException>().WithMessage("*ya está cerrada*");
     }
 
     [Fact]
@@ -132,12 +133,12 @@ public sealed class LiveSessionFullCoverageTests
         session.Start();
         var rules = new[]
         {
-            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, "ok"),
-            new NodeValidationRule(NodeB, 2, NodeValidationType.Trivia, "next")
+            new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]),
+            new NodeValidationRule(NodeB, 2, NodeValidationType.Trivia, ["next"])
         };
-        session.SubmitTriviaAnswer(TeamId, NodeA, "ok", rules);
-        var act = () => session.SubmitTriviaAnswer(TeamId, NodeA, "ok", rules);
-        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
+        var act = () => session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
+        act.Should().Throw<SessionDomainException>().WithMessage("*ya está cerrada*");
     }
 
     [Fact]
@@ -145,7 +146,8 @@ public sealed class LiveSessionFullCoverageTests
     {
         var session = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(),
             [new AllowedNode(NodeA, "Trivia", 10)], 1m);
-        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeA, 5);
+        var rules = new[] { new NodeValidationRule(NodeA, 1, NodeValidationType.Trivia, ["ok"]) };
+        var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeA, 5, rules);
         act.Should().Throw<SessionDomainException>();
     }
 

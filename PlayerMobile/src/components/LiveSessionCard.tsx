@@ -9,6 +9,7 @@ type LiveSessionCardProps = {
   teamIsLocked: boolean;
   teamCurrentSessionRef: string | null;
   loading?: boolean;
+  joinRequestSent?: boolean;
   onRequestJoin: () => void;
 };
 
@@ -17,6 +18,7 @@ export function LiveSessionCard({
   teamIsLocked,
   teamCurrentSessionRef,
   loading,
+  joinRequestSent,
   onRequestJoin,
 }: LiveSessionCardProps) {
   const blockReason = getSessionJoinBlockReason({
@@ -25,7 +27,12 @@ export function LiveSessionCard({
     teamCurrentSessionRef,
     targetSessionId: session.sessionId,
   });
-  const joinable = blockReason === null;
+  const joinable = blockReason === null && !joinRequestSent;
+  const buttonLabel = joinRequestSent
+    ? 'Solicitud enviada'
+    : joinable
+      ? 'Solicitar unirse'
+      : 'Unión no disponible';
 
   return (
     <View style={styles.card}>
@@ -34,11 +41,15 @@ export function LiveSessionCard({
       <Text style={styles.meta}>
         Code · {session.joinCode}
       </Text>
-      {blockReason ? (
+      {joinRequestSent ? (
+        <Text style={styles.blocked}>
+          Espera a que el operador apruebe la unión de tu equipo.
+        </Text>
+      ) : blockReason ? (
         <Text style={styles.blocked}>{blockReason}</Text>
       ) : null}
       <PrimaryButton
-        label={joinable ? 'Request session join' : 'Join not available'}
+        label={buttonLabel}
         variant={joinable ? 'primary' : 'ghost'}
         locked={!joinable}
         loading={loading}

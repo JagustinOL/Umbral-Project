@@ -1,0 +1,157 @@
+import { API_CONFIG, API_PATHS } from '../constants/api';
+import type {
+  RankingEntry,
+  SubmissionResult,
+  SubmittedEvidence,
+  TeamCurrentNodeContent,
+  TeamCurrentStage,
+  TeamFinalSummary,
+  TeamHint,
+  TeamMissionProgress,
+  TeamPenalty,
+} from '../types/gameplay';
+import { normalizeGuid } from '../utils/uuid';
+import { apiFormRequest, apiRequest } from './apiClient';
+
+const sessionBase = API_CONFIG.sessionManagementBaseUrl;
+const scoringBase = API_CONFIG.scoringAuditBaseUrl;
+
+export async function getTeamCurrentStage(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamCurrentStage> {
+  return apiRequest<TeamCurrentStage>(
+    API_PATHS.teamCurrentStage(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
+    { baseUrl: sessionBase },
+  );
+}
+
+export async function getTeamCurrentNodeContent(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamCurrentNodeContent> {
+  return apiRequest<TeamCurrentNodeContent>(
+    API_PATHS.teamCurrentNodeContent(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
+    { baseUrl: sessionBase },
+  );
+}
+
+export async function submitTriviaAnswer(input: {
+  sessionId: string;
+  teamId: string;
+  nodeId: string;
+  answer: string;
+  questionIndex: number;
+}): Promise<SubmissionResult> {
+  return apiRequest<SubmissionResult>(
+    API_PATHS.submitTrivia(input.sessionId, input.teamId),
+    {
+      method: 'POST',
+      baseUrl: sessionBase,
+      body: {
+        nodeId: normalizeGuid(input.nodeId),
+        answer: input.answer.trim(),
+        questionIndex: input.questionIndex,
+      },
+    },
+  );
+}
+
+export async function submitTreasureHuntCode(input: {
+  sessionId: string;
+  teamId: string;
+  nodeId: string;
+  foundCode: string;
+}): Promise<SubmissionResult> {
+  return apiRequest<SubmissionResult>(
+    API_PATHS.submitTreasure(input.sessionId, input.teamId),
+    {
+      method: 'POST',
+      baseUrl: sessionBase,
+      body: {
+        nodeId: normalizeGuid(input.nodeId),
+        foundCode: input.foundCode.trim(),
+      },
+    },
+  );
+}
+
+export async function submitEvidence(input: {
+  sessionId: string;
+  teamId: string;
+  nodeId: string;
+  content: string;
+}): Promise<SubmittedEvidence> {
+  const form = new FormData();
+  form.append('nodeId', normalizeGuid(input.nodeId));
+  form.append('content', input.content.trim());
+
+  return apiFormRequest<SubmittedEvidence>(
+    API_PATHS.submitEvidence(input.sessionId, input.teamId),
+    { baseUrl: sessionBase, formData: form },
+  );
+}
+
+export async function getTeamHints(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamHint[]> {
+  // Solo pistas liberadas por el operador (nunca el catálogo completo de la misión).
+  const hints = await apiRequest<TeamHint[]>(
+    API_PATHS.teamHints(sessionId, teamId),
+    { baseUrl: sessionBase },
+  );
+  return Array.isArray(hints) ? hints : [];
+}
+
+export async function getTeamPenalties(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamPenalty[]> {
+  const penalties = await apiRequest<TeamPenalty[]>(
+    API_PATHS.teamPenalties(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
+    { baseUrl: scoringBase },
+  );
+  return Array.isArray(penalties) ? penalties : [];
+}
+
+export async function getSessionRanking(
+  sessionId: string,
+): Promise<RankingEntry[]> {
+  return apiRequest<RankingEntry[]>(
+    API_PATHS.sessionRanking(sessionId),
+    { baseUrl: scoringBase },
+  );
+}
+
+export async function getTeamFinalSummary(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamFinalSummary> {
+  return apiRequest<TeamFinalSummary>(
+    API_PATHS.teamSummary(sessionId, teamId),
+    { baseUrl: sessionBase },
+  );
+}
+
+export async function getTeamMissionProgress(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamMissionProgress> {
+  return apiRequest<TeamMissionProgress>(
+    API_PATHS.teamMissionProgress(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
+    { baseUrl: sessionBase },
+  );
+}

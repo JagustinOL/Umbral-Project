@@ -1,15 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Hints.Commands.AddHint;
-using MissionManagement.Application.Hints.Commands.DeleteHint;
-using MissionManagement.Application.Hints.Commands.UpdateHint;
-using MissionManagement.Application.Hints.Queries.GetHintsByNode;
 using MissionManagement.WebApi.Contracts.Hints;
+using MissionManagement.WebApi.Contracts.Routes;
+using MissionManagement.WebApi.Mapping;
 
 namespace MissionManagement.WebApi.Controllers;
 
 [ApiController]
 [Route("api/v1/missions/{missionId:guid}/nodes/{nodeId:guid}/hints")]
+[Authorize(Roles = "admin,operator")]
 public sealed class HintsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -21,56 +21,43 @@ public sealed class HintsController : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> AddHint(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
-        [FromForm] AddHintRequest request,
+        [FromRoute] HintParentRoute route,
+        [FromBody] AddHintRequest body,
         CancellationToken cancellationToken)
     {
-        var hintId = await _mediator.Send(new AddHintCommand(
-            MissionId: missionId,
-            NodeId: nodeId,
-            Content: request.Content,
-            Attachment: request.Attachment), cancellationToken);
-
-        return CreatedAtAction(nameof(GetHintsByNode), new { missionId, nodeId }, new { id = hintId });
+        var hintId = await _mediator.Send(body.ToCommand(route), cancellationToken);
+        return CreatedAtAction(
+            nameof(GetHintsByNode),
+            new { missionId = route.MissionId, nodeId = route.NodeId },
+            new { id = hintId });
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetHintsByNode(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
+        [FromRoute] HintParentRoute route,
         CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new GetHintsByNodeQuery(missionId, nodeId), cancellationToken);
+        var result = await _mediator.Send(route.ToQuery(), cancellationToken);
         return Ok(result);
     }
 
     [HttpPut("{hintId:guid}")]
     public async Task<IActionResult> UpdateHint(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
-        [FromRoute] Guid hintId,
-        [FromBody] UpdateHintRequest request,
+        [FromRoute] HintRoute route,
+        [FromBody] UpdateHintRequest body,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new UpdateHintCommand(
-            MissionId: missionId,
-            NodeId: nodeId,
-            HintId: hintId,
-            Content: request.Content), cancellationToken);
-
+        await _mediator.Send(body.ToCommand(route), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{hintId:guid}")]
     public async Task<IActionResult> DeleteHint(
-        [FromRoute] Guid missionId,
-        [FromRoute] Guid nodeId,
-        [FromRoute] Guid hintId,
+        [FromRoute] HintRoute route,
         CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeleteHintCommand(missionId, nodeId, hintId), cancellationToken);
+        await _mediator.Send(route.ToCommand(), cancellationToken);
         return NoContent();
     }
 }
-

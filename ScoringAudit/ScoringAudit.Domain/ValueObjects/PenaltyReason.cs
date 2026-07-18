@@ -1,4 +1,5 @@
-using ScoringAudit.Domain.Exceptions;
+﻿using ScoringAudit.Domain.Exceptions;
+using System.Text.Json.Serialization;
 
 namespace ScoringAudit.Domain.ValueObjects;
 
@@ -21,22 +22,25 @@ public sealed record PenaltyReason
     /// Ej: "ManualOperator", "HintUsage", "TimeExpired".
     /// </summary>
     public PenaltyCategory Category { get; }
+    public Guid? AppliedByOperatorId { get; }
 
-    private PenaltyReason(string description, PenaltyCategory category)
+    [JsonConstructor]
+    private PenaltyReason(string description, PenaltyCategory category, Guid? appliedByOperatorId = null)
     {
         Description = description;
         Category = category;
+        AppliedByOperatorId = appliedByOperatorId;
     }
 
     /// <summary>
     /// Crea un PenaltyReason para una penalización manual del Operador.
     /// RB-06: el motivo es obligatorio — lanza excepción si está vacío.
     /// </summary>
-    public static PenaltyReason ForManualPenalty(string description)
+    public static PenaltyReason ForManualPenalty(string description, Guid? appliedByOperatorId = null)
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ScoringDomainException(
-                "El motivo de la penalización manual es obligatorio (RB-06). " +
+                "El motivo de la penalización manual es obligatorio. " +
                 "El Operador debe describir la razón antes de aplicar la penalización.");
 
         if (description.Trim().Length < 5)
@@ -44,7 +48,7 @@ public sealed record PenaltyReason
                 "El motivo de la penalización debe tener al menos 5 caracteres " +
                 "para garantizar una descripción significativa.");
 
-        return new PenaltyReason(description.Trim(), PenaltyCategory.ManualOperator);
+        return new PenaltyReason(description.Trim(), PenaltyCategory.ManualOperator, appliedByOperatorId);
     }
 
     /// <summary>Crea un PenaltyReason para el uso de una pista.</summary>

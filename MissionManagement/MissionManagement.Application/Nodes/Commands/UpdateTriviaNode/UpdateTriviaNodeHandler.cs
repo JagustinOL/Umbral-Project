@@ -19,7 +19,7 @@ public sealed class UpdateTriviaNodeHandler : IRequestHandler<UpdateTriviaNodeCo
         if (mission is null)
             throw new NotFoundException($"No se encontró la misión con Id={request.MissionId}.");
 
-        mission.UpdateTriviaNode(request.NodeId, request.Questions);
+        mission.UpdateTriviaNode(request.NodeId, request.Questions, request.BaseScore);
         await _repository.SaveAsync(mission, cancellationToken);
     }
 }

@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Aggregates;
@@ -34,7 +34,7 @@ public sealed class DisbandTeamHandler : IRequestHandler<DisbandTeamCommand>
             if (session?.Status is LiveSessionStatus.Active or LiveSessionStatus.Paused)
             {
                 throw new ConflictException(
-                    "No se puede disolver el equipo durante una sesión activa o pausada (RN-13).");
+                    "No se puede disolver el equipo durante una sesión activa o pausada.");
             }
         }
 

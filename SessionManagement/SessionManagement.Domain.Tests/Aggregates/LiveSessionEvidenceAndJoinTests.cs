@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
+using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
 using Xunit;
@@ -12,7 +13,7 @@ public sealed class LiveSessionEvidenceAndJoinTests
     private static readonly Guid NodeId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     [Fact]
-    public void JoinTeam_WhenJoinCodeMatches_RegistersTeam()
+    public void JoinTeam_WhenJoinCodeMatches_CreatesPendingRequest()
     {
         var session = LiveSession.CreateForMission(Guid.NewGuid(), Guid.NewGuid(),
             [new AllowedNode(NodeId, "Trivia", 10)], 1m);
@@ -20,7 +21,23 @@ public sealed class LiveSessionEvidenceAndJoinTests
 
         session.JoinTeam(newTeam, session.JoinCode);
 
+        session.RegisteredTeamIds.Should().NotContain(newTeam);
+        session.JoinRequests.Should().ContainSingle(x => x.TeamId == newTeam);
+    }
+
+    [Fact]
+    public void ApproveJoinRequest_WhenPending_RegistersTeam()
+    {
+        var operatorId = Guid.NewGuid();
+        var session = LiveSession.CreateForMission(Guid.NewGuid(), operatorId,
+            [new AllowedNode(NodeId, "Trivia", 10)], 1m);
+        var newTeam = Guid.NewGuid();
+        session.SubmitJoinRequest(newTeam, session.JoinCode);
+
+        session.ApproveJoinRequest(newTeam, operatorId);
+
         session.RegisteredTeamIds.Should().Contain(newTeam);
+        session.JoinRequests.Single(x => x.TeamId == newTeam).Status.Should().Be(JoinRequestStatus.Approved);
     }
 
     [Fact]

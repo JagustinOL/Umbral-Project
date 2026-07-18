@@ -1,10 +1,9 @@
 using FluentAssertions;
 using Moq;
-using SessionManagement.Application.Common.Interfaces;
+using SessionManagement.Application.Dtos;
 using SessionManagement.Application.Exceptions;
+using SessionManagement.Application.Facades;
 using SessionManagement.Application.OperatorSessions.Commands.CreateLiveSession;
-using SessionManagement.Application.Tests.Support;
-using SessionManagement.Domain.Repositories;
 using Xunit;
 
 namespace SessionManagement.Application.Tests.OperatorSessions.Commands.CreateLiveSession;
@@ -16,12 +15,11 @@ public sealed class CreateLiveSessionHandlerTests
     {
         var operatorId = Guid.NewGuid();
         var missionId = Guid.NewGuid();
-        var repo = new Mock<ILiveSessionRepository>();
-        var integration = new Mock<IMissionIntegrationService>();
-        integration.Setup(x => x.GetAssignedMissionsForOperatorAsync(operatorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<AssignedMissionData>());
+        var facade = new Mock<ISessionOperationFacade>();
+        facade.Setup(x => x.CreateSessionAsync(operatorId, missionId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("not found"));
 
-        var handler = new CreateLiveSessionHandler(repo.Object, integration.Object);
+        var handler = new CreateLiveSessionHandler(facade.Object);
         var act = () => handler.Handle(new CreateLiveSessionCommand(operatorId, missionId), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
@@ -32,40 +30,30 @@ public sealed class CreateLiveSessionHandlerTests
     {
         var operatorId = Guid.NewGuid();
         var missionId = Guid.NewGuid();
-        var repo = new Mock<ILiveSessionRepository>();
-        var integration = new Mock<IMissionIntegrationService>();
-        integration.Setup(x => x.GetAssignedMissionsForOperatorAsync(operatorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LiveSessionTestFactory.AssignedTo(operatorId, missionId));
-        integration.Setup(x => x.GetMissionStatusAsync(missionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Draft");
+        var facade = new Mock<ISessionOperationFacade>();
+        facade.Setup(x => x.CreateSessionAsync(operatorId, missionId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConflictException("conflict"));
 
-        var handler = new CreateLiveSessionHandler(repo.Object, integration.Object);
+        var handler = new CreateLiveSessionHandler(facade.Object);
         var act = () => handler.Handle(new CreateLiveSessionCommand(operatorId, missionId), CancellationToken.None);
 
         await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
-    public async Task Handle_WhenValid_CreatesSession()
+    public async Task Handle_WhenValid_DelegatesToFacade()
     {
         var operatorId = Guid.NewGuid();
         var missionId = Guid.NewGuid();
-        var repo = new Mock<ILiveSessionRepository>();
-        var integration = new Mock<IMissionIntegrationService>();
-        integration.Setup(x => x.GetAssignedMissionsForOperatorAsync(operatorId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LiveSessionTestFactory.AssignedTo(operatorId, missionId));
-        integration.Setup(x => x.GetMissionStatusAsync(missionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Active");
-        integration.Setup(x => x.GetNodeValidationDataAsync(missionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LiveSessionTestFactory.DefaultValidationData());
-        integration.Setup(x => x.GetMissionDifficultyMultiplierAsync(missionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1.5m);
+        var sessionId = Guid.NewGuid();
+        var facade = new Mock<ISessionOperationFacade>();
+        facade.Setup(x => x.CreateSessionAsync(operatorId, missionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreatedLiveSessionDto(sessionId, "ABC123"));
 
-        var handler = new CreateLiveSessionHandler(repo.Object, integration.Object);
+        var handler = new CreateLiveSessionHandler(facade.Object);
         var result = await handler.Handle(new CreateLiveSessionCommand(operatorId, missionId), CancellationToken.None);
 
-        result.SessionId.Should().NotBe(Guid.Empty);
-        result.JoinCode.Should().NotBeNullOrWhiteSpace();
-        repo.Verify(x => x.SaveAsync(It.IsAny<SessionManagement.Domain.Aggregates.LiveSession>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.SessionId.Should().Be(sessionId);
+        result.JoinCode.Should().Be("ABC123");
     }
 }

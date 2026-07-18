@@ -14,8 +14,9 @@ namespace SessionManagement.Domain.ValueObjects;
 public sealed record AllowedNode(
     Guid NodeId,
     string NodeType,
-    int BaseScore
+    int BaseScore,
+    string Title = ""
 )
 {
-    public AllowedNode() : this(Guid.Empty, string.Empty, 0) { }
+    public AllowedNode() : this(Guid.Empty, string.Empty, 0, string.Empty) { }
 }

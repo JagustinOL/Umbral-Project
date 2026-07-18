@@ -8,6 +8,7 @@ import {
   XIcon,
   Loader2Icon,
   AlertTriangleIcon,
+  MailIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,12 +55,14 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "./StatusBadge";
 import { Operator, Mission, CreateOperatorPayload } from "@/lib/types";
+import { CreateOperatorResponse } from "@/lib/types/api";
 import { cn } from "@/lib/utils";
 
 interface OperatorManagementProps {
   operators: Operator[];
   missions: Mission[];
-  onCreateOperator: (payload: CreateOperatorPayload) => Promise<void>;
+  onCreateOperator: (payload: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
+  onResendActivation: (operatorId: string) => Promise<CreateOperatorResponse>;
   onDeactivateOperator: (operatorId: string) => Promise<void>;
   onAssignOperator: (missionId: string, operatorId: string) => Promise<void>;
   onRevokeOperator: (missionId: string, operatorId: string) => Promise<void>;
@@ -79,25 +82,25 @@ interface OperatorManagementProps {
 interface CreateOperatorModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateOperatorPayload) => Promise<void>;
+  onSubmit: (data: CreateOperatorPayload) => Promise<CreateOperatorResponse>;
   isSubmitting: boolean;
+  onCreated: (result: CreateOperatorResponse) => void;
 }
 
-function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOperatorModalProps) {
+function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting, onCreated }: CreateOperatorModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await onSubmit({ firstName, lastName, email, password });
+      const result = await onSubmit({ firstName, lastName, email });
       setFirstName("");
       setLastName("");
       setEmail("");
-      setPassword("");
       onClose();
+      onCreated(result);
     } catch {
       // Error is handled at page-level and rendered as alert.
     }
@@ -109,7 +112,8 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Create Operator Account</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Create an operator user in Keycloak and assign the operator role.
+            Create a pending operator account. The activation code is sent only to their email — you will not see it.
+            If the email already belongs to an inactive operator, a new code is sent so they can activate again.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -127,22 +131,8 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
             <Label htmlFor="op-email">Email <span className="text-destructive">*</span></Label>
             <Input id="op-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@umbral.ops" required />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="op-password">
-              Password <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="op-password"
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 8 characters"
-              required
-            />
-          </div>
           <p className="text-xs text-muted-foreground">
-            A Keycloak account will be created and the <strong>operator</strong> role assigned automatically.
+            The account is created inactive in Keycloak. The operator activates it with the one-time code received by email.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
@@ -151,6 +141,35 @@ function CreateOperatorModal({ open, onClose, onSubmit, isSubmitting }: CreateOp
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ActivationEmailDialogProps {
+  open: boolean;
+  email: string | null;
+  emailSent: boolean;
+  onClose: () => void;
+}
+
+function ActivationEmailDialog({ open, email, emailSent, onClose }: ActivationEmailDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold">
+            {emailSent ? "Activation email sent" : "Operator created"}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            {emailSent
+              ? `The activation code was sent to ${email}. The operator must open Activate account on the login screen.`
+              : `The operator account was created for ${email}, but the email could not be sent. Use Resend activation from the list.`}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" onClick={onClose}>Done</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -250,7 +269,7 @@ function AssignOperatorSheet({
               {/* Assigned operators */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Asignados ({assignedOperators.length}) — HU-24
+                  Asignados ({assignedOperators.length})
                 </p>
                 {assignedOperators.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">No operators assigned.</p>
@@ -278,7 +297,7 @@ function AssignOperatorSheet({
                           className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
                           disabled={isBusy}
                           onClick={() => void onRevoke(selectedMissionId, op.id)}
-                          title="Revocar operador (HU-25 / RN-16)"
+                          title="Revocar operador"
                         >
                           {isRevoking ? (
                             <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
@@ -351,6 +370,7 @@ export function OperatorManagement({
   operators,
   missions,
   onCreateOperator,
+  onResendActivation,
   onDeactivateOperator,
   onAssignOperator,
   onRevokeOperator,
@@ -367,9 +387,24 @@ export function OperatorManagement({
   const [createOpen, setCreateOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Operator | null>(null);
+  const [activationNotice, setActivationNotice] = useState<{
+    email: string;
+    emailSent: boolean;
+  } | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
-  const handleCreate = async (data: CreateOperatorPayload) => {
-    await onCreateOperator(data);
+  const handleCreate = async (data: CreateOperatorPayload) => onCreateOperator(data);
+
+  const handleResend = async (operatorId: string) => {
+    setResendingId(operatorId);
+    try {
+      const result = await onResendActivation(operatorId);
+      setActivationNotice({ email: result.email, emailSent: result.activationEmailSent });
+    } catch {
+      // Error is handled at page-level and rendered as alert.
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const handleDeactivate = async () => {
@@ -395,7 +430,7 @@ export function OperatorManagement({
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAssignOpen(true)}>
             <ShieldIcon className="h-4 w-4" />
-            Asignar a misión
+            Asignar/Revocar misión
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4" />
@@ -502,7 +537,20 @@ export function OperatorManagement({
                           Deactivate
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic">Inactive</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => void handleResend(op.id)}
+                          disabled={resendingId === op.id}
+                        >
+                          {resendingId === op.id ? (
+                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <MailIcon className="h-3.5 w-3.5" />
+                          )}
+                          Resend activation
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -518,6 +566,16 @@ export function OperatorManagement({
         onClose={() => setCreateOpen(false)}
         onSubmit={handleCreate}
         isSubmitting={isCreating}
+        onCreated={(result) =>
+          setActivationNotice({ email: result.email, emailSent: result.activationEmailSent })
+        }
+      />
+
+      <ActivationEmailDialog
+        open={!!activationNotice}
+        email={activationNotice?.email ?? null}
+        emailSent={activationNotice?.emailSent ?? false}
+        onClose={() => setActivationNotice(null)}
       />
 
       <AssignOperatorSheet
@@ -542,7 +600,7 @@ export function OperatorManagement({
             <AlertDialogTitle>Deactivate Operator</AlertDialogTitle>
             <AlertDialogDescription>
               This will globally deactivate <strong>{deactivateTarget?.firstName} {deactivateTarget?.lastName}</strong> in Keycloak.
-              Per <strong>RN-26</strong>, this action is blocked if the operator has any active sessions in the system.
+              This action is blocked if the operator has any active sessions in the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,9 +1,10 @@
-import { Operator } from "@/lib/types";
-import { ApiError, apiRequest } from "@/lib/api/client";
+import { CreateOperatorPayload, Operator } from "@/lib/types";
+import { ApiError, userApiRequest } from "@/lib/api/client";
 import {
   CreateOperatorRequest,
   CreateOperatorResponse,
   OperatorDto,
+  ResendOperatorActivationResponse,
 } from "@/lib/types/api";
 
 export function toOperatorViewModel(dto: OperatorDto): Operator {
@@ -19,30 +20,31 @@ export function toOperatorViewModel(dto: OperatorDto): Operator {
 
 export const operatorService = {
   async getOperators(signal?: AbortSignal): Promise<OperatorDto[]> {
-    return apiRequest<OperatorDto[]>("/operators", { signal });
+    return userApiRequest<OperatorDto[]>("/operators", { signal });
   },
 
-  async createOperator(payload: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }): Promise<CreateOperatorResponse> {
+  async createOperator(payload: CreateOperatorPayload): Promise<CreateOperatorResponse> {
     const request: CreateOperatorRequest = {
       firstName: payload.firstName,
       lastName: payload.lastName,
       email: payload.email,
-      password: payload.password,
     };
 
-    return apiRequest<CreateOperatorResponse>("/operators", {
+    return userApiRequest<CreateOperatorResponse>("/operators", {
       method: "POST",
       body: request,
     });
   },
 
+  async resendActivation(operatorId: string): Promise<ResendOperatorActivationResponse> {
+    return userApiRequest<ResendOperatorActivationResponse>(
+      `/operators/${operatorId}/resend-activation`,
+      { method: "POST" },
+    );
+  },
+
   async deactivateOperator(operatorId: string): Promise<void> {
-    await apiRequest<void>(`/operators/${operatorId}/deactivate`, {
+    await userApiRequest<void>(`/operators/${operatorId}/deactivate`, {
       method: "PUT",
     });
   },
@@ -58,7 +60,7 @@ export function getOperatorApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 400) {
-    return "Operator payload failed validation. Verify the form fields and password policy.";
+    return error.message || "Operator request failed validation. Refresh the list and try again.";
   }
 
   if (error.status === 404) {

@@ -1,9 +1,6 @@
 import { Hint } from "@/lib/types";
-import { ApiError, apiFormRequest, apiRequest } from "@/lib/api/client";
+import { ApiError, apiRequest } from "@/lib/api/client";
 import { AddHintResponse, HintDto, UpdateHintCommand } from "@/lib/types/api";
-
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-const ALLOWED_ATTACHMENT_TYPES = new Set(["image/jpeg", "image/png"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -29,21 +26,10 @@ export function validateHintContent(content: string): string | null {
   return null;
 }
 
-export function validateHintAttachment(file: File | null): string | null {
-  if (!file) return null;
-
-  if (file.size <= 0) {
-    return "El archivo adjunto está vacío.";
+export function validateHintPenaltyPoints(penaltyPoints: number): string | null {
+  if (!Number.isFinite(penaltyPoints) || !Number.isInteger(penaltyPoints) || penaltyPoints < 0) {
+    return "La penalización de la pista debe ser un entero mayor o igual a cero.";
   }
-
-  if (file.size > MAX_ATTACHMENT_BYTES) {
-    return "El archivo adjunto supera el tamaño máximo de 5 MB.";
-  }
-
-  if (!ALLOWED_ATTACHMENT_TYPES.has(file.type)) {
-    return "Formato no válido. Solo se permiten imágenes JPG o PNG.";
-  }
-
   return null;
 }
 
@@ -60,15 +46,12 @@ export const hintService = {
     missionId: string,
     nodeId: string,
     content: string,
-    attachment?: File | null,
+    penaltyPoints: number,
   ): Promise<AddHintResponse> {
-    const formData = new FormData();
-    formData.append("content", content);
-    if (attachment) {
-      formData.append("attachment", attachment);
-    }
-
-    return apiFormRequest<AddHintResponse>(`/missions/${missionId}/nodes/${nodeId}/hints`, formData);
+    return apiRequest<AddHintResponse>(`/missions/${missionId}/nodes/${nodeId}/hints`, {
+      method: "POST",
+      body: { content, penaltyPoints },
+    });
   },
 
   async updateHint(
@@ -113,7 +96,7 @@ export function getHintApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 409) {
-    return "Operación bloqueada por RN-01 o reglas de adjuntos (tamaño/formato).";
+    return "Operación bloqueada: la misión no se puede modificar en su estado actual.";
   }
 
   if (error.status === 400) {

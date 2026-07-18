@@ -7,6 +7,6 @@ public sealed record AddTriviaNodeCommand(
     Guid MissionId,
     Guid ParentNodeId,
     List<TriviaQuestion> Questions,
-    int ExecutionOrder
+    int ExecutionOrder,
+    int BaseScore
 ) : IRequest<Guid>;
-

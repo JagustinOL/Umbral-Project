@@ -2,8 +2,18 @@
   "info": {
     "_postman_id": "b1058018-ddd9-4a98-a22e-a8d083f32ffd",
     "name": "UMBRAL API",
-    "description": "## Variables de colección\nTras cada POST/PUT de creación, los scripts **Tests** guardan automáticamente `missionId`, `stageId`, `parentNodeId`, `nodeId`, `operatorId`, `playerId`, `teamId`, `sessionId`, `joinCode`, `teamCode`, `requestId`, `hintId`, etc.\n\n**URLs (Docker):** `{{missionManagementUrl}}` (5260) y `{{sessionManagementUrl}}` (5278).\nSi ejecutas con `dotnet run`: usa 5117 y 5240 en esas variables.\n\n**Flujo rápido:** carpeta «Flujo E2E» → Run collection (orden secuencial).\n\nEdita solo emails/contraseñas en los bodies de creación si hace falta.",
+    "description": "## Variables de colección\nTras cada POST/PUT de creación, los scripts **Tests** guardan automáticamente `missionId`, `stageId`, `parentNodeId`, `nodeId`, `operatorId`, `operatorSetupCode`, `playerId`, `teamId`, `sessionId`, `joinCode`, `teamCode`, `requestId`, `hintId`, `accessToken`, etc.\n\n**URLs (Docker):** `{{missionManagementUrl}}` (5260), `{{sessionManagementUrl}}` (5278), `{{scoringAuditUrl}}` (5290).\nSi ejecutas con `dotnet run`: ajusta puertos en las variables.\n\n**Autenticación:** La colección usa Bearer `{{accessToken}}`. Ejecuta primero **Autenticación → Login Admin** (o el paso `00 Login Admin` del flujo E2E). Credenciales por defecto: `admin@umbral.com` / `Admin123!`. También hay **Login Operador** (`ana@umbral.com`) y **Login Jugador** (`luis@umbral.com`) tras crear/activar esas cuentas.\n\n**Operadores (HU-22):** `POST /operators` ya no recibe contraseña; la respuesta incluye `setupCode` (una sola vez). Activa la cuenta con **Activar Operador** (`POST /auth/operator/setup-password`) antes del login del operador.\n\n**Registro jugador:** `POST /players` es anónimo; los requests «Crear Jugador» usan `noauth`.\n\n**Flujo rápido:** carpeta «Flujo E2E» → Run collection (orden secuencial).\n\n**Pistas HU-17:** `POST …/hints` con JSON `{ \"content\": \"...\" }` (sin multipart).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
   },
   "event": [
     {
@@ -122,16 +132,284 @@
       "key": "lastCreatedId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorSetupCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorPassword",
+      "value": "SecurePass1",
+      "type": "string"
+    },
+    {
+      "key": "playerPassword",
+      "value": "SecurePass1",
+      "type": "string"
+    },
+    {
+      "key": "scoringAuditUrl",
+      "value": "http://localhost:5290",
+      "type": "string"
+    },
+    {
+      "key": "scoringAuditPort",
+      "value": "5290",
+      "type": "string"
     }
   ],
   "item": [
+    {
+      "name": "Autenticación",
+      "description": "Obtener JWT antes del resto de carpetas. El token se guarda en `accessToken` y la colección lo envía como Bearer. Usa Login Operador/Jugador para probar flujos con esos roles.",
+      "item": [
+        {
+          "name": "Login Admin",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/token",
+              "host": [
+                "{{missionManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin@umbral.com\",\n  \"password\": \"Admin123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "    if (body.userId) pm.collectionVariables.set('adminUserId', body.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activar Operador",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/operator/setup-password",
+              "host": [
+                "{{missionManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "operator",
+                "setup-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana@umbral.com\",\n  \"setupCode\": \"{{operatorSetupCode}}\",\n  \"password\": \"{{operatorPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Operador",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/token",
+              "host": [
+                "{{missionManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"ana@umbral.com\",\n  \"password\": \"{{operatorPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "    if (body.userId) pm.collectionVariables.set('operatorId', body.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Jugador",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/token",
+              "host": [
+                "{{missionManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"luis@umbral.com\",\n  \"password\": \"{{playerPassword}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "    if (body.userId) pm.collectionVariables.set('playerId', body.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Flujo E2E (Run Collection)",
       "description": "Ejecuta esta carpeta con Collection Runner. Las variables se rellenan solas entre pasos.",
       "item": [
         {
+          "name": "00 Login Admin",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/token",
+              "host": [
+                "{{missionManagementUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin@umbral.com\",\n  \"password\": \"Admin123!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.accessToken) pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "01 Crear Jugador",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
@@ -154,7 +432,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+              "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"{{playerPassword}}\"\n}"
             }
           },
           "event": [
@@ -201,7 +479,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+              "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\"\n}"
             }
           },
           "event": [
@@ -213,11 +491,46 @@
                   "if (pm.response.code === 201) {",
                   "    const body = pm.response.json();",
                   "    if (body.id) pm.collectionVariables.set('operatorId', body.id);",
+                  "    if (body.setupCode) pm.collectionVariables.set('operatorSetupCode', body.setupCode);",
                   "}"
                 ]
               }
             }
           ]
+        },
+        {
+          "name": "02b Activar Operador",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/auth/operator/setup-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "operator",
+                "setup-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana@umbral.com\",\n  \"setupCode\": \"{{operatorSetupCode}}\",\n  \"password\": \"{{operatorPassword}}\"\n}"
+            }
+          }
         },
         {
           "name": "03 Crear Misión",
@@ -579,6 +892,55 @@
       "name": "MissionManagement",
       "description": "",
       "item": [
+        {
+          "name": "Administradores",
+          "description": "Requiere JWT con rol admin (Login Admin).",
+          "item": [
+            {
+              "name": "Crear Administrador",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/admins",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "admins"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Otro\",\n  \"lastName\": \"Admin\",\n  \"email\": \"otro.admin@umbral.com\",\n  \"password\": \"Admin123!\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const body = pm.response.json();",
+                      "    if (body.id) pm.collectionVariables.set('lastCreatedId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
         {
           "name": "Épica 1 — Misiones y Etapas",
           "description": "",
@@ -1174,7 +1536,12 @@
               "name": "Crear Pista (HU-17)",
               "request": {
                 "method": "POST",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "url": {
                   "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/nodes/{{nodeId}}/hints",
                   "protocol": "http",
@@ -1193,20 +1560,8 @@
                   ]
                 },
                 "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "content",
-                      "value": "Contenido de la pista",
-                      "type": "text"
-                    },
-                    {
-                      "key": "attachment",
-                      "type": "file",
-                      "src": [],
-                      "disabled": true
-                    }
-                  ]
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Contenido de la pista\"\n}"
                 }
               },
               "event": [
@@ -1338,7 +1693,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+                  "raw": "{\n  \"firstName\": \"Ana\",\n  \"lastName\": \"Operador\",\n  \"email\": \"ana@umbral.com\"\n}"
                 }
               },
               "event": [
@@ -1350,11 +1705,46 @@
                       "if (pm.response.code === 201) {",
                       "    const body = pm.response.json();",
                       "    if (body.id) pm.collectionVariables.set('operatorId', body.id);",
+                      "    if (body.setupCode) pm.collectionVariables.set('operatorSetupCode', body.setupCode);",
                       "}"
                     ]
                   }
                 }
               ]
+            },
+            {
+              "name": "Activar Operador (setup-password)",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{missionManagementUrl}}/api/v1/auth/operator/setup-password",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{missionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "operator",
+                    "setup-password"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"ana@umbral.com\",\n  \"setupCode\": \"{{operatorSetupCode}}\",\n  \"password\": \"{{operatorPassword}}\"\n}"
+                }
+              }
             },
             {
               "name": "Consultar Operadores (HU-23)",
@@ -1461,6 +1851,9 @@
             {
               "name": "Crear Jugador",
               "request": {
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
                   {
@@ -1483,7 +1876,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"SecurePass1\"\n}"
+                  "raw": "{\n  \"firstName\": \"Luis\",\n  \"lastName\": \"Jugador\",\n  \"email\": \"luis@umbral.com\",\n  \"password\": \"{{playerPassword}}\"\n}"
                 }
               },
               "event": [
@@ -1692,6 +2085,28 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Membresía de equipo del jugador",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/players/{{playerId}}/team-membership",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "players",
+                    "{{playerId}}",
+                    "team-membership"
+                  ]
+                }
+              }
             },
             {
               "name": "Modificar Equipo (HU-33)",
@@ -2062,6 +2477,32 @@
                   "raw": "{\n  \"nodeId\": \"{{nodeId}}\",\n  \"answer\": \"Caracas\"\n}"
                 }
               }
+            },
+            {
+              "name": "Pistas liberadas al equipo",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/live-sessions/{{sessionId}}/teams/{{teamId}}/nodes/{{nodeId}}/hints",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "live-sessions",
+                    "{{sessionId}}",
+                    "teams",
+                    "{{teamId}}",
+                    "nodes",
+                    "{{nodeId}}",
+                    "hints"
+                  ]
+                }
+              }
             }
           ]
         },
@@ -2094,6 +2535,9 @@
             {
               "name": "Validar Sesiones Abiertas por Misión",
               "request": {
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
@@ -2154,6 +2598,46 @@
                       "    const body = pm.response.json();",
                       "    if (body.sessionId) pm.collectionVariables.set('sessionId', body.sessionId);",
                       "    if (body.joinCode) pm.collectionVariables.set('joinCode', body.joinCode);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Consultar Sesiones Abiertas del Operador",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/operators/{{operatorId}}/sessions/open",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "{{sessionManagementPort}}",
+                  "path": [
+                    "api",
+                    "v1",
+                    "operators",
+                    "{{operatorId}}",
+                    "sessions",
+                    "open"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const body = pm.response.json();",
+                      "    if (Array.isArray(body) && body.length > 0) {",
+                      "        if (body[0].sessionId) pm.collectionVariables.set('sessionId', body[0].sessionId);",
+                      "        if (body[0].joinCode) pm.collectionVariables.set('joinCode', body[0].joinCode);",
+                      "    }",
                       "}"
                     ]
                   }
@@ -2255,6 +2739,104 @@
                   ]
                 }
               }
+            },
+            {
+              "name": "Listar solicitudes de unión (HU-49)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/join-requests",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "join-requests"]
+                }
+              }
+            },
+            {
+              "name": "Aprobar solicitud de unión",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"decision\": \"Approve\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/join-requests/{{teamId}}/decision",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "join-requests", "{{teamId}}", "decision"]
+                }
+              }
+            },
+            {
+              "name": "Liberar pista manual (HU-54)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hintId\": \"{{hintId}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/hints/release",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "hints", "release"]
+                }
+              }
+            },
+            {
+              "name": "Aplicar penalización manual (HU-55)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"points\": 50,\n  \"reason\": \"Incumplimiento de reglas\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/penalties",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "penalties"]
+                }
+              }
+            },
+            {
+              "name": "Enviar mensaje de soporte (HU-56)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"message\": \"Sigan buscando el código en el salón A\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/teams/{{teamId}}/messages",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "teams", "{{teamId}}", "messages"]
+                }
+              }
+            },
+            {
+              "name": "Pausar/Reanudar sesión (HU-62)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Pausa operativa\"\n}"
+                },
+                "url": {
+                  "raw": "{{sessionManagementUrl}}/api/v1/sessions/{{sessionId}}/pause",
+                  "host": ["localhost"],
+                  "port": "{{sessionManagementPort}}",
+                  "path": ["api", "v1", "sessions", "{{sessionId}}", "pause"]
+                }
+              }
             }
           ]
         }
@@ -2262,11 +2844,14 @@
     },
     {
       "name": "Integración (solo en código)",
-      "description": "",
+      "description": "Endpoints de validación entre microservicios y consultas anónimas de integración.",
       "item": [
         {
           "name": "Node Validations (integración)",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -2287,8 +2872,37 @@
           }
         },
         {
+          "name": "Misión tiene sesiones abiertas (MM)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{missionManagementUrl}}/api/v1/missions/{{missionId}}/session-validation/has-open",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{missionManagementPort}}",
+              "path": [
+                "api",
+                "v1",
+                "missions",
+                "{{missionId}}",
+                "session-validation",
+                "has-open"
+              ]
+            }
+          }
+        },
+        {
           "name": "Operador tiene sesiones activas",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -2312,6 +2926,9 @@
         {
           "name": "Operador supervisa misión",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -2330,6 +2947,108 @@
                 "{{missionId}}",
                 "session-validation",
                 "is-supervising"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ScoringAudit",
+      "description": "Requiere JWT admin u operator. Ejecutar tras registrar equipos y procesar evidencias en sesión activa.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ranking de sesión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/api/v1/sessions/{{sessionId}}/ranking",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "api",
+                "v1",
+                "sessions",
+                "{{sessionId}}",
+                "ranking"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Historial de sesiones (HU-64)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/api/v1/audit/sessions?page=1&pageSize=25",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "api",
+                "v1",
+                "audit",
+                "sessions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "25"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detalle auditoría de sesión (HU-65)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{scoringAuditUrl}}/api/v1/audit/sessions/{{sessionId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "{{scoringAuditPort}}",
+              "path": [
+                "api",
+                "v1",
+                "audit",
+                "sessions",
+                "{{sessionId}}"
               ]
             }
           }

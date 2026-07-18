@@ -17,5 +17,15 @@ public interface IMissionIntegrationService
     Task<string?> GetMissionStatusAsync(
         Guid missionId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MissionHintData>> GetHintsForNodeAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default);
+
+    Task<PlayerNodeContentData> GetNodePlayerContentAsync(
+        Guid missionId,
+        Guid nodeId,
+        CancellationToken cancellationToken = default);
 }
 

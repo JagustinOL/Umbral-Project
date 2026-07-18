@@ -38,12 +38,8 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const session = await login(email, password);
-      if (session.teamId) {
-        router.replace('/(main)/team-dashboard');
-      } else {
-        router.replace('/(main)/no-team');
-      }
+      await login(email, password);
+      router.replace('/(main)/(tabs)/team');
     } catch (error) {
       Alert.alert(
         'Login failed',

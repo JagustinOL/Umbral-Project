@@ -37,10 +37,10 @@ public sealed class GetTeamCurrentStageHandlerTests
         var session = LiveSessionTestFactory.BuildActiveSession();
         IReadOnlyList<NodeValidationRule> rules =
         [
-            new NodeValidationRule(LiveSessionTestFactory.TriviaNodeId, 1, NodeValidationType.Trivia, "Bogota"),
-            new NodeValidationRule(LiveSessionTestFactory.TreasureNodeId, 2, NodeValidationType.TreasureHunt, "CODE-123")
+            new NodeValidationRule(LiveSessionTestFactory.TriviaNodeId, 1, NodeValidationType.Trivia, ["Bogota"]),
+            new NodeValidationRule(LiveSessionTestFactory.TreasureNodeId, 2, NodeValidationType.TreasureHunt, ["CODE-123"])
         ];
-        session.SubmitTriviaAnswer(LiveSessionTestFactory.DefaultTeamId, LiveSessionTestFactory.TriviaNodeId, "Bogota", rules);
+        session.SubmitTriviaAnswer(LiveSessionTestFactory.DefaultTeamId, LiveSessionTestFactory.TriviaNodeId, "Bogota", 0, rules);
         session.SubmitTreasureHuntCode(LiveSessionTestFactory.DefaultTeamId, LiveSessionTestFactory.TreasureNodeId, "CODE-123", rules);
 
         var repo = new Mock<ILiveSessionRepository>();

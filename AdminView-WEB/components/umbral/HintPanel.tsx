@@ -5,8 +5,8 @@ import { LightbulbIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lu
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -31,8 +31,8 @@ import {
   logHintApiProblem,
   sortHintsByOrder,
   toHintViewModel,
-  validateHintAttachment,
   validateHintContent,
+  validateHintPenaltyPoints,
 } from "@/lib/services/hintService";
 import { getStructureLockTooltip } from "@/lib/services/nodeService";
 import type { MissionStatus } from "@/lib/types/api";
@@ -68,7 +68,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
   const [isInitialLoading, setIsInitialLoading] = useState(() => (node.hints ?? []).length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newContent, setNewContent] = useState("");
-  const [newAttachment, setNewAttachment] = useState<File | null>(null);
+  const [newPenaltyPoints, setNewPenaltyPoints] = useState(10);
   const [editingHintId, setEditingHintId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Hint | null>(null);
@@ -126,20 +126,19 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       toast.error(contentError);
       return;
     }
-
-    const attachmentError = validateHintAttachment(newAttachment);
-    if (attachmentError) {
-      toast.error(attachmentError);
+    const penaltyError = validateHintPenaltyPoints(newPenaltyPoints);
+    if (penaltyError) {
+      toast.error(penaltyError);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await hintService.addHint(missionId, nodeId, newContent.trim(), newAttachment);
+      await hintService.addHint(missionId, nodeId, newContent.trim(), newPenaltyPoints);
       setNewContent("");
-      setNewAttachment(null);
+      setNewPenaltyPoints(10);
       await loadHints(undefined, { silent: true });
-      toast.success("Pista creada (HU-17).");
+      toast.success("Pista creada.");
     } catch (error) {
       logHintApiProblem(error);
       toast.error(getHintApiErrorMessage(error));
@@ -168,7 +167,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       setEditingHintId(null);
       setEditContent("");
       await loadHints(undefined, { silent: true });
-      toast.success("Pista actualizada (HU-19).");
+      toast.success("Pista actualizada.");
     } catch (error) {
       logHintApiProblem(error);
       toast.error(getHintApiErrorMessage(error));
@@ -185,7 +184,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       await hintService.deleteHint(missionId, nodeId, deleteTarget.id);
       setDeleteTarget(null);
       await loadHints(undefined, { silent: true });
-      toast.success("Pista eliminada (HU-20).");
+      toast.success("Pista eliminada.");
     } catch (error) {
       logHintApiProblem(error);
       toast.error(getHintApiErrorMessage(error));
@@ -198,7 +197,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
     <div className="mt-3 space-y-2">
       <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
         <LightbulbIcon className="h-3.5 w-3.5" />
-        Pistas ({hints.length}) — orden de liberación (HU-21)
+        Pistas ({hints.length}) — orden de liberación
         {isSubmitting && <Loader2Icon className="h-3 w-3 animate-spin" />}
       </p>
 
@@ -210,7 +209,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
       ) : (
         <div className="space-y-1.5">
           {hints.length === 0 && (
-            <p className="text-xs text-muted-foreground italic py-1">Sin pistas configuradas (HU-18).</p>
+            <p className="text-xs text-muted-foreground italic py-1">Sin pistas configuradas.</p>
           )}
           {hints.map((hint) => (
             <div
@@ -238,7 +237,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
                       disabled={isSubmitting}
                       onClick={() => void handleSaveEdit(hint.id)}
                     >
-                      {isSubmitting ? "Guardando…" : "Guardar (HU-19)"}
+                      {isSubmitting ? "Guardando…" : "Guardar"}
                     </Button>
                     <Button
                       size="sm"
@@ -297,20 +296,18 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
             disabled={isSubmitting}
           />
           <div className="space-y-1">
-            <Label htmlFor={`hint-file-${nodeId}`} className="text-xs text-muted-foreground">
-              Adjunto opcional (JPG/PNG, máx. 5 MB)
+            <Label htmlFor={`hint-penalty-${nodeId}`} className="text-xs">
+              Penalización (pts)
             </Label>
             <Input
-              id={`hint-file-${nodeId}`}
-              type="file"
-              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-              className="text-xs h-8"
+              id={`hint-penalty-${nodeId}`}
+              type="number"
+              min={0}
+              className="h-8 text-xs max-w-[8rem]"
+              value={newPenaltyPoints}
               disabled={isSubmitting}
-              onChange={(e) => setNewAttachment(e.target.files?.[0] ?? null)}
+              onChange={(e) => setNewPenaltyPoints(parseInt(e.target.value, 10) || 0)}
             />
-            {newAttachment && (
-              <p className="text-xs text-muted-foreground truncate">{newAttachment.name}</p>
-            )}
           </div>
           <Button
             size="sm"
@@ -324,7 +321,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
             ) : (
               <PlusIcon className="h-3 w-3" />
             )}
-            Añadir pista (HU-17)
+            Añadir pista
           </Button>
         </div>
       )}
@@ -347,7 +344,7 @@ export function HintPanel({ missionId, missionStatus, node, onHintsChange }: Hin
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar pista</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará la pista #{deleteTarget?.order}. Esta acción no se puede deshacer (HU-20).
+              Se eliminará la pista #{deleteTarget?.order}. Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

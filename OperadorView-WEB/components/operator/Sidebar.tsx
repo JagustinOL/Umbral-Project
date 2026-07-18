@@ -1,7 +1,9 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { RadioIcon, ShieldIcon } from 'lucide-react';
+import { RadioIcon, ShieldIcon, LogOutIcon, ClipboardListIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { redirectToLogin } from '@/lib/auth/session';
 import { ViewType } from './OperatorDashboard';
 
 interface OperatorProfile {
@@ -61,9 +63,25 @@ export function Sidebar({ currentView, onNavigate, operatorProfile }: SidebarPro
             <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary shrink-0" />
           )}
         </button>
+        <button
+          onClick={() => onNavigate('audit')}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors',
+            currentView === 'audit'
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+          )}
+        >
+          <ClipboardListIcon className="h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium leading-none">Auditoría</p>
+            <p className="text-xs text-sidebar-foreground/40 mt-0.5 leading-none">Historial de sesiones</p>
+          </div>
+          {currentView === 'audit' && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sidebar-primary shrink-0" />}
+        </button>
       </nav>
 
-      <div className="px-5 py-4 border-t border-sidebar-border">
+      <div className="px-5 py-4 border-t border-sidebar-border space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
             <span className="text-xs font-semibold text-sidebar-accent-foreground">{initials}</span>
@@ -79,6 +97,16 @@ export function Sidebar({ currentView, onNavigate, operatorProfile }: SidebarPro
             )}
           </div>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          onClick={() => redirectToLogin()}
+        >
+          <LogOutIcon className="h-4 w-4" />
+          Sign out
+        </Button>
       </div>
     </aside>
   );

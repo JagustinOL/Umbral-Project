@@ -80,13 +80,14 @@ public sealed class MissionNode : Entity
         int executionOrder,
         IReadOnlyList<TriviaQuestion> questions,
         Guid parentNodeId,
-        int baseScore = 0,
+        int baseScore,
         Guid? missionId = null)
     {
         if (parentNodeId == Guid.Empty)
             throw new ArgumentException("El parentNodeId no puede ser vacio.", nameof(parentNodeId));
         if (questions is null || questions.Count == 0)
             throw new ArgumentException("La trivia debe tener al menos una pregunta.", nameof(questions));
+        EnsurePlayableBaseScore(baseScore);
 
         var node = Create(
             title: "Trivia",
@@ -107,7 +108,7 @@ public sealed class MissionNode : Entity
         string secretCode,
         GpsCoordinate destination,
         Guid parentNodeId,
-        int baseScore = 0,
+        int baseScore,
         Guid? missionId = null)
     {
         if (parentNodeId == Guid.Empty)
@@ -117,10 +118,11 @@ public sealed class MissionNode : Entity
         if (string.IsNullOrWhiteSpace(secretCode))
             throw new ArgumentException("El codigo secreto no puede estar vacio.", nameof(secretCode));
         ArgumentNullException.ThrowIfNull(destination);
+        EnsurePlayableBaseScore(baseScore);
 
         var node = Create(
-            title: "Treasure Hunt",
-            description: "Treasure hunt challenge",
+            title: TruncateTitle(instructions),
+            description: instructions.Trim(),
             nodeType: MissionNodeType.TreasureHunt,
             executionOrder: executionOrder,
             baseScore: baseScore,
@@ -131,6 +133,14 @@ public sealed class MissionNode : Entity
         node.SecretCode = secretCode.Trim();
         node.Destination = destination;
         return node;
+    }
+
+    private static string TruncateTitle(string instructions)
+    {
+        var trimmed = instructions.Trim();
+        if (trimmed.Length <= 80)
+            return trimmed;
+        return trimmed[..77] + "...";
     }
 
     /// <summary>
@@ -211,6 +221,25 @@ public sealed class MissionNode : Entity
         Instructions = instructions.Trim();
         SecretCode = secretCode.Trim();
         Destination = destination;
+        Title = TruncateTitle(instructions);
+        Description = instructions.Trim();
+    }
+
+    internal void UpdateBaseScore(int baseScore)
+    {
+        if (NodeType is not (MissionNodeType.Trivia or MissionNodeType.TreasureHunt))
+            throw new InvalidOperationException("Solo los nodos jugables (Trivia / TreasureHunt) tienen puntaje base.");
+
+        EnsurePlayableBaseScore(baseScore);
+        BaseScore = baseScore;
+    }
+
+    private static void EnsurePlayableBaseScore(int baseScore)
+    {
+        if (baseScore <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(baseScore),
+                "El puntaje base de un juego debe ser mayor que cero.");
     }
 
     internal Hint? FindHint(Guid hintId) => _hints.FirstOrDefault(h => h.Id == hintId);

@@ -1,5 +1,5 @@
 using ScoringAudit.Domain.Aggregates;
-using ScoringAudit.Domain.Entities;
+using ScoringAudit.Domain.ReadModels;
 
 namespace ScoringAudit.Domain.Repositories;
 
@@ -19,13 +19,26 @@ public interface IAuditLogRepository
         Guid sessionRef,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Retorna el historial de eventos paginado para el panel de auditoría.
-    /// </summary>
-    Task<IReadOnlyList<SessionEvent>> GetHistoryBySessionAsync(
-        Guid sessionRef,
-        int skip = 0,
-        int take = 50,
+    Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetClosedPaginatedAsync(
+        DateTime? startDate,
+        DateTime? endDate,
+        Guid? operatorRef,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountFinishedAsync(
+        Guid? operatorRef,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MissionPlayCount>> GetMissionPlayCountsAsync(
+        Guid? operatorRef,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<OperatorSessionCount>> GetOperatorSessionCountsAsync(
+        Guid? operatorRef,
+        int limit,
         CancellationToken cancellationToken = default);
 
     Task SaveAsync(

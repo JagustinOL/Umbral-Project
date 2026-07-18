@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
@@ -67,7 +67,7 @@ public sealed class TeamTests
         var act = () => team.AssignToSession(Guid.NewGuid());
 
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RN-13*");
+            .WithMessage("*sesión en curso*");
     }
 
     [Fact]
