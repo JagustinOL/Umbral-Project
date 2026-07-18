@@ -1,4 +1,4 @@
-using ScoringAudit.Domain.Exceptions;
+﻿using ScoringAudit.Domain.Exceptions;
 using System.Text.Json.Serialization;
 
 namespace ScoringAudit.Domain.ValueObjects;
@@ -40,7 +40,7 @@ public sealed record PenaltyReason
     {
         if (string.IsNullOrWhiteSpace(description))
             throw new ScoringDomainException(
-                "El motivo de la penalización manual es obligatorio (RB-06). " +
+                "El motivo de la penalización manual es obligatorio. " +
                 "El Operador debe describir la razón antes de aplicar la penalización.");
 
         if (description.Trim().Length < 5)

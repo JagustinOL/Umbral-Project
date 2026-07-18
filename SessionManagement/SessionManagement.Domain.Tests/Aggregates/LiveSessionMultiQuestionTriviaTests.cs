@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -95,6 +95,6 @@ public sealed class LiveSessionMultiQuestionTriviaTests
         wrong.NextNodeId.Should().Be(TreasureNodeId);
 
         var retry = () => session.SubmitTriviaAnswer(TeamId, TriviaNodeId, "Answer1", 0, rules);
-        retry.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        retry.Should().Throw<SessionDomainException>().WithMessage("*ya está cerrada*");
     }
 }

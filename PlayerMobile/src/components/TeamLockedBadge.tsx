@@ -10,7 +10,7 @@ export function TeamLockedBadge({ isLocked }: { isLocked: boolean }) {
       ]}
     >
       <Text style={styles.label}>
-        {isLocked ? 'LOCKED · RN-13 ACTIVE' : 'UNLOCKED · EDITABLE'}
+        {isLocked ? 'BLOQUEADO' : 'EDITABLE'}
       </Text>
     </View>
   );

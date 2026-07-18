@@ -145,7 +145,7 @@ function AddStageDialog({ open, onClose, onAdd, nextOrder, isSubmitting }: AddSt
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Añadir etapa</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Define una nueva etapa y su orden de ejecución (HU-05).
+            Define una nueva etapa y su orden de ejecución.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-2">
@@ -329,7 +329,7 @@ function GameNodeCard({
                 disabled={isSaving}
                 onClick={() => void onSave(node.id)}
               >
-                {isSaving ? "Guardando…" : isTrivia ? "Guardar trivia (HU-11)" : "Guardar búsqueda (HU-15)"}
+                {isSaving ? "Guardando…" : isTrivia ? "Guardar trivia" : "Guardar búsqueda"}
               </Button>
             )}
             <HintPanel
@@ -346,8 +346,8 @@ function GameNodeCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar juego</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará este {isTrivia ? "reto de trivia" : "reto de búsqueda"} (
-              {isTrivia ? "HU-12" : "HU-16"}). Esta acción no se puede deshacer.
+              Se eliminará este {isTrivia ? "reto de trivia" : "reto de búsqueda"}. Esta acción no se
+              puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -492,7 +492,7 @@ function StageNodeCard({
                     disabled={isSaving}
                     onClick={() => void onSaveStage(stage.id)}
                   >
-                    {isSaving ? "Guardando…" : "Guardar etapa (HU-07)"}
+                    {isSaving ? "Guardando…" : "Guardar etapa"}
                   </Button>
                 </div>
               </div>
@@ -539,7 +539,7 @@ function StageNodeCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar etapa</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará la etapa &ldquo;{stage.title}&rdquo; y su estructura asociada (HU-08). Esta acción
+              Se eliminará la etapa &ldquo;{stage.title}&rdquo; y su estructura asociada. Esta acción
               no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -797,7 +797,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       appendGameToStage(stageId, toTriviaGameViewModel(detail, mission.id));
       setPendingGameType(null);
       setAddGameStageId(null);
-      toast.success("Trivia creada (HU-09).");
+      toast.success("Trivia creada.");
     } catch (error) {
       logGameApiProblem(error);
       toast.error(getGameApiErrorMessage(error));
@@ -841,7 +841,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       appendGameToStage(stageId, toTreasureHuntGameViewModel(detail, mission.id));
       setPendingGameType(null);
       setAddGameStageId(null);
-      toast.success("Búsqueda del tesoro creada (HU-13).");
+      toast.success("Búsqueda del tesoro creada.");
     } catch (error) {
       logGameApiProblem(error);
       toast.error(getGameApiErrorMessage(error));
@@ -875,7 +875,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         });
         const detail = await gameService.getTrivia(mission.id, gameId);
         handleNodeChange(gameId, toTriviaGameViewModel(detail, mission.id));
-        toast.success("Trivia actualizada (HU-11).");
+        toast.success("Trivia actualizada.");
       } else {
         const payload = {
           instructions: game.instructions ?? "",
@@ -891,7 +891,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
         await gameService.updateTreasureHunt(mission.id, gameId, payload);
         const detail = await gameService.getTreasureHunt(mission.id, gameId);
         handleNodeChange(gameId, toTreasureHuntGameViewModel(detail, mission.id));
-        toast.success("Búsqueda actualizada (HU-15).");
+        toast.success("Búsqueda actualizada.");
       }
     } catch (error) {
       logGameApiProblem(error);
@@ -952,7 +952,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
             <StatusBadge status={mission.status} />
             {isStructureLocked && (
               <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5 font-medium">
-                RN-01: Solo lectura
+                Solo lectura
               </span>
             )}
           </div>
@@ -988,7 +988,7 @@ export function MissionBuilder({ mission, onBack, onMissionChange }: MissionBuil
       ) : stages.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 py-16 flex flex-col items-center gap-3">
           <Layers3Icon className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Aún no hay etapas (HU-06).</p>
+          <p className="text-sm text-muted-foreground">Aún no hay etapas.</p>
           <LockedAction locked={isStructureLocked} tooltip={structureLockTooltip}>
             <Button
               size="sm"

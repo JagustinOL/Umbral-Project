@@ -91,6 +91,7 @@ export interface OperatorTeamBoardEntryDto {
 export interface OperatorSessionBoardDto {
   sessionId: string;
   sessionStatus: string;
+  startedAtUtc: string | null;
   teams: OperatorTeamBoardEntryDto[];
 }
 
@@ -108,6 +109,21 @@ export interface HistoricalSessionsPageDto {
   totalCount: number;
   page: number;
   pageSize: number;
+}
+
+export interface AuditDashboardDto {
+  generalRanking: {
+    position: number;
+    teamId: string;
+    teamName: string;
+    totalScore: number;
+    elapsedSeconds: number;
+    sessionId: string;
+    missionId: string;
+  }[];
+  topMissions: { missionId: string; sessionCount: number }[];
+  topOperators: { operatorId: string; sessionCount: number }[];
+  totalFinishedSessions: number;
 }
 
 export interface SessionAuditDetailDto {

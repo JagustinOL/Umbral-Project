@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
@@ -32,7 +32,7 @@ public sealed class ReleaseManualHintHandler : IRequestHandler<ReleaseManualHint
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión no está asignada al operador.");
 
         var rules = await NodeValidationRulesFactory.BuildAsync(
             _missionIntegration, session.MissionRef, cancellationToken);
@@ -40,7 +40,7 @@ public sealed class ReleaseManualHintHandler : IRequestHandler<ReleaseManualHint
         var currentNodeId = session.GetCurrentNodeForTeam(request.TeamId, rules);
         if (currentNodeId is null)
             throw new ConflictException(
-                "El equipo ya completó todos los juegos; no se pueden liberar más pistas (RN-04).");
+                "El equipo ya completó todos los juegos; no se pueden liberar más pistas.");
 
         var hints = await _missionIntegration.GetHintsForNodeAsync(
             session.MissionRef, currentNodeId.Value, cancellationToken);

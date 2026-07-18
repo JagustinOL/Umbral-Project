@@ -26,6 +26,8 @@ export const API_PATHS = {
     `/api/v1/live-sessions/${sessionId}/teams/${teamId}/current-stage`,
   teamCurrentNodeContent: (sessionId: string, teamId: string) =>
     `/api/v1/live-sessions/${sessionId}/teams/${teamId}/current-node-content`,
+  teamMissionProgress: (sessionId: string, teamId: string) =>
+    `/api/v1/live-sessions/${sessionId}/teams/${teamId}/mission-progress`,
   submitTrivia: (sessionId: string, teamId: string) =>
     `/api/v1/live-sessions/${sessionId}/teams/${teamId}/trivia-answer`,
   submitTreasure: (sessionId: string, teamId: string) =>
@@ -48,9 +50,9 @@ export const TEAM_CODE_LENGTH = 6;
 
 export const DOMAIN_ERRORS = {
   teamLocked:
-    'RN-13: Team modifications are disabled while an active or paused session is in progress.',
+    'No se pueden modificar los equipos mientras hay una sesión activa o pausada en curso.',
   duplicateTeamName:
-    'RN-14: A team with this name already exists. Choose a unique team name.',
+    'Ya existe un equipo con ese nombre. Elige un nombre distinto.',
   emptyTeamName: 'Team name cannot be empty.',
   invalidTeamCode: 'Team code must be exactly 6 alphanumeric characters.',
   teamNotFound: 'No team found for the provided code.',

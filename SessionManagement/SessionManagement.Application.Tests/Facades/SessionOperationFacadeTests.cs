@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Evidence.Processing;
@@ -421,7 +421,7 @@ public sealed class SessionOperationFacadeTests
         var act = () => CreateFacade().StartSessionAsync(operatorId, session.Id);
 
         await act.Should().ThrowAsync<NotFoundException>()
-            .WithMessage("*RN-16*");
+            .WithMessage("*no está asignada al operador*");
     }
 
     [Fact]

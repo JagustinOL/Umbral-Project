@@ -54,6 +54,15 @@ public sealed class LiveSessionsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{sessionId:guid}/teams/{teamId:guid}/mission-progress")]
+    public async Task<IActionResult> GetTeamMissionProgress(
+        [FromRoute] LiveSessionTeamRoute route,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(route.ToMissionProgressQuery(), cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("{sessionId:guid}/teams/{teamId:guid}/treasure-hunt-code")]
     public async Task<IActionResult> SubmitTreasureHuntCode(
         [FromRoute] LiveSessionTeamRoute route,

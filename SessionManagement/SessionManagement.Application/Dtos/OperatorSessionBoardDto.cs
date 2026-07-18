@@ -3,6 +3,7 @@ namespace SessionManagement.Application.Dtos;
 public sealed record OperatorSessionBoardDto(
     Guid SessionId,
     string SessionStatus,
+    DateTime? StartedAtUtc,
     IReadOnlyList<OperatorTeamBoardEntryDto> Teams);
 
 public sealed record OperatorTeamBoardEntryDto(

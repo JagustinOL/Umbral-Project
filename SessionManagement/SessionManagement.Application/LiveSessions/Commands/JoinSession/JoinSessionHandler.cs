@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Dtos;
 using SessionManagement.Application.Exceptions;
@@ -35,7 +35,7 @@ public sealed class JoinSessionHandler : IRequestHandler<JoinSessionCommand, Joi
 
         if (team.IsLocked)
             throw new ConflictException(
-                "El equipo participa en una sesión en curso y no puede unirse a otra (RN-13).");
+                "El equipo participa en una sesión en curso y no puede unirse a otra.");
 
         if (team.CurrentSessionRef is Guid otherSession && otherSession != session.Id)
             throw new ConflictException(

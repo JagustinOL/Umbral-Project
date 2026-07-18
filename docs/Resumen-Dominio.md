@@ -823,7 +823,7 @@ Operador finaliza sesión
 
 ## 8. Patrones de Diseño Aplicados
 
-> Mapa completo de componentes y capas: ver [`architecture-map.md`](../architecture-map.md) en la raíz del repositorio.
+> Mapa completo de componentes y capas: ver [`RESUMEN-DEFENSA.md`](./RESUMEN-DEFENSA.md) (resumen unificado arquitectura + defensa).
 
 ### Composite — `MissionNode`
 ```

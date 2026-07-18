@@ -121,8 +121,8 @@ public sealed class MissionNode : Entity
         EnsurePlayableBaseScore(baseScore);
 
         var node = Create(
-            title: "Treasure Hunt",
-            description: "Treasure hunt challenge",
+            title: TruncateTitle(instructions),
+            description: instructions.Trim(),
             nodeType: MissionNodeType.TreasureHunt,
             executionOrder: executionOrder,
             baseScore: baseScore,
@@ -133,6 +133,14 @@ public sealed class MissionNode : Entity
         node.SecretCode = secretCode.Trim();
         node.Destination = destination;
         return node;
+    }
+
+    private static string TruncateTitle(string instructions)
+    {
+        var trimmed = instructions.Trim();
+        if (trimmed.Length <= 80)
+            return trimmed;
+        return trimmed[..77] + "...";
     }
 
     /// <summary>
@@ -213,6 +221,8 @@ public sealed class MissionNode : Entity
         Instructions = instructions.Trim();
         SecretCode = secretCode.Trim();
         Destination = destination;
+        Title = TruncateTitle(instructions);
+        Description = instructions.Trim();
     }
 
     internal void UpdateBaseScore(int baseScore)

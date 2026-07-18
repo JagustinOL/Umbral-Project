@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Dtos;
 using SessionManagement.Application.Exceptions;
@@ -35,7 +35,7 @@ public sealed class GetSessionJoinRequestsHandler
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión de la sesión no está asignada al operador.");
 
         var result = new List<SessionJoinRequestDto>();
         foreach (var joinRequest in session.JoinRequests.OrderByDescending(x => x.RequestedAtUtc))

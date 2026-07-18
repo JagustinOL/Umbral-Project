@@ -1,5 +1,5 @@
 using ScoringAudit.Domain.Aggregates;
-using ScoringAudit.Domain.Entities;
+using ScoringAudit.Domain.ReadModels;
 
 namespace ScoringAudit.Domain.Repositories;
 
@@ -25,6 +25,20 @@ public interface IAuditLogRepository
         Guid? operatorRef,
         int page,
         int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountFinishedAsync(
+        Guid? operatorRef,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MissionPlayCount>> GetMissionPlayCountsAsync(
+        Guid? operatorRef,
+        int limit,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<OperatorSessionCount>> GetOperatorSessionCountsAsync(
+        Guid? operatorRef,
+        int limit,
         CancellationToken cancellationToken = default);
 
     Task SaveAsync(

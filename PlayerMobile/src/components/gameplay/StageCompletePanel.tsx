@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '../PrimaryButton';
 import { colors, typography } from '../../constants/theme';
+import type { RankingEntry } from '../../types/gameplay';
 
 export type StageAdvanceSummary = {
   title: string;
@@ -13,17 +14,59 @@ export type StageAdvanceSummary = {
 type StageCompletePanelProps = {
   summary: StageAdvanceSummary;
   onContinue: () => void;
+  ranking?: RankingEntry[];
+  teamId?: string;
+  sessionId?: string;
 };
+
+function resolveOwnEntry(
+  ranking: RankingEntry[],
+  teamId?: string,
+): RankingEntry | null {
+  if (!teamId) {
+    return null;
+  }
+  const normalized = teamId.toLowerCase();
+  return (
+    ranking.find((entry) => entry.teamId.toLowerCase() === normalized) ?? null
+  );
+}
 
 export function StageCompletePanel({
   summary,
   onContinue,
+  ranking = [],
+  teamId,
 }: StageCompletePanelProps) {
+  const ownEntry = resolveOwnEntry(ranking, teamId);
+  const position = ownEntry?.position ?? null;
+
+  if (summary.missionCompleted) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>MISIÓN COMPLETADA</Text>
+        <Text style={styles.title}>Tu equipo terminó la misión</Text>
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Puntaje total</Text>
+            <Text style={styles.statValue}>
+              {ownEntry != null ? ownEntry.totalScore : '—'}
+            </Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Puesto actual</Text>
+            <Text style={styles.statValue}>
+              {position != null ? `#${position}` : '—'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>
-        {summary.missionCompleted ? 'MISIÓN COMPLETADA' : 'ETAPA SUPERADA'}
-      </Text>
+      <Text style={styles.eyebrow}>ETAPA SUPERADA</Text>
       <Text style={styles.title}>{summary.title}</Text>
       <Text style={styles.message}>{summary.message}</Text>
 
@@ -42,17 +85,10 @@ export function StageCompletePanel({
         </View>
       </View>
 
-      {summary.missionCompleted ? (
-        <Text style={styles.hint}>
-          Espera a que el operador finalice la sesión para ver el resumen y el
-          ranking finales.
-        </Text>
-      ) : (
-        <PrimaryButton
-          label="Continuar a la siguiente etapa"
-          onPress={onContinue}
-        />
-      )}
+      <PrimaryButton
+        label="Continuar a la siguiente etapa"
+        onPress={onContinue}
+      />
     </View>
   );
 }
@@ -76,7 +112,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.subtitle,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   message: {
     color: colors.textMuted,
@@ -88,12 +124,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 16,
   },
   stat: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: 8,
     minWidth: '45%',
+    flex: 1,
     padding: 12,
   },
   statLabel: {
@@ -106,10 +142,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.subtitle,
     fontWeight: '700',
-  },
-  hint: {
-    color: colors.textMuted,
-    fontSize: typography.body,
-    lineHeight: 20,
   },
 });

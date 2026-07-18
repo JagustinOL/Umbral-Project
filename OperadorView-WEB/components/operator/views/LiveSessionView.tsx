@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react';
+import { ArrowLeftIcon, PauseIcon, PlayIcon, TimerIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ApplyPenaltyDialog } from '@/components/operator/ApplyPenaltyDialog';
@@ -12,12 +12,42 @@ import {
   OperatorTeamBoardEntryDto,
   RankingEntryDto,
 } from '@/lib/types/api';
+import { formatSessionElapsed } from '@/lib/utils';
+
 interface LiveSessionViewProps {
   operatorId: string;
   sessionId: string;
   missionTitle: string;
   onBack: () => void;
   onFinalized: () => void;
+}
+
+function useSessionElapsed(startedAtUtc: string | null | undefined): string | null {
+  const [elapsedLabel, setElapsedLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!startedAtUtc) {
+      setElapsedLabel(null);
+      return;
+    }
+
+    const startedMs = Date.parse(startedAtUtc);
+    if (Number.isNaN(startedMs)) {
+      setElapsedLabel(null);
+      return;
+    }
+
+    const tick = () => {
+      const seconds = (Date.now() - startedMs) / 1000;
+      setElapsedLabel(formatSessionElapsed(seconds));
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [startedAtUtc]);
+
+  return elapsedLabel;
 }
 
 function isSessionAlreadyClosedError(error: unknown): boolean {
@@ -44,6 +74,7 @@ export function LiveSessionView({
   } | null>(null);
   const closedHandledRef = useRef(false);
   const reconcileAttemptedRef = useRef(false);
+  const elapsedLabel = useSessionElapsed(board?.startedAtUtc);
 
   const handleSessionClosed = useCallback(() => {
     if (closedHandledRef.current) return;
@@ -187,7 +218,20 @@ export function LiveSessionView({
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          {elapsedLabel ? (
+            <div
+              className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2"
+              title="Tiempo transcurrido desde el inicio de la sesión"
+              aria-live="polite"
+              aria-label={`Tiempo transcurrido: ${elapsedLabel}`}
+            >
+              <TimerIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <span className="font-mono text-lg font-semibold tabular-nums tracking-tight text-foreground">
+                {elapsedLabel}
+              </span>
+            </div>
+          ) : null}
           <Button variant="outline" disabled={isActing} onClick={() => void runAction(async () => {
             const result = await operatorSessionService.togglePause(sessionId);
             setIsPaused(result.status.toLowerCase() === 'paused');

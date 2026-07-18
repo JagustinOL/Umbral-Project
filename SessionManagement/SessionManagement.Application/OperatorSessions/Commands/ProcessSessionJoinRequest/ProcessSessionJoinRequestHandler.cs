@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Exceptions;
@@ -35,7 +35,7 @@ public sealed class ProcessSessionJoinRequestHandler : IRequestHandler<ProcessSe
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión de la sesión no está asignada al operador.");
 
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new NotFoundException($"No se encontró el equipo {request.TeamId}.");

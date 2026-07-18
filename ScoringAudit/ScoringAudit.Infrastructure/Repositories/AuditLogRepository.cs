@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ScoringAudit.Domain.Aggregates;
+using ScoringAudit.Domain.ReadModels;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Infrastructure.Persistence;
 
@@ -48,11 +49,66 @@ public sealed class AuditLogRepository : IAuditLogRepository
         return (items, totalCount);
     }
 
+    public async Task<int> CountFinishedAsync(
+        Guid? operatorRef,
+        CancellationToken cancellationToken = default)
+    {
+        return await FinishedQuery(operatorRef).CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<MissionPlayCount>> GetMissionPlayCountsAsync(
+        Guid? operatorRef,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await FinishedQuery(operatorRef)
+            .GroupBy(x => x.MissionRef)
+            .Select(g => new { MissionId = g.Key, SessionCount = g.Count() })
+            .OrderByDescending(x => x.SessionCount)
+            .ThenBy(x => x.MissionId)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(x => new MissionPlayCount(x.MissionId, x.SessionCount))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<OperatorSessionCount>> GetOperatorSessionCountsAsync(
+        Guid? operatorRef,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await FinishedQuery(operatorRef)
+            .GroupBy(x => x.OperatorRef)
+            .Select(g => new { OperatorId = g.Key, SessionCount = g.Count() })
+            .OrderByDescending(x => x.SessionCount)
+            .ThenBy(x => x.OperatorId)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(x => new OperatorSessionCount(x.OperatorId, x.SessionCount))
+            .ToList();
+    }
+
     public async Task SaveAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
         if (_dbContext.Entry(auditLog).State == EntityState.Detached)
             _dbContext.AuditLogs.Add(auditLog);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private IQueryable<AuditLog> FinishedQuery(Guid? operatorRef)
+    {
+        var query = _dbContext.AuditLogs
+            .AsNoTracking()
+            .Where(x => x.IsClosed && x.Status == "Finished");
+
+        if (operatorRef.HasValue)
+            query = query.Where(x => x.OperatorRef == operatorRef.Value);
+
+        return query;
     }
 }

@@ -269,7 +269,7 @@ function AssignOperatorSheet({
               {/* Assigned operators */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Asignados ({assignedOperators.length}) — HU-24
+                  Asignados ({assignedOperators.length})
                 </p>
                 {assignedOperators.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic">No operators assigned.</p>
@@ -297,7 +297,7 @@ function AssignOperatorSheet({
                           className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
                           disabled={isBusy}
                           onClick={() => void onRevoke(selectedMissionId, op.id)}
-                          title="Revocar operador (HU-25 / RN-16)"
+                          title="Revocar operador"
                         >
                           {isRevoking ? (
                             <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
@@ -430,7 +430,7 @@ export function OperatorManagement({
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAssignOpen(true)}>
             <ShieldIcon className="h-4 w-4" />
-            Asignar a misión
+            Asignar/Revocar misión
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <PlusIcon className="h-4 w-4" />
@@ -600,7 +600,7 @@ export function OperatorManagement({
             <AlertDialogTitle>Deactivate Operator</AlertDialogTitle>
             <AlertDialogDescription>
               This will globally deactivate <strong>{deactivateTarget?.firstName} {deactivateTarget?.lastName}</strong> in Keycloak.
-              Per <strong>RN-26</strong>, this action is blocked if the operator has any active sessions in the system.
+              This action is blocked if the operator has any active sessions in the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

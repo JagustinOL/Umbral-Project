@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -24,7 +24,7 @@ public sealed class LiveSessionParticipationTests
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RB-03*");
+            .WithMessage("*debe estar Active*");
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public sealed class LiveSessionParticipationTests
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RN-04*");
+            .WithMessage("*ya está cerrada*");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class LiveSessionParticipationTests
 
         // Assert
         act.Should().Throw<SessionDomainException>()
-            .WithMessage("*RN-11*");
+            .WithMessage("*Progresión secuencial*");
     }
 
     [Fact]

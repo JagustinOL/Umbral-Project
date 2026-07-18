@@ -1,19 +1,33 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { MissionNodesSummary } from './MissionNodesSummary';
+import { RankingPanel } from './RankingPanel';
 import { colors, typography } from '../../constants/theme';
-import type { TeamFinalSummary } from '../../types/gameplay';
+import type { RankingEntry, TeamFinalSummary } from '../../types/gameplay';
 import * as gameplayService from '../../services/gameplayService';
 
 type FinalSummaryPanelProps = {
   sessionId: string;
   teamId: string;
   sessionStatus: string;
+  ranking?: RankingEntry[];
 };
+
+function resolveOwnEntry(
+  ranking: RankingEntry[],
+  teamId: string,
+): RankingEntry | null {
+  const normalized = teamId.toLowerCase();
+  return (
+    ranking.find((entry) => entry.teamId.toLowerCase() === normalized) ?? null
+  );
+}
 
 export function FinalSummaryPanel({
   sessionId,
   teamId,
   sessionStatus,
+  ranking = [],
 }: FinalSummaryPanelProps) {
   const [summary, setSummary] = useState<TeamFinalSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +36,10 @@ export function FinalSummaryPanel({
   const isTerminal =
     sessionStatus.toLowerCase() === 'finalized' ||
     sessionStatus.toLowerCase() === 'cancelled';
+
+  const ownEntry = resolveOwnEntry(ranking, teamId);
+  const position = summary?.rankingPosition ?? ownEntry?.position ?? null;
+  const totalScore = summary?.totalScore ?? ownEntry?.totalScore ?? null;
 
   useEffect(() => {
     if (!isTerminal) {
@@ -47,19 +65,11 @@ export function FinalSummaryPanel({
     );
   }
 
-  if (loading) {
+  if (loading && !ownEntry) {
     return <ActivityIndicator color={colors.primary} />;
   }
 
-  if (error) {
-    return <Text style={styles.error}>{error}</Text>;
-  }
-
-  if (!summary) {
-    return null;
-  }
-
-  if (summary.cancellationReason) {
+  if (summary?.cancellationReason) {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>Sesión cancelada</Text>
@@ -69,21 +79,60 @@ export function FinalSummaryPanel({
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.eyebrow}>DEBRIEF DE MISIÓN</Text>
-      <Text style={styles.title}>{summary.teamName ?? 'Tu equipo'}</Text>
-      <View style={styles.grid}>
-        <Stat label="Puntos" value={String(summary.totalScore ?? 0)} />
-        <Stat label="Posición" value={`#${summary.rankingPosition ?? '—'}`} />
-        <Stat label="Nodos" value={String(summary.completedNodes ?? 0)} />
-        <Stat label="Sanciones" value={String(summary.penaltiesApplied ?? 0)} />
+    <View style={styles.wrapper}>
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>DEBRIEF DE MISIÓN</Text>
+        <Text style={styles.title}>
+          {summary?.teamName ?? ownEntry?.teamName ?? 'Tu equipo'}
+        </Text>
+
+        <View style={styles.grid}>
+          <Stat
+            label="Puntaje total"
+            value={totalScore != null ? String(totalScore) : '—'}
+          />
+          <Stat
+            label="Puesto"
+            value={position != null ? `#${position}` : '—'}
+          />
+          <Stat
+            label="Nodos"
+            value={String(
+              summary?.completedNodes ?? ownEntry?.completedNodes ?? '—',
+            )}
+          />
+          <Stat
+            label="Sanciones"
+            value={String(summary?.penaltiesApplied ?? '—')}
+          />
+        </View>
+        <Text style={styles.meta}>
+          Tiempo:{' '}
+          {summary?.totalElapsedSeconds?.toFixed(0) ??
+            ownEntry?.lastElapsedSeconds.toFixed(0) ??
+            '—'}
+          s
+          {summary?.finalizedAtUtc
+            ? ` · Finalizó ${new Date(summary.finalizedAtUtc).toLocaleString()}`
+            : ''}
+        </Text>
+        {error && !summary ? (
+          <Text style={styles.fallbackNote}>
+            Mostrando datos del ranking en vivo; el resumen oficial no estuvo
+            disponible.
+          </Text>
+        ) : null}
       </View>
-      <Text style={styles.meta}>
-        Tiempo: {summary.totalElapsedSeconds?.toFixed(0) ?? '—'}s · Finalizó{' '}
-        {summary.finalizedAtUtc
-          ? new Date(summary.finalizedAtUtc).toLocaleString()
-          : '—'}
-      </Text>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionEyebrow}>RANKING FINAL</Text>
+        <RankingPanel ranking={ranking} />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionEyebrow}>RECORRIDO</Text>
+        <MissionNodesSummary sessionId={sessionId} teamId={teamId} />
+      </View>
     </View>
   );
 }
@@ -98,6 +147,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    gap: 16,
+  },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.accent,
@@ -111,6 +163,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 6,
+  },
+  sectionEyebrow: {
+    color: colors.accent,
+    fontSize: typography.caption,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 8,
   },
   title: {
     color: colors.text,
@@ -150,13 +209,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.caption,
   },
+  fallbackNote: {
+    color: colors.warning,
+    fontSize: typography.caption,
+    marginTop: 10,
+  },
   muted: {
     color: colors.textMuted,
     fontSize: typography.body,
     lineHeight: 20,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: typography.body,
   },
 });

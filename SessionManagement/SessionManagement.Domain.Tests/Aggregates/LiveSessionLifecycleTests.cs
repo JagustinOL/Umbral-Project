@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.ValueObjects;
@@ -28,7 +28,7 @@ public sealed class LiveSessionLifecycleTests
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*RN-15*");
+            .WithMessage("*al menos un equipo*");
     }
 
     [Fact]

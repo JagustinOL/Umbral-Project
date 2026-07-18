@@ -41,10 +41,21 @@ public sealed class GetMissionNodeValidationsHandler
                 ExecutionOrder: order++,
                 BaseScore: node.BaseScore,
                 ExpectedAnswers: ResolveExpectedAnswers(node),
-                Title: node.Title));
+                Title: ResolveDisplayTitle(node)));
         }
 
         return result;
+    }
+
+    private static string ResolveDisplayTitle(MissionNode node)
+    {
+        if (node.NodeType == MissionNodeType.TreasureHunt &&
+            !string.IsNullOrWhiteSpace(node.Instructions))
+        {
+            return node.Instructions.Trim();
+        }
+
+        return node.Title;
     }
 
     private static IReadOnlyList<string> ResolveExpectedAnswers(MissionNode node)

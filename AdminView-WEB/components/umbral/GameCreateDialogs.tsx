@@ -70,7 +70,7 @@ export function CreateTriviaDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Nueva trivia (HU-09)</DialogTitle>
+          <DialogTitle className="text-base font-semibold">Nueva trivia</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Cada pregunta debe tener exactamente una respuesta correcta.
           </DialogDescription>
@@ -186,7 +186,7 @@ export function CreateTreasureHuntDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Nueva búsqueda (HU-13)</DialogTitle>
+          <DialogTitle className="text-base font-semibold">Nueva búsqueda</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Instrucciones, código secreto y coordenadas GPS son obligatorios. El QR se genera al escribir el código.
           </DialogDescription>
@@ -248,7 +248,7 @@ export function AddGameTypeDialog({ open, onClose, onSelect }: AddGameTypeDialog
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">Añadir juego</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Elige el tipo de juego para esta etapa (RN-02).
+            Elige el tipo de juego para esta etapa.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 py-2">

@@ -3,6 +3,7 @@ using SessionManagement.Application.LiveSessions.Commands.SubmitTreasureHuntCode
 using SessionManagement.Application.LiveSessions.Commands.SubmitTriviaAnswer;
 using SessionManagement.Application.LiveSessions.Queries.GetTeamCurrentNodeContent;
 using SessionManagement.Application.LiveSessions.Queries.GetTeamCurrentStage;
+using SessionManagement.Application.LiveSessions.Queries.GetTeamMissionProgress;
 using SessionManagement.WebApi.Contracts.LiveSessions;
 using SessionManagement.WebApi.Contracts.Routes;
 
@@ -17,6 +18,9 @@ public static class LiveSessionMappings
         new(SessionId: route.SessionId, TeamId: route.TeamId);
 
     public static GetTeamCurrentNodeContentQuery ToNodeContentQuery(this LiveSessionTeamRoute route) =>
+        new(SessionId: route.SessionId, TeamId: route.TeamId);
+
+    public static GetTeamMissionProgressQuery ToMissionProgressQuery(this LiveSessionTeamRoute route) =>
         new(SessionId: route.SessionId, TeamId: route.TeamId);
 
     public static SubmitTreasureHuntCodeCommand ToCommand(

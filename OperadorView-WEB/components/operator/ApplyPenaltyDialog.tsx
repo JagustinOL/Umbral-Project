@@ -64,7 +64,7 @@ export function ApplyPenaltyDialog({
           <DialogTitle>Aplicar penalización</DialogTitle>
           <DialogDescription>
             Sanción manual para <span className="font-medium text-foreground">{teamName}</span>.
-            Se descontará del puntaje del equipo (RN-10).
+            Se descontará del puntaje del equipo.
           </DialogDescription>
         </DialogHeader>
 

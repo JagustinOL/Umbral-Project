@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
@@ -57,7 +57,7 @@ public sealed class ReconcileSessionScoringHandlerTests
         var act = () => handler.Handle(
             new ReconcileSessionScoringCommand(session.OperatorRef, session.Id), CancellationToken.None);
 
-        await act.Should().ThrowAsync<NotFoundException>().WithMessage("*RN-16*");
+        await act.Should().ThrowAsync<NotFoundException>().WithMessage("*no está asignada al operador*");
     }
 
     [Fact]

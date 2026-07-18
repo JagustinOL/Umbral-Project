@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Exceptions;
@@ -31,7 +31,7 @@ public sealed class ToggleSessionPauseHandler : IRequestHandler<ToggleSessionPau
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión no está asignada al operador.");
 
         try
         {

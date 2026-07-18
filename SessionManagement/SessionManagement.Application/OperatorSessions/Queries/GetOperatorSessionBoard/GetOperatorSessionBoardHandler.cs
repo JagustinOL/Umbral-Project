@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Dtos;
@@ -38,7 +38,7 @@ public sealed class GetOperatorSessionBoardHandler
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión de la sesión no está asignada al operador.");
 
         var rules = await NodeValidationRulesFactory.BuildAsync(
             _missionIntegration, session.MissionRef, cancellationToken);
@@ -147,6 +147,7 @@ public sealed class GetOperatorSessionBoardHandler
         return new OperatorSessionBoardDto(
             SessionId: session.Id,
             SessionStatus: session.Status.ToString(),
+            StartedAtUtc: session.StartedAtUtc,
             Teams: entries);
     }
 }

@@ -189,7 +189,7 @@ public sealed class LiveSession : AggregateRoot
 
     /// <summary>
     /// Crea una solicitud formal Pending para unirse a la sesión (HU-49).
-    /// No registra el equipo hasta ApproveJoinRequest (RN-15).
+    /// No registra el equipo hasta ApproveJoinRequest.
     /// </summary>
     public SessionJoinRequest SubmitJoinRequest(Guid teamId, string providedJoinCode)
     {
@@ -281,7 +281,7 @@ public sealed class LiveSession : AggregateRoot
     {
         if (Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
             throw new SessionDomainException(
-                "Una sesión finalizada o cancelada no puede pausarse ni reanudarse (RN-17).");
+                "Una sesión finalizada o cancelada no puede pausarse ni reanudarse.");
 
         if (Status == LiveSessionStatus.Active)
             Pause(reason);
@@ -298,7 +298,7 @@ public sealed class LiveSession : AggregateRoot
 
         if (Status is LiveSessionStatus.Finalized or LiveSessionStatus.Cancelled)
             throw new SessionDomainException(
-                "No se pueden enviar mensajes en una sesión finalizada (RN-17).");
+                "No se pueden enviar mensajes en una sesión finalizada.");
 
         if (string.IsNullOrWhiteSpace(message))
             throw new SessionDomainException("El mensaje de soporte no puede estar vacío.");
@@ -312,7 +312,7 @@ public sealed class LiveSession : AggregateRoot
 
         if (!participation.CanReceiveSupportMessage)
             throw new SessionDomainException(
-                "No se puede enviar un mensaje a un equipo expulsado o que ya finalizó la misión (RN-18).");
+                "No se puede enviar un mensaje a un equipo expulsado o que ya finalizó la misión.");
 
         RaiseDomainEvent(new SupportMessageSentEvent
         {
@@ -325,7 +325,7 @@ public sealed class LiveSession : AggregateRoot
 
     /// <summary>
     /// Marca al equipo como Completado al superar el último nodo (HU-61).
-    /// La sesión permanece Active/Paused hasta que el operador la finalice (RN-17).
+    /// La sesión permanece Active/Paused hasta que el operador la finalice.
     /// </summary>
     public void MarkTeamCompleted(Guid teamId)
     {
@@ -379,7 +379,7 @@ public sealed class LiveSession : AggregateRoot
         if (_registeredTeamIds.Count == 0)
             throw new InvalidOperationException(
                 $"La sesión {Id} no puede iniciarse porque no tiene equipos registrados. " +
-                "Debe existir al menos un equipo participante (RN-15).");
+                "Debe existir al menos un equipo participante.");
 
         var previous = Status;
         TransitionTo(LiveSessionStatus.Active);
@@ -524,14 +524,14 @@ public sealed class LiveSession : AggregateRoot
         if (Status != LiveSessionStatus.Active)
             throw new SessionDomainException(
                 $"No se pueden aceptar evidencias en una sesión con estado '{Status}'. " +
-                $"La sesión debe estar Active (RB-03).");
+                $"La sesión debe estar Active.");
 
         // RB-05: el nodo debe pertenecer a esta sesión
         bool nodeAllowed = _allowedNodes.Any(n => n.NodeId == missionNodeId);
         if (!nodeAllowed)
             throw new SessionDomainException(
                 $"El nodo {missionNodeId} no pertenece a los nodos permitidos " +
-                $"de esta sesión (misión {MissionRef}). Violación de RB-05.");
+                $"de esta sesión (misión {MissionRef}).");
 
         if (!_registeredTeamIds.Contains(teamId))
             throw new SessionDomainException(
@@ -676,19 +676,19 @@ public sealed class LiveSession : AggregateRoot
         var currentNodeId = GetCurrentNodeForTeam(teamId, validationRules);
         if (currentNodeId is null)
             throw new SessionDomainException(
-                "El equipo ya completó todos los juegos; no se pueden liberar más pistas (RN-04).");
+                "El equipo ya completó todos los juegos; no se pueden liberar más pistas.");
 
         if (missionNodeId != currentNodeId.Value)
             throw new SessionDomainException(
                 $"Solo se pueden liberar pistas del juego actual del equipo (nodo {currentNodeId.Value}). " +
-                $"La pista pertenece al nodo {missionNodeId} (RN-04/RN-07).");
+                $"La pista pertenece al nodo {missionNodeId}.");
 
         // RB-04 / RN-06: misma pista al mismo equipo
         bool alreadyReleased = _releasedHints
             .Any(r => r.TeamId == teamId && r.HintId == hintId);
         if (alreadyReleased)
             throw new SessionDomainException(
-                $"La pista {hintId} ya fue liberada al equipo {teamId} (RB-04/RN-06). " +
+                $"La pista {hintId} ya fue liberada al equipo {teamId}. " +
                 $"No puede liberarse dos veces.");
 
         var released = ReleasedHint.Create(
@@ -806,7 +806,7 @@ public sealed class LiveSession : AggregateRoot
         // RB-06
         if (string.IsNullOrWhiteSpace(reason))
             throw new SessionDomainException(
-                "El motivo de la penalización es obligatorio (RB-06). " +
+                "El motivo de la penalización es obligatorio. " +
                 "Debes especificar la razón antes de aplicar la penalización.");
 
         if (penaltyPoints <= 0)
@@ -823,13 +823,13 @@ public sealed class LiveSession : AggregateRoot
         });
     }
 
-    // ── Patrón State — Matriz de transiciones (RB-09) ─────────────────────────
+    // ── Patrón State — Matriz de transiciones ─────────────────────────
 
     /// <summary>
     /// Valida y ejecuta una transición de estado.
     ///
     /// Patrón State implementado como tabla de transiciones válidas.
-    /// Cualquier transición no listada lanza SessionDomainException (RB-09).
+    /// Cualquier transición no listada lanza SessionDomainException.
     ///
     /// Transiciones válidas:
     ///   Pending   → Preparation, Cancelled
@@ -857,7 +857,7 @@ public sealed class LiveSession : AggregateRoot
         if (!isValid)
             throw new SessionDomainException(
                 $"Transición de estado inválida: '{Status}' → '{newStatus}'. " +
-                $"Esta transición no está permitida por las reglas del dominio (RB-09).");
+                $"Esta transición no está permitida por las reglas del dominio.");
 
         Status = newStatus;
     }
@@ -868,7 +868,7 @@ public sealed class LiveSession : AggregateRoot
     {
         if (operatorId != OperatorRef)
             throw new SessionDomainException(
-                "El operador no está autorizado para operar esta sesión (RN-16).");
+                "El operador no está autorizado para operar esta sesión.");
     }
 
     private SessionJoinRequest FindPendingJoinRequest(Guid teamId)
@@ -915,15 +915,15 @@ public sealed class LiveSession : AggregateRoot
             throw new SessionDomainException($"El equipo {teamId} ya completó todos los nodos.");
 
         if (IsNodeCompletedForTeam(teamId, currentRule))
-            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
 
         var submittedRule = orderedRules.FirstOrDefault(r => r.NodeId == nodeId);
         if (submittedRule is not null && IsNodeCompletedForTeam(teamId, submittedRule))
-            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
 
         if (currentRule.NodeId != nodeId)
             throw new SessionDomainException(
-                $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId} (RN-11).");
+                $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId}.");
 
         if (currentRule.ValidationType != expectedType)
             throw new SessionDomainException("Tipo de validación no coincide con el nodo actual.");
@@ -982,11 +982,11 @@ public sealed class LiveSession : AggregateRoot
 
         var nextQuestionIndex = GetNextQuestionIndex(teamId, rule.NodeId, rule.ExpectedAnswers.Count);
         if (nextQuestionIndex >= rule.ExpectedAnswers.Count)
-            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
 
         if (requestedQuestionIndex.HasValue && requestedQuestionIndex.Value != nextQuestionIndex)
             throw new SessionDomainException(
-                $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex} (RN-11).");
+                $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex}.");
 
         return nextQuestionIndex;
     }

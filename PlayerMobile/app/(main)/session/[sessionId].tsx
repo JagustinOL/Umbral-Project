@@ -113,6 +113,7 @@ export default function LiveSessionScreen() {
             teamId={teamId}
             stage={gameplay.stage}
             canSubmit={gameplay.isPlayable}
+            ranking={gameplay.ranking}
             onSubmitted={async () => {
               await gameplay.refreshStage();
               await gameplay.refreshRanking();
@@ -146,6 +147,7 @@ export default function LiveSessionScreen() {
             sessionId={sessionId}
             teamId={teamId}
             sessionStatus={gameplay.sessionStatus}
+            ranking={gameplay.ranking}
           />
         ) : null}
 

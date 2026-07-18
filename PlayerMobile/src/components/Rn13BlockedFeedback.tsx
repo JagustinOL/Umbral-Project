@@ -3,7 +3,7 @@ import { DOMAIN_ERRORS } from '../constants/api';
 
 export function showRn13BlockedAlert(): void {
   Alert.alert(
-    'Team locked (RN-13)',
+    'Equipo bloqueado',
     DOMAIN_ERRORS.teamLocked,
   );
 }

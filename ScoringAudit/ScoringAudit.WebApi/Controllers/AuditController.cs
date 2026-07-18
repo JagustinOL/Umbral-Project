@@ -7,7 +7,7 @@ using ScoringAudit.WebApi.Auth;
 namespace ScoringAudit.WebApi.Controllers;
 
 [ApiController]
-[Route("api/v1/audit/sessions")]
+[Route("api/v1/audit")]
 [Authorize(Roles = "admin,operator")]
 public sealed class AuditController : ControllerBase
 {
@@ -20,7 +20,21 @@ public sealed class AuditController : ControllerBase
         _currentUser = currentUser;
     }
 
-    [HttpGet]
+    [HttpGet("dashboard")]
+    public async Task<ActionResult<AuditDashboardDto>> GetDashboard(
+        [FromQuery] int limit = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetAuditDashboardQuery(
+                _currentUser.IsInRole("admin"),
+                _currentUser.UserId,
+                limit),
+            cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("sessions")]
     public async Task<ActionResult<HistoricalSessionsPageDto>> GetHistoricalSessions(
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,
@@ -40,7 +54,7 @@ public sealed class AuditController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("{sessionId:guid}")]
+    [HttpGet("sessions/{sessionId:guid}")]
     public async Task<ActionResult<SessionAuditDetailDto>> GetSessionAuditDetail(
         Guid sessionId,
         CancellationToken cancellationToken)

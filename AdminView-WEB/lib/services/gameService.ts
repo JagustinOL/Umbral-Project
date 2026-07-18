@@ -262,7 +262,7 @@ export function getGameApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 409) {
-    return "Operación bloqueada por RN-01: la misión no está en borrador.";
+    return "Operación bloqueada: la misión no está en borrador.";
   }
 
   if (error.status === 400) {

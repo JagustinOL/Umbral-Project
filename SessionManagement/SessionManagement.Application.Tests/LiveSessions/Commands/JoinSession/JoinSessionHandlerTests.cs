@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
@@ -48,7 +48,7 @@ public sealed class JoinSessionHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<ConflictException>()
-            .WithMessage("*RN-13*");
+            .WithMessage("*sesión en curso*");
 
         sessionRepository.Verify(
             r => r.SaveAsync(It.IsAny<LiveSession>(), It.IsAny<CancellationToken>()),

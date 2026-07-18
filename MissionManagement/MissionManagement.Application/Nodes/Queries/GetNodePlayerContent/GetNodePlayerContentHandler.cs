@@ -47,7 +47,14 @@ public sealed class GetNodePlayerContentHandler
 
         if (node.NodeType == MissionNodeType.TreasureHunt)
         {
-            if (string.IsNullOrWhiteSpace(node.Instructions))
+            var instructions = !string.IsNullOrWhiteSpace(node.Instructions)
+                ? node.Instructions
+                : (!string.IsNullOrWhiteSpace(node.Description) &&
+                   !string.Equals(node.Description, "Treasure hunt challenge", StringComparison.OrdinalIgnoreCase)
+                    ? node.Description
+                    : null);
+
+            if (string.IsNullOrWhiteSpace(instructions))
                 throw new ConflictException($"El nodo TreasureHunt con Id={request.NodeId} no tiene instrucciones configuradas.");
 
             if (node.Destination is null)
@@ -57,7 +64,7 @@ public sealed class GetNodePlayerContentHandler
                 NodeId: node.Id,
                 NodeType: node.NodeType.ToString(),
                 Questions: null,
-                Instructions: node.Instructions,
+                Instructions: instructions,
                 Destination: new GpsCoordinateDto(
                     node.Destination.Latitude,
                     node.Destination.Longitude));

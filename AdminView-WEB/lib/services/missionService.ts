@@ -113,7 +113,7 @@ export function getMissionApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 409) {
-    return "Mission update/deactivation was blocked by business rules (RN-01). The mission may have open sessions or conflicting data.";
+    return "No se puede actualizar o desactivar la misión: puede tener sesiones abiertas o datos en conflicto.";
   }
 
   if (error.status === 400) {
@@ -139,7 +139,7 @@ export function getMissionOperatorAssignmentErrorMessage(error: unknown): string
   }
 
   if (error.status === 409) {
-    return "Revocación bloqueada (RN-25): el operador supervisa una sesión activa de esta misión.";
+    return "Revocación bloqueada: el operador supervisa una sesión activa de esta misión.";
   }
 
   if (error.status === 400) {

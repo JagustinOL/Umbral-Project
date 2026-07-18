@@ -96,7 +96,7 @@ export function getHintApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 409) {
-    return "Operación bloqueada por RN-01.";
+    return "Operación bloqueada: la misión no se puede modificar en su estado actual.";
   }
 
   if (error.status === 400) {

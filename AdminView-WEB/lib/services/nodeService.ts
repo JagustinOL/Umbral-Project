@@ -141,7 +141,7 @@ export function getNodeApiErrorMessage(error: unknown): string {
   }
 
   if (error.status === 409) {
-    return "Operación bloqueada por reglas de negocio (RN-01). La estructura no se puede modificar.";
+    return "Operación bloqueada: la estructura de la misión no se puede modificar.";
   }
 
   if (error.status === 400) {

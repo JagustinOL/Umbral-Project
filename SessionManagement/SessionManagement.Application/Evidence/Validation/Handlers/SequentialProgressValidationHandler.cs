@@ -1,4 +1,4 @@
-using SessionManagement.Application.Evidence;
+﻿using SessionManagement.Application.Evidence;
 using SessionManagement.Domain.Exceptions;
 
 namespace SessionManagement.Application.Evidence.Validation.Handlers;
@@ -23,15 +23,15 @@ public sealed class SequentialProgressValidationHandler : EvidenceValidationHand
         if (submittedRule is not null &&
             NodeProgressHelper.IsNodeCompleted(context.Session, context.TeamId, submittedRule))
         {
-            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
         }
 
         if (NodeProgressHelper.IsNodeCompleted(context.Session, context.TeamId, currentRule))
-            throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+            throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
 
         if (currentRule.NodeId != context.NodeId)
             throw new SessionDomainException(
-                $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId} (RN-11).");
+                $"Progresión secuencial inválida. Se esperaba el nodo {currentRule.NodeId}.");
 
         if (currentRule.ValidationType != context.ExpectedType)
             throw new SessionDomainException("Tipo de validación no coincide con el nodo actual.");
@@ -45,11 +45,11 @@ public sealed class SequentialProgressValidationHandler : EvidenceValidationHand
                 currentRule.ExpectedAnswers.Count);
 
             if (nextQuestionIndex >= currentRule.ExpectedAnswers.Count)
-                throw new SessionDomainException("La etapa ya está cerrada para este equipo (RN-04).");
+                throw new SessionDomainException("La etapa ya está cerrada para este equipo.");
 
             if (context.QuestionIndex.HasValue && context.QuestionIndex.Value != nextQuestionIndex)
                 throw new SessionDomainException(
-                    $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex} (RN-11).");
+                    $"Progresión secuencial inválida. Se esperaba la pregunta {nextQuestionIndex}.");
 
             context.ResolvedQuestionIndex = nextQuestionIndex;
         }

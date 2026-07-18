@@ -1,4 +1,4 @@
-using SessionManagement.Application.Common;
+﻿using SessionManagement.Application.Common;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Dtos;
 using SessionManagement.Application.Evidence.Processing;
@@ -78,10 +78,10 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(operatorId, cancellationToken);
         var mission = assigned.FirstOrDefault(x => x.MissionId == missionId);
         if (mission is null)
-            throw new NotFoundException("La misión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión no está asignada al operador.");
 
         if (!string.Equals(await _missionIntegration.GetMissionStatusAsync(missionId, cancellationToken), "Active", StringComparison.OrdinalIgnoreCase))
-            throw new ConflictException("Solo se pueden crear sesiones para misiones en estado Active (RB-01).");
+            throw new ConflictException("Solo se pueden crear sesiones para misiones en estado Active.");
 
         var nodeData = await _missionIntegration.GetNodeValidationDataAsync(missionId, cancellationToken);
         var difficultyMultiplier = await _missionIntegration.GetMissionDifficultyMultiplierAsync(missionId, cancellationToken);
@@ -276,7 +276,7 @@ public sealed class SessionOperationFacade : ISessionOperationFacade
     {
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(operatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == missionId))
-            throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión de la sesión no está asignada al operador.");
     }
 
     private async Task<IReadOnlyList<NodeValidationRule>> BuildRulesAsync(

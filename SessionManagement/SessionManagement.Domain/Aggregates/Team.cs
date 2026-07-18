@@ -1,4 +1,4 @@
-using SessionManagement.Domain.Common;
+﻿using SessionManagement.Domain.Common;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -247,7 +247,7 @@ public sealed class Team : AggregateRoot
 
         if (IsLocked)
             throw new SessionDomainException(
-                "El equipo participa en una sesión en curso y no puede unirse a otra (RN-13).");
+                "El equipo participa en una sesión en curso y no puede unirse a otra.");
 
         if (CurrentSessionRef is Guid otherSessionId)
             throw new SessionDomainException(

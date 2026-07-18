@@ -346,4 +346,4 @@ Captura o PDF de `coverage-report/index.html` y la salida de `check-coverage-thr
 
 - Reglas de negocio: [`docs/reglas_negocio.md`](docs/reglas_negocio.md)
 - Catálogo de endpoints REST: [`backend-endpoints.md`](backend-endpoints.md)
-- Mapa de arquitectura backend: [`architecture-map.md`](architecture-map.md)
+- Resumen unificado (arquitectura + defensa): [`docs/RESUMEN-DEFENSA.md`](docs/RESUMEN-DEFENSA.md)

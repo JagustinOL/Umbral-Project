@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -47,7 +47,7 @@ public sealed class LiveSessionAdvancedTests
 
         var act = () => session.ReleaseHint(TeamId, hintId, NodeId, 5, SingleNodeRules());
 
-        act.Should().Throw<SessionDomainException>().WithMessage("*RB-04*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*ya fue liberada*");
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class LiveSessionAdvancedTests
 
         var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeId, 5, rules);
 
-        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*juego actual*");
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class LiveSessionAdvancedTests
 
         var act = () => session.ReleaseHint(TeamId, Guid.NewGuid(), NodeB, 5, rules);
 
-        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*juego actual*");
     }
 
     [Fact]

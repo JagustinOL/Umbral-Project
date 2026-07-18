@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Entities;
 using SessionManagement.Domain.Exceptions;
@@ -63,7 +63,7 @@ public sealed class LiveSessionGameplayEdgeTests
     {
         var session = BuildActiveWithRules(out _);
         var act = () => session.ApplyManualPenalty(TeamId, session.OperatorRef, 10, "  ");
-        act.Should().Throw<SessionDomainException>().WithMessage("*RB-06*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*motivo de la penalización es obligatorio*");
     }
 
     [Fact]
@@ -72,6 +72,6 @@ public sealed class LiveSessionGameplayEdgeTests
         var session = LiveSession.CreateForMission(Guid.NewGuid(), Guid.NewGuid(),
             [new AllowedNode(TriviaId, "Trivia", 10)], 1m);
         var act = () => session.Finalize();
-        act.Should().Throw<SessionDomainException>().WithMessage("*RB-09*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*transición no está permitida*");
     }
 }

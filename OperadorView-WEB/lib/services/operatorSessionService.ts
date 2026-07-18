@@ -2,6 +2,7 @@ import { ApiError, scoringApiRequest, sessionApiRequest } from "@/lib/api/client
 import {
   CreatedLiveSessionDto,
   CreateLiveSessionRequest,
+  AuditDashboardDto,
   HistoricalSessionsPageDto,
   MissionHasOpenSessionsResponse,
   OperatorAssignedMissionDto,
@@ -163,6 +164,10 @@ export const operatorSessionService = {
 
   async getSessionAuditDetail(sessionId: string, signal?: AbortSignal): Promise<SessionAuditDetailDto> {
     return scoringApiRequest<SessionAuditDetailDto>(`/audit/sessions/${sessionId}`, { signal });
+  },
+
+  async getAuditDashboard(signal?: AbortSignal): Promise<AuditDashboardDto> {
+    return scoringApiRequest<AuditDashboardDto>("/audit/dashboard", { signal });
   },
 };
 

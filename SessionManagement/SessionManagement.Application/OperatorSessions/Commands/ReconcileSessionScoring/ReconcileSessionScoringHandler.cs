@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using SessionManagement.Application.Common.Interfaces;
 using SessionManagement.Application.Exceptions;
 using SessionManagement.Domain.Common;
@@ -47,7 +47,7 @@ public sealed class ReconcileSessionScoringHandler
         var assigned = await _missionIntegration.GetAssignedMissionsForOperatorAsync(
             request.OperatorId, cancellationToken);
         if (!assigned.Any(x => x.MissionId == session.MissionRef))
-            throw new NotFoundException("La misión de la sesión no está asignada al operador (RN-16).");
+            throw new NotFoundException("La misión de la sesión no está asignada al operador.");
 
         var teams = await _teamRepository.GetByIdsAsync(session.RegisteredTeamIds, cancellationToken);
         var teamNames = teams.ToDictionary(t => t.Id, t => t.Name);

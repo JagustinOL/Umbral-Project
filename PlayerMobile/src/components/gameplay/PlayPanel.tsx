@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { FormTextField } from '../FormTextField';
-import { PrimaryButton } from '../PrimaryButton';
 import { GameplayFeedbackBanner } from './GameplayFeedbackBanner';
-import { QrCodeScannerModal } from './QrCodeScannerModal';
 import {
   StageCompletePanel,
   type StageAdvanceSummary,
 } from './StageCompletePanel';
 import { TriviaQuestionPanel } from './TriviaQuestionPanel';
-import { TreasureAreaMap } from './TreasureAreaMap';
+import { TreasureHuntPanel } from './TreasureHuntPanel';
 import { colors, typography } from '../../constants/theme';
-import type { TeamCurrentNodeContent, TeamCurrentStage } from '../../types/gameplay';
+import type {
+  RankingEntry,
+  TeamCurrentNodeContent,
+  TeamCurrentStage,
+} from '../../types/gameplay';
 import * as gameplayService from '../../services/gameplayService';
 import { showUserAlert } from '../../utils/confirm';
 import {
@@ -26,6 +27,7 @@ type PlayPanelProps = {
   teamId: string;
   stage: TeamCurrentStage | null;
   canSubmit: boolean;
+  ranking?: RankingEntry[];
   onSubmitted: () => void | Promise<unknown>;
   sharedTriviaFeedback?: TriviaFeedback | null;
   stageAdvance?: StageAdvanceSummary | null;
@@ -43,11 +45,42 @@ type FeedbackState = {
   message: string;
 } | null;
 
+/** Normaliza el payload por si el gateway/serialización usa PascalCase. */
+function normalizeNodeContent(raw: TeamCurrentNodeContent): TeamCurrentNodeContent {
+  const anyRaw = raw as TeamCurrentNodeContent & {
+    Instructions?: string | null;
+    Destination?: { Latitude?: number; Longitude?: number } | null;
+  };
+
+  const instructions =
+    (typeof raw.instructions === 'string' && raw.instructions.trim()) ||
+    (typeof anyRaw.Instructions === 'string' && anyRaw.Instructions.trim()) ||
+    null;
+
+  const destination =
+    raw.destination ??
+    (anyRaw.Destination &&
+    typeof anyRaw.Destination.Latitude === 'number' &&
+    typeof anyRaw.Destination.Longitude === 'number'
+      ? {
+          latitude: anyRaw.Destination.Latitude,
+          longitude: anyRaw.Destination.Longitude,
+        }
+      : null);
+
+  return {
+    ...raw,
+    instructions,
+    destination,
+  };
+}
+
 export function PlayPanel({
   sessionId,
   teamId,
   stage,
   canSubmit,
+  ranking = [],
   onSubmitted,
   sharedTriviaFeedback = null,
   stageAdvance = null,
@@ -78,7 +111,7 @@ export function PlayPanel({
         sessionId,
         teamId,
       );
-      setNodeContent(content);
+      setNodeContent(normalizeNodeContent(content));
       setSelectedOption(null);
     } catch (error) {
       setNodeContent(null);
@@ -235,19 +268,31 @@ export function PlayPanel({
 
   if (stageAdvance) {
     return (
-      <StageCompletePanel summary={stageAdvance} onContinue={handleContinue} />
+      <StageCompletePanel
+        summary={stageAdvance}
+        onContinue={handleContinue}
+        ranking={ranking}
+        teamId={teamId}
+        sessionId={sessionId}
+      />
     );
   }
 
   if (stage.isCompleted) {
     return (
-      <View style={styles.card}>
-        <GameplayFeedbackBanner
-          tone="success"
-          title="¡Misión completada!"
-          message="Todas las etapas fueron superadas. Espera a que el operador finalice la sesión; luego podrás ver el resumen y el ranking."
-        />
-      </View>
+      <StageCompletePanel
+        summary={{
+          title: '¡Misión completada!',
+          message: 'Todas las etapas fueron superadas.',
+          awardedPoints: 0,
+          completedExecutionOrder: null,
+          missionCompleted: true,
+        }}
+        onContinue={handleContinue}
+        ranking={ranking}
+        teamId={teamId}
+        sessionId={sessionId}
+      />
     );
   }
 
@@ -294,43 +339,20 @@ export function PlayPanel({
         ) : null}
 
         {nodeType.includes('treasure') ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Búsqueda del tesoro</Text>
-            {nodeContent?.instructions ? (
-              <Text style={styles.instructions}>{nodeContent.instructions}</Text>
-            ) : null}
-            <PrimaryButton
-              label="Escanear código QR"
-              locked={!canSubmit}
-              disabled={loading}
-              onPress={() => setScannerOpen(true)}
-            />
-            <FormTextField
-              label="O ingresa el código manualmente"
-              value={code}
-              onChangeText={setCode}
-              autoCapitalize="characters"
-              editable={canSubmit && !loading}
-            />
-            {nodeContent?.destination ? (
-              <TreasureAreaMap
-                latitude={nodeContent.destination.latitude}
-                longitude={nodeContent.destination.longitude}
-              />
-            ) : null}
-            <PrimaryButton
-              label="Enviar código"
-              loading={loading}
-              locked={!canSubmit}
-              onPress={() => void handleTreasure()}
-            />
-            <QrCodeScannerModal
-              visible={scannerOpen}
-              locked={loading}
-              onClose={() => setScannerOpen(false)}
-              onScanned={handleQrScanned}
-            />
-          </View>
+          <TreasureHuntPanel
+            instructions={nodeContent?.instructions ?? null}
+            contentLoading={contentLoading}
+            code={code}
+            onChangeCode={setCode}
+            canSubmit={canSubmit}
+            loading={loading}
+            scannerOpen={scannerOpen}
+            onOpenScanner={() => setScannerOpen(true)}
+            onCloseScanner={() => setScannerOpen(false)}
+            onScanned={handleQrScanned}
+            onSubmit={() => void handleTreasure()}
+            destination={nodeContent?.destination ?? null}
+          />
         ) : null}
       </View>
     </View>
@@ -365,22 +387,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: typography.caption,
     marginBottom: 16,
-  },
-  section: {
-    gap: 12,
-    marginTop: 16,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: typography.body,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  instructions: {
-    color: colors.textMuted,
-    fontSize: typography.body,
-    lineHeight: 22,
-    marginBottom: 12,
   },
   muted: {
     color: colors.textMuted,

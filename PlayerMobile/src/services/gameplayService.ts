@@ -7,6 +7,7 @@ import type {
   TeamCurrentStage,
   TeamFinalSummary,
   TeamHint,
+  TeamMissionProgress,
   TeamPenalty,
 } from '../types/gameplay';
 import { normalizeGuid } from '../utils/uuid';
@@ -113,10 +114,14 @@ export async function getTeamPenalties(
   sessionId: string,
   teamId: string,
 ): Promise<TeamPenalty[]> {
-  return apiRequest<TeamPenalty[]>(
-    API_PATHS.teamPenalties(sessionId, teamId),
+  const penalties = await apiRequest<TeamPenalty[]>(
+    API_PATHS.teamPenalties(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
     { baseUrl: scoringBase },
   );
+  return Array.isArray(penalties) ? penalties : [];
 }
 
 export async function getSessionRanking(
@@ -134,6 +139,19 @@ export async function getTeamFinalSummary(
 ): Promise<TeamFinalSummary> {
   return apiRequest<TeamFinalSummary>(
     API_PATHS.teamSummary(sessionId, teamId),
+    { baseUrl: sessionBase },
+  );
+}
+
+export async function getTeamMissionProgress(
+  sessionId: string,
+  teamId: string,
+): Promise<TeamMissionProgress> {
+  return apiRequest<TeamMissionProgress>(
+    API_PATHS.teamMissionProgress(
+      normalizeGuid(sessionId),
+      normalizeGuid(teamId),
+    ),
     { baseUrl: sessionBase },
   );
 }

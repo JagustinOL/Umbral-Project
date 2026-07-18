@@ -1,4 +1,4 @@
-using SessionManagement.Domain.Aggregates;
+﻿using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 
 namespace SessionManagement.Application.Evidence.Validation.Handlers;
@@ -9,6 +9,6 @@ public sealed class SessionActiveValidationHandler : EvidenceValidationHandlerBa
     {
         if (context.Session.Status != LiveSessionStatus.Active)
             throw new SessionDomainException(
-                $"No se pueden aceptar evidencias en una sesión con estado '{context.Session.Status}' (RB-03).");
+                $"No se pueden aceptar evidencias en una sesión con estado '{context.Session.Status}'.");
     }
 }

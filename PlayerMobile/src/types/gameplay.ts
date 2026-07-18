@@ -81,6 +81,24 @@ export type TeamFinalSummary = {
   finalizedAtUtc: string | null;
 };
 
+export type MissionProgressNode = {
+  nodeId: string;
+  executionOrder: number;
+  nodeType: string;
+  title: string;
+  baseScore: number;
+  isCompleted: boolean;
+};
+
+export type TeamMissionProgress = {
+  sessionId: string;
+  teamId: string;
+  isMissionCompleted: boolean;
+  completedNodes: number;
+  totalNodes: number;
+  nodes: MissionProgressNode[];
+};
+
 export type SubmittedEvidence = {
   evidenceId: string;
   status: string;

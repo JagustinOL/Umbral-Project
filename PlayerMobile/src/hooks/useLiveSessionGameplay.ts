@@ -108,9 +108,17 @@ export function useLiveSessionGameplay({
   }, [sessionId, teamId, hints.length]);
 
   const refreshPenalties = useCallback(async () => {
-    const next = await gameplayService.getTeamPenalties(sessionId, teamId);
-    setPenalties(next);
-    return next;
+    try {
+      const next = await gameplayService.getTeamPenalties(sessionId, teamId);
+      setPenalties(next);
+      return next;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('Failed to refresh penalties:', error);
+      }
+      // No vaciar la lista optimista si el API falla.
+      return null;
+    }
   }, [sessionId, teamId]);
 
   const syncSessionStatus = useCallback(async () => {
@@ -163,21 +171,21 @@ export function useLiveSessionGameplay({
       setLastPenaltyAlert(
         `Sanción −${payload.penaltyPoints} pts: ${payload.reason}`,
       );
-      void refreshPenalties().catch(() => {
-        setPenalties((prev) => [
-          {
-            entryId: `live-${payload.penaltyPoints}-${Date.now()}`,
-            penaltyPoints: payload.penaltyPoints,
-            reason: payload.reason,
-            category: 'ManualOperator',
-            appliedAtUtc: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
-      });
+      // Optimistic: ScoringAudit aún no persistió cuando llega ReceiveManualPenalty.
+      // El refresh real ocurre en onScoreUpdate (ledger ya actualizado).
+      setPenalties((prev) => [
+        {
+          entryId: `live-manual-${payload.penaltyPoints}-${Date.now()}`,
+          penaltyPoints: payload.penaltyPoints,
+          reason: payload.reason,
+          category: 'ManualOperator',
+          appliedAtUtc: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
       void refreshRanking();
     },
-    [teamId, refreshPenalties, refreshRanking],
+    [teamId, refreshRanking],
   );
 
   const handleSupportMessage = useCallback((payload: SupportMessagePayload) => {
@@ -279,11 +287,32 @@ export function useLiveSessionGameplay({
       },
       onScoreUpdate: (payload) => {
         applyRanking(payload.ranking ?? []);
+        // Tras penalización/pista, el ledger ya está en ScoringAudit.
+        if (payload.teamId.toLowerCase() === teamId.toLowerCase()) {
+          void refreshPenalties();
+        }
       },
       onManualPenalty: handlePenalty,
       onHintReleased: (payload) => {
-        if (payload.teamId.toLowerCase() === teamId.toLowerCase()) {
-          void refreshHints();
+        if (payload.teamId.toLowerCase() !== teamId.toLowerCase()) {
+          return;
+        }
+        void refreshHints();
+        if (payload.penaltyPoints > 0) {
+          setPenalties((prev) => {
+            const entryId = `live-hint-${payload.hintId}`;
+            const withoutDup = prev.filter((p) => p.entryId !== entryId);
+            return [
+              {
+                entryId,
+                penaltyPoints: payload.penaltyPoints,
+                reason: 'Penalización por uso de pista.',
+                category: 'HintPenalty',
+                appliedAtUtc: new Date().toISOString(),
+              },
+              ...withoutDup,
+            ];
+          });
         }
       },
       onSupportMessage: handleSupportMessage,
@@ -310,6 +339,7 @@ export function useLiveSessionGameplay({
               missionCompleted: !payload.nextNodeId,
             };
           });
+          void refreshRanking();
         }
         void refreshStage().then((next) => {
           if (payload.nodeCompleted && next.isCompleted) {
@@ -331,6 +361,7 @@ export function useLiveSessionGameplay({
     pollRef.current = setInterval(() => {
       void refreshStage();
       void refreshRanking();
+      void refreshPenalties();
       void syncSessionStatus();
     }, 15000);
 
@@ -347,6 +378,7 @@ export function useLiveSessionGameplay({
     refreshAll,
     refreshStage,
     refreshRanking,
+    refreshPenalties,
     syncSessionStatus,
     handlePenalty,
     handleSupportMessage,

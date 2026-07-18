@@ -56,7 +56,7 @@ export function RankingPanel({ ranking, events = [] }: RankingPanelProps) {
                     {isYou ? ' (tú)' : ''}
                   </Text>
                   <Text style={styles.meta}>
-                    {entry.completedNodes} nodes · {entry.lastElapsedSeconds.toFixed(0)}s
+                    {entry.completedNodes} nodos · {entry.lastElapsedSeconds.toFixed(0)}s
                   </Text>
                 </View>
                 <Text style={styles.score}>{entry.totalScore}</Text>

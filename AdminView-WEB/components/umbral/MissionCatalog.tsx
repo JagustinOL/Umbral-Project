@@ -8,7 +8,6 @@ import {
   ClockIcon,
   ChevronRightIcon,
   AlertTriangleIcon,
-  ArchiveIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,7 +74,6 @@ export function MissionCatalog({
   const [deleteTarget, setDeleteTarget] = useState<Mission | null>(null);
 
   const activeMissions = missions.filter((m) => m.status !== "Inactive");
-  const inactiveMissions = missions.filter((m) => m.status === "Inactive");
 
   const handleCreate = async (data: CreateMissionPayload | UpdateMissionPayload) => {
     const payload = data as CreateMissionPayload;
@@ -116,8 +114,6 @@ export function MissionCatalog({
           <h1 className="text-xl font-semibold text-foreground text-balance">Mission Catalog</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {activeMissions.length} mission{activeMissions.length !== 1 ? "s" : ""} in use
-            {inactiveMissions.length > 0 &&
-              ` · ${inactiveMissions.length} deactivated for audit`}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-1.5">
@@ -255,7 +251,7 @@ export function MissionCatalog({
                             </TooltipTrigger>
                             {isImmutable && (
                               <TooltipContent side="top" className="text-xs max-w-[180px]">
-                                RN-01: Active missions are immutable. Deactivate first to edit.
+                                Las misiones activas no se pueden editar. Desactívalas primero.
                               </TooltipContent>
                             )}
                           </Tooltip>
@@ -276,7 +272,7 @@ export function MissionCatalog({
                             </TooltipTrigger>
                             {isImmutable && (
                               <TooltipContent side="top" className="text-xs max-w-[180px]">
-                                RN-01: Active missions cannot be deleted.
+                                Las misiones activas no se pueden eliminar.
                               </TooltipContent>
                             )}
                           </Tooltip>
@@ -290,68 +286,6 @@ export function MissionCatalog({
           </TableBody>
         </Table>
       </div>
-
-      {inactiveMissions.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <ArchiveIcon className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <h2 className="text-sm font-medium text-foreground">Deactivated missions</h2>
-              <p className="text-xs text-muted-foreground">
-                Read-only audit view. Inactive missions cannot be edited or reactivated.
-              </p>
-            </div>
-          </div>
-          <div className="rounded-lg border border-border bg-card overflow-hidden opacity-90">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="font-medium text-foreground w-[280px]">Title</TableHead>
-                  <TableHead className="font-medium text-foreground">Status</TableHead>
-                  <TableHead className="font-medium text-foreground">Difficulty</TableHead>
-                  <TableHead className="font-medium text-foreground">Duration</TableHead>
-                  <TableHead className="font-medium text-foreground">Operators</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inactiveMissions.map((mission) => (
-                  <TableRow key={mission.id} className="hover:bg-muted/20">
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{mission.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 max-w-[240px]">
-                          {mission.description}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={mission.status} />
-                    </TableCell>
-                    <TableCell>
-                      <DifficultyStars value={mission.difficulty} />
-                    </TableCell>
-                    <TableCell>
-                      {mission.maxDurationMinutes ? (
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <ClockIcon className="h-3.5 w-3.5" />
-                          {mission.maxDurationMinutes} min
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {mission.assignedOperators?.length ?? 0}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
 
       {/* Create Modal */}
       <MissionFormModal
@@ -376,8 +310,7 @@ export function MissionCatalog({
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate Mission</AlertDialogTitle>
             <AlertDialogDescription>
-              This will deactivate &ldquo;{deleteTarget?.title}&rdquo; and mark it as Inactive. This action
-              satisfies <strong>RN-01</strong>.
+              This will deactivate &ldquo;{deleteTarget?.title}&rdquo; and mark it as Inactive.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

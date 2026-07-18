@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
       if (hasOpenSessions) {
         setMissionsError(
-          "Mission deactivation blocked by RN-01: there are active or open sessions linked to this mission.",
+          "No se puede desactivar la misión: hay sesiones activas o abiertas vinculadas.",
         );
         throw new Error("Mission has open sessions.");
       }
@@ -224,12 +224,15 @@ export default function DashboardPage() {
       const hasOpenSessions = await missionService.missionHasOpenSessions(missionId);
       if (hasOpenSessions) {
         const message =
-          "RN-01: No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.";
+          "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.";
         setAssignmentError(message);
         throw new Error(message);
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes("RN-01")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+      ) {
         throw error;
       }
       console.warn("Mission session precheck unavailable, continuing with API enforcement:", error);
@@ -243,15 +246,24 @@ export default function DashboardPage() {
       await ensureMissionAllowsOperatorRosterChange(missionId);
       await missionService.assignOperatorToMission(missionId, operatorId);
       await loadMissions();
-      toast.success("Operador asignado a la misión (HU-24).");
+      toast.success("Operador asignado a la misión.");
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes("RN-01"))) {
+      if (
+        !(
+          error instanceof Error &&
+          error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+        )
+      ) {
         logMissionOperatorApiProblem(error);
         const message = getMissionOperatorAssignmentErrorMessage(error);
         setAssignmentError(message);
         toast.error(message);
       } else {
-        toast.error(error instanceof Error ? error.message : "RN-01");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.",
+        );
       }
       throw error;
     } finally {
@@ -266,15 +278,24 @@ export default function DashboardPage() {
       await ensureMissionAllowsOperatorRosterChange(missionId);
       await missionService.revokeOperatorFromMission(missionId, operatorId);
       await loadMissions();
-      toast.success("Operador revocado de la misión (HU-25).");
+      toast.success("Operador revocado de la misión.");
     } catch (error) {
-      if (!(error instanceof Error && error.message.includes("RN-01"))) {
+      if (
+        !(
+          error instanceof Error &&
+          error.message.includes("asignación de operadores mientras la misión tiene sesiones abiertas")
+        )
+      ) {
         logMissionOperatorApiProblem(error);
         const message = getMissionOperatorAssignmentErrorMessage(error);
         setAssignmentError(message);
         toast.error(message);
       } else {
-        toast.error(error instanceof Error ? error.message : "RN-01");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "No se puede modificar la asignación de operadores mientras la misión tiene sesiones abiertas.",
+        );
       }
       throw error;
     } finally {

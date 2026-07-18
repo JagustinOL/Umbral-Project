@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SessionManagement.Domain.Aggregates;
 using SessionManagement.Domain.Exceptions;
 using SessionManagement.Domain.ValueObjects;
@@ -56,12 +56,12 @@ public sealed class LiveSessionFullCoverageTests
             [new AllowedNode(NodeA, "Trivia", 10)], 1m);
         session.RegisterTeam(TeamId);
         var notActive = () => session.AcceptEvidence(TeamId, NodeA, "x");
-        notActive.Should().Throw<SessionDomainException>().WithMessage("*RB-03*");
+        notActive.Should().Throw<SessionDomainException>().WithMessage("*debe estar Active*");
 
         session.BeginPreparation();
         session.Start();
         var badNode = () => session.AcceptEvidence(TeamId, Guid.NewGuid(), "x");
-        badNode.Should().Throw<SessionDomainException>().WithMessage("*RB-05*");
+        badNode.Should().Throw<SessionDomainException>().WithMessage("*nodos permitidos*");
 
         var unregistered = () => session.AcceptEvidence(Guid.NewGuid(), NodeA, "x");
         unregistered.Should().Throw<SessionDomainException>();
@@ -111,7 +111,7 @@ public sealed class LiveSessionFullCoverageTests
         };
 
         var wrongOrder = () => session.SubmitTreasureHuntCode(TeamId, NodeB, "CODE", rules);
-        wrongOrder.Should().Throw<SessionDomainException>().WithMessage("*RN-11*");
+        wrongOrder.Should().Throw<SessionDomainException>().WithMessage("*Progresión secuencial*");
 
         var wrongAnswer = session.SubmitTriviaAnswer(TeamId, NodeA, "bad", 0, rules);
         wrongAnswer.IsCorrect.Should().BeFalse();
@@ -120,7 +120,7 @@ public sealed class LiveSessionFullCoverageTests
         wrongAnswer.NextNodeId.Should().Be(NodeB);
 
         var retry = () => session.SubmitTriviaAnswer(TeamId, NodeA, "Answer", 0, rules);
-        retry.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        retry.Should().Throw<SessionDomainException>().WithMessage("*ya está cerrada*");
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class LiveSessionFullCoverageTests
         };
         session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
         var act = () => session.SubmitTriviaAnswer(TeamId, NodeA, "ok", 0, rules);
-        act.Should().Throw<SessionDomainException>().WithMessage("*RN-04*");
+        act.Should().Throw<SessionDomainException>().WithMessage("*ya está cerrada*");
     }
 
     [Fact]

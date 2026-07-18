@@ -55,6 +55,7 @@ public sealed class GetOperatorSessionBoardHandlerTests
             new GetOperatorSessionBoardQuery(OperatorId, session.Id),
             CancellationToken.None);
 
+        result.StartedAtUtc.Should().NotBeNull();
         result.Teams.Should().ContainSingle();
         var team = result.Teams[0];
         team.CurrentNodeId.Should().Be(NodeId);

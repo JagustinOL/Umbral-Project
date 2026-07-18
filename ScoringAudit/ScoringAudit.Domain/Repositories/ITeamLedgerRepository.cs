@@ -1,4 +1,5 @@
 using ScoringAudit.Domain.Aggregates;
+using ScoringAudit.Domain.ReadModels;
 
 namespace ScoringAudit.Domain.Repositories;
 
@@ -22,6 +23,14 @@ public interface ITeamLedgerRepository
     /// </summary>
     Task<IReadOnlyList<TeamLedger>> GetBySessionAsync(
         Guid sessionRef,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Mejores puntuaciones de una sola sesión entre sesiones Finished (RN-09).
+    /// </summary>
+    Task<IReadOnlyList<TopScoreAcrossSessions>> GetTopScoresAcrossFinishedSessionsAsync(
+        Guid? operatorRef,
+        int limit,
         CancellationToken cancellationToken = default);
 
     Task SaveAsync(

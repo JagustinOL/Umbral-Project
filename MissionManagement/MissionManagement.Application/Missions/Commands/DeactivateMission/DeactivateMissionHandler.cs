@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using MissionManagement.Application.Common.Interfaces;
 using MissionManagement.Application.Exceptions;
 using MissionManagement.Domain.Repositories;
@@ -36,14 +36,14 @@ public sealed class DeactivateMissionHandler : IRequestHandler<DeactivateMission
         {
             throw new ConflictException(
                 $"No fue posible validar sesiones abiertas para la misión con Id={request.Id}. " +
-                "La desactivación fue bloqueada para proteger RN-01. " +
+                "La desactivación fue bloqueada por seguridad. " +
                 $"Detalle técnico: {ex.Message}");
         }
 
         if (hasOpenSessions)
         {
             throw new ConflictException(
-                $"No se puede desactivar la misión con Id={request.Id} porque tiene sesiones abiertas (RN-01).");
+                $"No se puede desactivar la misión con Id={request.Id} porque tiene sesiones abiertas.");
         }
 
         mission.Deactivate();

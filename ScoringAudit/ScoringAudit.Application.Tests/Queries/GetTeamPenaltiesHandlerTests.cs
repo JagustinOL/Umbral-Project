@@ -1,6 +1,7 @@
 using ScoringAudit.Application.Queries;
 using ScoringAudit.Domain.Aggregates;
 using ScoringAudit.Domain.Entities;
+using ScoringAudit.Domain.ReadModels;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.ValueObjects;
 using Xunit;
@@ -58,6 +59,10 @@ public sealed class GetTeamPenaltiesHandlerTests
             Guid sessionRef, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<TeamLedger>>(
                 _items.Values.Where(x => x.SessionRef == sessionRef).ToList());
+
+        public Task<IReadOnlyList<TopScoreAcrossSessions>> GetTopScoresAcrossFinishedSessionsAsync(
+            Guid? operatorRef, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<TopScoreAcrossSessions>>([]);
 
         public Task SaveAsync(TeamLedger ledger, CancellationToken cancellationToken = default)
         {

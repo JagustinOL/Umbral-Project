@@ -2,6 +2,7 @@ using ScoringAudit.Application.Events;
 using ScoringAudit.Application.Messaging;
 using ScoringAudit.Domain.Aggregates;
 using ScoringAudit.Domain.Entities;
+using ScoringAudit.Domain.ReadModels;
 using ScoringAudit.Domain.Repositories;
 using ScoringAudit.Domain.Services;
 using Xunit;
@@ -174,6 +175,10 @@ public sealed class ProcessEvidenceValidatedHandlerTests
             Task.FromResult<IReadOnlyList<TeamLedger>>(
                 _items.Values.Where(x => x.SessionRef == sessionRef).ToList());
 
+        public Task<IReadOnlyList<TopScoreAcrossSessions>> GetTopScoresAcrossFinishedSessionsAsync(
+            Guid? operatorRef, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<TopScoreAcrossSessions>>([]);
+
         public Task SaveAsync(TeamLedger ledger, CancellationToken cancellationToken = default)
         {
             _items[(ledger.TeamRef, ledger.SessionRef)] = ledger;
@@ -192,6 +197,17 @@ public sealed class ProcessEvidenceValidatedHandlerTests
             DateTime? startDate, DateTime? endDate, Guid? operatorRef, int page, int pageSize,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<(IReadOnlyList<AuditLog>, int)>(([], 0));
+
+        public Task<int> CountFinishedAsync(Guid? operatorRef, CancellationToken cancellationToken = default) =>
+            Task.FromResult(0);
+
+        public Task<IReadOnlyList<MissionPlayCount>> GetMissionPlayCountsAsync(
+            Guid? operatorRef, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<MissionPlayCount>>([]);
+
+        public Task<IReadOnlyList<OperatorSessionCount>> GetOperatorSessionCountsAsync(
+            Guid? operatorRef, int limit, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<OperatorSessionCount>>([]);
 
         public Task SaveAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
         {
